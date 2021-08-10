@@ -87,7 +87,6 @@ namespace SCEditor.ScOld
         internal ushort _textureId;
         internal uint _packetSize;
 
-
         internal bool _disposed;
         internal ScFile _scFile;
         internal ScImage _image;
