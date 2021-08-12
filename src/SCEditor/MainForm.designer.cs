@@ -68,6 +68,7 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.toolStripMenuItemEditCharacter = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -361,7 +362,8 @@
             this.importExpotstoolStripMenuItem,
             this.exportToolStripMenuItem,
             this.duplicateToolStripMenuItem1,
-            this.exportShapeToolStripMenuItem});
+            this.exportShapeToolStripMenuItem,
+            this.toolStripMenuItemEditCharacter});
             this.objectToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.objectToolStripMenuItem.Name = "objectToolStripMenuItem";
             this.objectToolStripMenuItem.Size = new System.Drawing.Size(58, 21);
@@ -504,6 +506,15 @@
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
+            // toolStripMenuItemEditCharacter
+            // 
+            this.toolStripMenuItemEditCharacter.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
+            this.toolStripMenuItemEditCharacter.ForeColor = System.Drawing.Color.White;
+            this.toolStripMenuItemEditCharacter.Name = "toolStripMenuItemEditCharacter";
+            this.toolStripMenuItemEditCharacter.Size = new System.Drawing.Size(187, 22);
+            this.toolStripMenuItemEditCharacter.Text = "Edit Character";
+            this.toolStripMenuItemEditCharacter.Click += new System.EventHandler(this.toolStripMenuItemEditCharacter_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -576,6 +587,7 @@
         private System.Windows.Forms.ToolStripMenuItem createTextureStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createExportToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem importExpotstoolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemEditCharacter;
     }
 }
 

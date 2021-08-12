@@ -453,6 +453,19 @@ namespace SCEditor
 
         }
 
+        private void toolStripMenuItemEditCharacter_Click(object sender, EventArgs e)
+        {
+            using (editCharacter form = new editCharacter())
+            {
+                if (treeView1.SelectedNode?.Tag != null)
+                {
+                    form.setScData((ScObject)treeView1.SelectedNode.Tag);
+                    form.addData();
+                    form.ShowDialog();
+                }
+            }
+        }
+
         private void importExportToolStripMenuItem_Click(object sender, EventArgs e)
         {
             MessageBox.Show("In order to import export names, use TexturePacker by Code&Web and export sprite data as JSON.\nMake sure to import the texture and select the corrosponding one.");

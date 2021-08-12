@@ -197,7 +197,6 @@ namespace SCEditor.ScOld
 
             Console.WriteLine("Rendering image of " + _chunks.Count + " polygons");
             
-
             // Calculate et initialize the final shape size
             PointF[] pointsXY = _chunks.SelectMany(chunk => ((ShapeChunk) chunk).XY).ToArray();
             using (var xyPath = new GraphicsPath())
@@ -219,6 +218,7 @@ namespace SCEditor.ScOld
                 Console.WriteLine($"Rendering shape: W:{finalShape.Width} H:{finalShape.Height}\n");
                 Console.WriteLine("Length: " + _length + " | Offset: " + _offset);
 
+                
                 // Assemble shape chunks
                 foreach (ShapeChunk chunk in _chunks)
                 {
@@ -305,9 +305,11 @@ namespace SCEditor.ScOld
                             }
                             g.Flush();
                         }
+                        
                     }
 
                 }
+                
                 return finalShape;
                     
             }

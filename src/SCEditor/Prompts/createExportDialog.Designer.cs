@@ -61,7 +61,7 @@ namespace SCEditor.Prompts
             this.importExportsButton.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(41)))), ((int)(((byte)(41)))), ((int)(((byte)(41)))));
             this.importExportsButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.importExportsButton.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.importExportsButton.Location = new System.Drawing.Point(212, 96);
+            this.importExportsButton.Location = new System.Drawing.Point(212, 83);
             this.importExportsButton.Name = "importExportsButton";
             this.importExportsButton.Size = new System.Drawing.Size(103, 28);
             this.importExportsButton.TabIndex = 2;
