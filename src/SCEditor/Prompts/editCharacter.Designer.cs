@@ -1,4 +1,7 @@
 ﻿
+using System;
+using System.Runtime.InteropServices;
+
 namespace SCEditor.Prompts
 {
     partial class editCharacter
@@ -21,6 +24,33 @@ namespace SCEditor.Prompts
             base.Dispose(disposing);
         }
 
+        // constants used to hide a checkbox
+        public const int TVIF_STATE = 0x8;
+        public const int TVIS_STATEIMAGEMASK = 0xF000;
+        public const int TV_FIRST = 0x1100;
+        public const int TVM_SETITEM = TV_FIRST + 63;
+
+        [DllImport("user32.dll")]
+        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam,
+        IntPtr lParam);
+
+        // struct used to set node properties
+        public struct TVITEM
+        {
+            public int mask;
+            public IntPtr hItem;
+            public int state;
+            public int stateMask;
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public String lpszText;
+            public int cchTextMax;
+            public int iImage;
+            public int iSelectedImage;
+            public int cChildren;
+            public IntPtr lParam;
+
+        }
+
         #region Windows Form Designer generated code
 
         /// <summary>
@@ -39,7 +69,10 @@ namespace SCEditor.Prompts
             this.editCharacterButtonSizeDecrease = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.saveButton = new System.Windows.Forms.Button();
+            this.revertButton = new System.Windows.Forms.Button();
+            this.scaleFactorTextBox = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -53,6 +86,7 @@ namespace SCEditor.Prompts
             // 
             // editCharacterButtonUp
             // 
+            this.editCharacterButtonUp.Enabled = false;
             this.editCharacterButtonUp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.editCharacterButtonUp.Location = new System.Drawing.Point(84, 329);
             this.editCharacterButtonUp.Name = "editCharacterButtonUp";
@@ -64,6 +98,7 @@ namespace SCEditor.Prompts
             // 
             // editCharacterButtonDown
             // 
+            this.editCharacterButtonDown.Enabled = false;
             this.editCharacterButtonDown.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.editCharacterButtonDown.Location = new System.Drawing.Point(84, 405);
             this.editCharacterButtonDown.Name = "editCharacterButtonDown";
@@ -75,6 +110,7 @@ namespace SCEditor.Prompts
             // 
             // editCharacterButtonLeft
             // 
+            this.editCharacterButtonLeft.Enabled = false;
             this.editCharacterButtonLeft.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.editCharacterButtonLeft.Location = new System.Drawing.Point(30, 367);
             this.editCharacterButtonLeft.Name = "editCharacterButtonLeft";
@@ -86,6 +122,7 @@ namespace SCEditor.Prompts
             // 
             // editCharacterButtonRight
             // 
+            this.editCharacterButtonRight.Enabled = false;
             this.editCharacterButtonRight.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.editCharacterButtonRight.Location = new System.Drawing.Point(140, 367);
             this.editCharacterButtonRight.Name = "editCharacterButtonRight";
@@ -98,15 +135,21 @@ namespace SCEditor.Prompts
             // treeView1
             // 
             this.treeView1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(42)))), ((int)(((byte)(42)))), ((int)(((byte)(42)))));
+            this.treeView1.CheckBoxes = true;
+            this.treeView1.DrawMode = System.Windows.Forms.TreeViewDrawMode.OwnerDrawText;
             this.treeView1.ForeColor = System.Drawing.Color.White;
             this.treeView1.Location = new System.Drawing.Point(12, 12);
             this.treeView1.Name = "treeView1";
             this.treeView1.Size = new System.Drawing.Size(224, 214);
             this.treeView1.TabIndex = 2;
+            this.treeView1.BeforeCheck += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView1_BeforeCheck);
+            this.treeView1.AfterCheck += new System.Windows.Forms.TreeViewEventHandler(this.treeView1_AfterCheck);
+            this.treeView1.DrawNode += new System.Windows.Forms.DrawTreeNodeEventHandler(this.treeView1_DrawNode);
             this.treeView1.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView1_AfterSelect);
             // 
             // editCharacterButtonSizeIncrease
             // 
+            this.editCharacterButtonSizeIncrease.Enabled = false;
             this.editCharacterButtonSizeIncrease.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.editCharacterButtonSizeIncrease.Location = new System.Drawing.Point(30, 260);
             this.editCharacterButtonSizeIncrease.Name = "editCharacterButtonSizeIncrease";
@@ -118,6 +161,7 @@ namespace SCEditor.Prompts
             // 
             // editCharacterButtonSizeDecrease
             // 
+            this.editCharacterButtonSizeDecrease.Enabled = false;
             this.editCharacterButtonSizeDecrease.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.editCharacterButtonSizeDecrease.Location = new System.Drawing.Point(140, 260);
             this.editCharacterButtonSizeDecrease.Name = "editCharacterButtonSizeDecrease";
@@ -147,26 +191,63 @@ namespace SCEditor.Prompts
             this.label2.TabIndex = 5;
             this.label2.Text = "Edit Size";
             // 
-            // button1
+            // saveButton
             // 
-            this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button1.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.button1.Location = new System.Drawing.Point(12, 465);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(224, 31);
-            this.button1.TabIndex = 6;
-            this.button1.Text = "SAVE";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.saveButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.saveButton.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.saveButton.ForeColor = System.Drawing.Color.LawnGreen;
+            this.saveButton.Location = new System.Drawing.Point(695, 515);
+            this.saveButton.Name = "saveButton";
+            this.saveButton.Size = new System.Drawing.Size(93, 31);
+            this.saveButton.TabIndex = 6;
+            this.saveButton.Text = "Save";
+            this.saveButton.UseVisualStyleBackColor = true;
+            this.saveButton.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // revertButton
+            // 
+            this.revertButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.revertButton.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.revertButton.ForeColor = System.Drawing.Color.LightCoral;
+            this.revertButton.Location = new System.Drawing.Point(552, 515);
+            this.revertButton.Name = "revertButton";
+            this.revertButton.Size = new System.Drawing.Size(93, 31);
+            this.revertButton.TabIndex = 7;
+            this.revertButton.Text = "Revert";
+            this.revertButton.UseVisualStyleBackColor = true;
+            this.revertButton.Click += new System.EventHandler(this.revertButton_Click);
+            // 
+            // scaleFactorTextBox
+            // 
+            this.scaleFactorTextBox.Location = new System.Drawing.Point(74, 473);
+            this.scaleFactorTextBox.Name = "scaleFactorTextBox";
+            this.scaleFactorTextBox.Size = new System.Drawing.Size(100, 23);
+            this.scaleFactorTextBox.TabIndex = 8;
+            this.scaleFactorTextBox.Text = "0.25";
+            this.scaleFactorTextBox.TextChanged += new System.EventHandler(this.scaleFactorTextBox_TextChanged);
+            this.scaleFactorTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.scaleFactorTextBox_KeyDown);
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label3.Location = new System.Drawing.Point(81, 451);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(81, 19);
+            this.label3.TabIndex = 5;
+            this.label3.Text = "Scale Factor";
             // 
             // editCharacter
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
-            this.ClientSize = new System.Drawing.Size(800, 508);
-            this.Controls.Add(this.button1);
+            this.ClientSize = new System.Drawing.Size(800, 558);
+            this.Controls.Add(this.scaleFactorTextBox);
+            this.Controls.Add(this.revertButton);
+            this.Controls.Add(this.saveButton);
             this.Controls.Add(this.label2);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.editCharacterButtonSizeDecrease);
             this.Controls.Add(this.editCharacterButtonSizeIncrease);
@@ -180,6 +261,7 @@ namespace SCEditor.Prompts
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "editCharacter";
             this.Text = "Edit Character";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.editCharacter_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -198,6 +280,9 @@ namespace SCEditor.Prompts
         internal System.Windows.Forms.Button editCharacterButtonSizeDecrease;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
-        internal System.Windows.Forms.Button button1;
+        internal System.Windows.Forms.Button saveButton;
+        private System.Windows.Forms.Button revertButton;
+        private System.Windows.Forms.TextBox scaleFactorTextBox;
+        private System.Windows.Forms.Label label3;
     }
 }

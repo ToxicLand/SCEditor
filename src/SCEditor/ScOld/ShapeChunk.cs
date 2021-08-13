@@ -22,9 +22,23 @@ namespace SCEditor.ScOld
             //_pointsUV = new List<PointF>();
         }
 
+        public ShapeChunk(ShapeChunk chunk)
+        {
+            this.SetChunkId(chunk._chunkId);
+            this.SetShapeId(chunk._shapeId);
+            this.SetTextureId(chunk._textureId);
+            this.SetXY(chunk._xy);
+            this.SetUV(chunk._uv);
+            this.SetOffset(chunk._offset);
+            this.SetVertexCount(chunk._vertexCount);
+            this._scFile = chunk._scFile;
+        }
+
         #endregion
 
         #region Fields & Properties
+
+        private readonly ScFile _scFile;
 
         private ushort _chunkId;
         private ushort _shapeId;
@@ -33,20 +47,14 @@ namespace SCEditor.ScOld
         private PointF[] _xy;
         private PointF[] _uv;
         private int _vertexCount;
-
-
+        private long _offset;
         private bool _disposed;
-        //private GraphicsPath _path; NOT USED
 
         public PointF[] XY => _xy;
 
         public PointF[] UV => _uv;
 
-        // private List<PointF> _pointsXY;
-        // private List<PointF> _pointsUV;
-        private readonly ScFile _scFile;
-
-        private long _offset;
+        public override ushort Id => _chunkId;
 
         #endregion
 
@@ -70,9 +78,7 @@ namespace SCEditor.ScOld
         public override string GetName()
         {
             return "Chunk " + Id;
-        }
-
-        public override ushort Id => _chunkId;
+        } 
 
         public override string GetInfo()
         {
@@ -281,6 +287,13 @@ namespace SCEditor.ScOld
             {
                 input.Seek(_offset, SeekOrigin.Begin);
                 input.WriteByte(_textureId);
+                input.Position += 1;
+
+                foreach (var pointXY in _xy)
+                {
+                    input.Write(BitConverter.GetBytes((int)(pointXY.X * 20)), 0, 4);
+                    input.Write(BitConverter.GetBytes((int)(pointXY.Y * 20)), 0, 4);
+                }
             }
         }
         public override void Write(FileStream input, int inOffset, out int outOffset)
@@ -351,6 +364,11 @@ namespace SCEditor.ScOld
             _offset = offset;
         }
 
+        public void SetVertexCount(int count)
+        {
+            _vertexCount = count;
+        }
+
         public void SetShapeId(ushort id)
         {
             _shapeId = id;
@@ -369,6 +387,12 @@ namespace SCEditor.ScOld
         public void SetTextureId(byte id)
         {
             _textureId = id;
+        }
+
+        public ShapeChunk Clone()
+        {
+            ShapeChunk newChunk = (ShapeChunk)this.MemberwiseClone();
+            return newChunk;
         }
         #endregion
     }

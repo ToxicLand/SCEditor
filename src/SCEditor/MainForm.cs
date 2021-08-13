@@ -459,9 +459,25 @@ namespace SCEditor
             {
                 if (treeView1.SelectedNode?.Tag != null)
                 {
-                    form.setScData((ScObject)treeView1.SelectedNode.Tag);
+                    form.setScData((ScObject)treeView1.SelectedNode.Tag, _scFile);
                     form.addData();
-                    form.ShowDialog();
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+
+                    }
+                    else
+                    {
+                        List<OriginalData> revertData = form._originalData.ToList();
+
+                        if (revertData.Count > 0)
+                        {
+                            foreach (OriginalData data in revertData)
+                            {
+                                Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
+                                form.revertShape(shapeData);
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -21,6 +21,23 @@ namespace SCEditor.ScOld
             _chunks = new List<ScObject>();
         }
 
+        public Shape(Shape shape, bool customAdd)
+        {
+            this.SetId(shape._shapeId);
+            this.SetOffset(shape._offset);
+            this.SetLength(shape._length);
+            this._scFile = shape._scFile;
+            this._chunks = new List<ScObject>();
+
+            for (int i = 0; i < shape._chunks.Count; i++)
+            {
+                ShapeChunk newChunk = new ShapeChunk((ShapeChunk)shape._chunks[i]);
+                this._chunks.Add(newChunk);
+            }
+
+            this._shapeChunkCount = this._chunks.Count;
+        }
+
         public Shape(Shape shape)
         {
             _scFile = shape.GetStorageObject();
@@ -467,9 +484,27 @@ namespace SCEditor.ScOld
             _shapeId = id;
         }
 
+        public void SetLength(int length)
+        {
+            _length = length;
+        }
+
         public void SetOffset(long offset)
         {
             _offset = offset;
+        }
+
+        public Shape Clone()
+        {
+            Shape newShape = (Shape)this.MemberwiseClone();
+            newShape._chunks = new List<ScObject>();
+
+            foreach (ShapeChunk chunk in this._chunks)
+            {
+                newShape.AddChunk(chunk.Clone());
+            }
+
+            return newShape;
         }
 
         #endregion
