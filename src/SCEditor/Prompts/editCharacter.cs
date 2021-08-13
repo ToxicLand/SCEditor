@@ -609,11 +609,14 @@ namespace SCEditor.Prompts
 
         private void editCharacter_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_originalData.Count > 0)
+            if (this.DialogResult != DialogResult.OK)
             {
-                DialogResult result = MessageBox.Show("There are changes not yet saved! Closing will revert any changes made. Proceed to close?", "Changes not saved", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button2);
+                if (_originalData.Count > 0)
+                {
+                    DialogResult result = MessageBox.Show("There are changes not yet saved! Closing will revert any changes made. Proceed to close?", "Changes not saved", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button2);
 
-                e.Cancel = (result == DialogResult.No);
+                    e.Cancel = (result == DialogResult.No);
+                }
             }
         }
     }

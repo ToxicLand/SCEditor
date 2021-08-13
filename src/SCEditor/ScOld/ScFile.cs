@@ -185,6 +185,7 @@ namespace SCEditor.ScOld
             int textureAdd = 0;
             int movieClipAdd = 0;
             int shapeAdd = 0;
+            int shapeChunkAdd = 0;
             int matrixAdd = 0;
 
             // Flushing depending edits.
@@ -212,6 +213,11 @@ namespace SCEditor.ScOld
                         data.Write(input);
                         shapeAdd += 1;
                         goto case -256;
+
+                    case 99: // ShapeChunk
+                        data.Write(input);
+                        shapeChunkAdd += 1;
+                        break;
 
                     case -256:
                         if (data.GetDataType() == -256)
@@ -286,7 +292,7 @@ namespace SCEditor.ScOld
             input.Read(new byte[2], 0, 2); // SKIP
             input.Write(BitConverter.GetBytes((ushort)this._matrixCount + matrixAdd), 0, 2);
 
-            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd} | Shapes: {shapeAdd} | Textures: {textureAdd} | Matrixs {matrixAdd}");
+            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd}");
         }
 
         public void Load()

@@ -463,7 +463,19 @@ namespace SCEditor
                     form.addData();
                     if (form.ShowDialog() == DialogResult.OK)
                     {
+                        List<OriginalData> saveChanges = form._originalData.ToList();
 
+                        foreach (OriginalData data in saveChanges)
+                        {
+                            Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
+
+                            foreach (ShapeChunk chunkData in shapeData.GetChunks())
+                            {
+                                _scFile.AddChange(chunkData);
+                            }
+                        }
+
+                        Render();
                     }
                     else
                     {
@@ -474,6 +486,7 @@ namespace SCEditor
                             foreach (OriginalData data in revertData)
                             {
                                 Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
+
                                 form.revertShape(shapeData);
                             }
                         }
