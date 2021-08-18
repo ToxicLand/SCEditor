@@ -205,6 +205,45 @@ namespace SCEditor
                 {
                 }
 
+                // REMOVE
+                if (data.GetDataType() == 7)
+                {
+                    Console.WriteLine("MovieClip Data:");
+                    Console.WriteLine(((MovieClip)data.GetDataObject()).Frames.Count());
+
+                    List<ushort> addId = new List<ushort>();
+                    List<int> IdValue = new List<int>();
+                    for (int i = 0; i < ((MovieClip)data.GetDataObject()).timelineArray.Length; i++)
+                    {
+                        for (int x = 0; x < 3; x++)
+                        {
+                            if (x == 0)
+                            {
+                                Console.WriteLine(((MovieClip)data.GetDataObject()).timelineArray[i]);
+
+                                int idx = addId.FindIndex(g => g == ((MovieClip)data.GetDataObject()).timelineArray[i]);
+                                if (idx == -1)
+                                {
+                                    addId.Add(((MovieClip)data.GetDataObject()).timelineArray[i]);
+                                    IdValue.Add(1);
+                                }
+                                else
+                                {
+                                    
+                                    IdValue[idx] += 1; 
+                                }
+                            }
+
+                            x++;i++;
+                        }
+                    }
+
+                    for (int y = 0; y < addId.Count; y++)
+                    {
+                        Console.WriteLine($"ID {addId[y]}: {IdValue[y]}");
+                    }
+                }
+
                 pictureBox1.Refresh();
                 label1.Text = data.GetInfo();
             }
@@ -603,29 +642,43 @@ namespace SCEditor
                                     Console.WriteLine($"Unknown Export Type for: {frameName}");
                                 }
 
+                                bool exportExist = false;
+                                int exportIndex = -1;
+
                                 while (true)
                                 {
-                                    if (_scFile.GetExports().FindIndex(exp => exp.GetName() == frameName) != -1 || string.IsNullOrEmpty(frameName))
+                                    if (!string.IsNullOrEmpty(frameName))
                                     {
-                                        MessageBox.Show($"Export with name {frameName} already exists or is empty. Please change name.", "Invalid/Missing Export Name");
-
-                                        CloneExport changeName = new CloneExport();
-                                        ((TextBox)changeName.Controls["textBox1"]).Text = frameName;
-
-                                        if (changeName.ShowDialog() == DialogResult.OK)
+                                        if (_exportType == exportType.Animation)
                                         {
-                                            var result = ((TextBox)changeName.Controls["textBox1"]).Text;
-                                            if (!string.IsNullOrEmpty(result))
+                                            exportIndex = _scFile.exportExists(frameName.Substring(0, frameName.Length - 4));
+                                            if (exportIndex != -1)
                                             {
-                                                frameName = result;
+                                                exportExist = true;
+                                                break;
                                             }
+
+                                        }
+                                        else if (_scFile.exportExists(frameName) == -1)
+                                        {
+                                            break;
+                                        }
+                                    }     
+
+                                    MessageBox.Show($"Export with name {frameName} already exists or is empty. Please change name.", "Invalid/Missing Export Name");
+
+                                    CloneExport changeName = new CloneExport();
+                                    ((TextBox)changeName.Controls["textBox1"]).Text = _animationType != animationType.None ? frameName.Substring(0, frameName.Length - 4) : frameName;
+
+                                    if (changeName.ShowDialog() == DialogResult.OK)
+                                    {
+                                        var result = ((TextBox)changeName.Controls["textBox1"]).Text;
+                                        if (!string.IsNullOrEmpty(result))
+                                        {
+                                            frameName = result + frameName.Substring(frameName.Length - 4);
                                         }
                                     }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                }                             
+                                }
 
                                 long lastShapeOffset = 0;
                                 long lastShapeChunkOffset = 0;
@@ -709,6 +762,7 @@ namespace SCEditor
                                 shapeChunkData.SetChunkType(22);
                                 shapeChunkData.setCustomAdded(true);
                                 shapeChunkData.SetOffset(lastShapeChunkOffset * -1);
+                                shapeChunkData.SetShapeId(maxShapeId);
 
                                 PointF[] frameXY = new PointF[frameVerticies.Count];
                                 PointF[] frameUV = new PointF[frameVerticiesUV.Count];
@@ -734,34 +788,63 @@ namespace SCEditor
                                 Shape shapeData = new Shape(_scFile);
 
                                 shapeData.SetId(maxShapeId);
-
-                                shapeChunkData.SetShapeId(shapeData.Id);
-
                                 shapeData.AddChunk(shapeChunkData);
                                 shapeData.setCustomAdded(true);
-                                shapeData.SetOffset(lastShapeOffset * -1);     
+                                shapeData.SetOffset(lastShapeOffset * -1);
 
                                 _scFile.AddShape(shapeData);
-                                _scFile.AddChange(shapeData);
-                                treeView1.Populate(new List<ScObject>() { shapeData });
 
                                 // MOVIECLIP DATA
                                 MovieClip movieClipData = new MovieClip(_scFile, 12);
 
-                                movieClipData.SetId(maxMovieClipId);
-                                movieClipData.SetOffset(lastMovieClipOffset * -1);
-                                movieClipData.SetDataType(12);
-                                movieClipData.SetFrameCount(1);
-
-                                if (_exportType == exportType.Animation) // TROOPS ONLY - TODO
+                                if (exportExist)
                                 {
-                                    movieClipData.AddShape(_scFile.GetShapes()[_scFile.GetShapes().FindIndex(shape => shape.Id == 314)]); // SHADOW
+                                    movieClipData = (MovieClip) _scFile.GetMovieClips()[_scFile.GetMovieClips().FindIndex(mv => mv.Id == _scFile.GetExports()[exportIndex].GetDataObject().Id)];
+                                }
+                                else
+                                {
+                                    movieClipData.SetId(maxMovieClipId);
+                                    movieClipData.SetOffset(lastMovieClipOffset * -1);
+                                    movieClipData.SetDataType(12);
+                                    movieClipData.setCustomAdded(true);
+                                    movieClipData.SetFramePerSecond(24);
+                                    movieClipData.setExportType(_exportType);
+                                }
+                              
+                                movieClipData.SetFrameCount((short)(movieClipData.GetFrames().Count + 1));
+
+                                if (exportExist && movieClipData.GetShapes().Count == 0)
+                                {
+                                    inputDataDialog shadowIdInput = new inputDataDialog(1);
+                                    shadowIdInput.Text = "Input Shadow Shape ID";
+                                    shadowIdInput.setLabelText("Shadow ID");
+
+                                    while (true)
+                                    {
+                                        DialogResult addShadowPopup = MessageBox.Show("Would you like to add shadow?", "Add Shadow?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                                        if (addShadowPopup == DialogResult.Yes)
+                                        {
+                                            if (shadowIdInput.ShowDialog() == DialogResult.OK)
+                                            {
+                                                int shapeIndex = _scFile.shapeExists(shadowIdInput.inputTextBoxInt);
+                                                if (shapeIndex != -1)
+                                                {
+                                                    movieClipData.AddShape(_scFile.GetShapes()[shapeIndex]);
+                                                    movieClipData.setHasShadow(true);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        else if (addShadowPopup == DialogResult.No)
+                                        {
+                                            break;
+                                        }
+                                    }
+
                                 }
 
                                 movieClipData.AddShape(shapeData);
-                                movieClipData.setCustomAdded(true);
-                                movieClipData.SetFramePerSecond(24);
-                                movieClipData.setExportType(_exportType);
 
                                 ushort[] timelineOffset = new ushort[] { 0, 65535, 65535 };
 
@@ -777,40 +860,64 @@ namespace SCEditor
                                 else if (_exportType == exportType.Animation)
                                 {
                                     movieClipData.setAnimationType(_animationType);
-                                    timelineOffset = new ushort[] { 0, 65535, 65535, 1, 65535, 65535 };
+                                    timelineOffset = movieClipData.timelineArray;
+                                    int timeLineOffsetLength = timelineOffset.Length;
+
+                                    for (int i = 0; i < 2; i++)
+                                    {
+                                        if (movieClipData.hasShadow == true)
+                                        {
+                                            timelineOffset[++timeLineOffsetLength] = 0;
+                                            timelineOffset[++timeLineOffsetLength] = 65535;
+                                            timelineOffset[++timeLineOffsetLength] = 65535;
+                                        }
+
+                                        timelineOffset[++timeLineOffsetLength] = exportExist == true ? (ushort)(movieClipData.GetShapes().Count - 1) : (ushort)0;
+                                        timelineOffset[++timeLineOffsetLength] = 65535;
+                                        timelineOffset[++timeLineOffsetLength] = 65535;
+                                    }
                                 }
 
                                 movieClipData.SetTimelineOffsetCount(timelineOffset.Length / 3);
                                 movieClipData.setTimelineOffsetArray(timelineOffset);
 
-                                // MOVIECLIP FRAME DATA
-                                MovieClipFrame movieClipFrameData = new MovieClipFrame(_scFile);
-
-                                ushort MovieClipFrameId = 1;
-
-                                if (_animationType == animationType.Idle)
+                                for (int i = 0; i < 2; i++)
                                 {
-                                    MovieClipFrameId = 2;
+                                    // MOVIECLIP FRAME DATA
+                                    MovieClipFrame movieClipFrameData = new MovieClipFrame(_scFile);
+
+                                    ushort MovieClipFrameId = 1;
+
+                                    if (_exportType == exportType.Animation)
+                                    {
+                                        MovieClipFrameId = 2;
+                                    }
+
+                                    movieClipFrameData.SetId(MovieClipFrameId);
+                                    movieClipData.AddFrame(movieClipFrameData);
+
+                                    if (_exportType != exportType.Animation)
+                                        break;
                                 }
-
-                                movieClipFrameData.SetId(MovieClipFrameId);
-                                movieClipData.AddFrame(movieClipFrameData);
-
-                                _scFile.AddMovieClip(movieClipData);
-                                _scFile.AddChange(movieClipData);
-                                treeView1.Populate(new List<ScObject>() { movieClipData });
-
+                                
                                 // EXPORT DATA
-                                Export exportData = new Export(_scFile);
-                                exportData.SetId(maxExportId);
-                                exportData.SetExportName(frameName);
-                                exportData.SetDataObject(movieClipData);
-                                exportData.setCustomAdded(true);
+                                if (!exportExist)
+                                {
+                                    Export exportData = new Export(_scFile);
 
-                                _scFile.AddExport(exportData);
-                                _scFile.AddChange(exportData);
-                                treeView1.Populate(new List<ScObject>() { exportData });
+                                    exportData.SetId(maxExportId);
+                                    string exportName = _exportType == exportType.Animation ? frameName.Substring(0, frameName.Length - 4) : frameName;
+                                    exportData.SetExportName(exportName);
+                                    exportData.SetDataObject(movieClipData);
+                                    exportData.setCustomAdded(true);
+
+                                    _scFile.AddMovieClip(movieClipData);
+                                    _scFile.AddExport(exportData);
+                                }
+                                
                             }
+
+
                         }
                         catch (Exception ex)
                         {

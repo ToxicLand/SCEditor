@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,52 +14,68 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            //compress(@"G:\Clash of Clans\Tools\Custom SC Editor\SCEditor Source\src\SCEditor\tests\testcompressed\buildings_tex.sc");
-
+            //decompress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc");
+            compress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc.clone");
             //byte[] test = new byte[] {0xE2, 0x12, 0x00, 0x00 };
             //byte[] test2 = new byte[] { 0x00, 0x10, 0x97, 0x45 };
 
             //Console.WriteLine(BitConverter.ToInt32(test));
             //Console.WriteLine(BitConverter.ToInt32(test2));
 
-            Create32X32Blocks();
+            //Create32X32Blocks();
 
-            Console.WriteLine("Done!");
+            //Console.WriteLine("Done!");
+        }
+
+
+        static void decompress(string file)
+        {
+            Console.WriteLine("Start");
+
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = @"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\x64_Debug\zstd.exe";
+            startInfo.Arguments = $"--decompress \"{file}\" -o \"{file}.clone\"";
+            startInfo.UseShellExecute = false;
+            startInfo.RedirectStandardInput = true;
+
+            try
+            {
+                using (Process proc = Process.Start(startInfo))
+                {
+                    proc.WaitForExit();
+                }
+            }
+            catch
+            {
+                // Log error.
+            }
+
+            Console.WriteLine("Done");
         }
 
         static void compress(string file)
         {
-            byte[] hash;
-            using (var md5 = MD5.Create())
-            {
-                hash = md5.ComputeHash(File.ReadAllBytes(file));
-            }
+            Console.WriteLine("Start");
 
-            using (var input = new FileStream(file, FileMode.Open))
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = @"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\x64_Debug\zstd.exe";
+            startInfo.Arguments = $"--compress \"{file}\" -o \"{file}.clone\" -15";
+            startInfo.UseShellExecute = false;
+            startInfo.RedirectStandardInput = true;
+
+            try
             {
-                using (var output = new FileStream(file + ".c1", FileMode.Create, FileAccess.Write))
+                using (Process proc = Process.Start(startInfo))
                 {
-                    output.Write(Encoding.UTF8.GetBytes("SC"), 0, 2);
-                    output.Write(BitConverter.GetBytes(3).Reverse().ToArray(), 0, 4);
-                    output.Write(BitConverter.GetBytes(hash.Length).Reverse().ToArray(), 0, 4);
-                    output.Write(hash, 0, hash.Length);
-
-                    CompressionOptions compressorOption = new CompressionOptions(CompressionOptions.MaxCompressionLevel);
-
-                    int x = (int)input.Length;
-
-                    using (var compressor = new CompressionStream(output, compressorOption, x))
-                    {
-                        input.CopyTo(compressor);
-                    }
-
-
-                    output.Flush();
-                    output.Dispose();
+                    proc.WaitForExit();
                 }
             }
-                    
-            
+            catch
+            {
+                // Log error.
+            }
+
+            Console.WriteLine("Done");
         }
 
         public static void Create32X32Blocks()

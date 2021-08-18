@@ -103,9 +103,12 @@ namespace SCEditor.ScOld
         private exportType _exportType;
         private iconType _iconType;
         private animationType _animationType;
+        private bool _hasShadow;
         public override ushort Id => _clipId;
         public override List<ScObject> Children => _shapes;
         public List<ScObject> Frames => _frames;
+        public ushort[] timelineArray => _timelineOffsetArray;
+        public bool hasShadow => _hasShadow;
 
         #endregion
 
@@ -658,6 +661,11 @@ namespace SCEditor.ScOld
         public void setTimelineOffsetArray(ushort[] array)
         {
             _timelineOffsetArray = array;
+        }
+
+        public void setHasShadow(bool value)
+        {
+            _hasShadow = value;
         }
 
         #endregion

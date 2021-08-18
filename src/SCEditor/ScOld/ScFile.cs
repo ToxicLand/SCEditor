@@ -658,5 +658,17 @@ namespace SCEditor.ScOld
                 break;
             }
         }
+
+        public int exportExists(string exportName)
+        {
+            int value = this._exports.FindIndex(exp => exp.GetName() == exportName);
+            return value;
+        }
+
+        public int shapeExists(int id)
+        {
+            int value = this._shapes.FindIndex(shp => shp.Id == id);
+            return value;
+        }
     }
 }
