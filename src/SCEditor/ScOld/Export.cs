@@ -248,28 +248,29 @@ namespace SCEditor.ScOld
                                         //double[,] matrixArrayUV = { { polygonUV[0].X, polygonUV[1].X, polygonUV[2].X }, { polygonUV[0].Y, polygonUV[1].Y, polygonUV[2].Y }, { 1, 1, 1 } };
                                         double[,] matrixArrayUV =
                                         {
-                            {
-                                gpuv.PathPoints[0].X, gpuv.PathPoints[1].X, gpuv.PathPoints[2].X
-                            },
-                            {
-                                gpuv.PathPoints[0].Y, gpuv.PathPoints[1].Y, gpuv.PathPoints[2].Y
-                            },
-                            {
-                                1, 1, 1
-                            }
-                        };
+                                            {
+                                                gpuv.PathPoints[0].X, gpuv.PathPoints[1].X, gpuv.PathPoints[2].X
+                                            },
+                                            {
+                                                gpuv.PathPoints[0].Y, gpuv.PathPoints[1].Y, gpuv.PathPoints[2].Y
+                                            },
+                                            {
+                                                1, 1, 1
+                                            }
+                                        };
+
                                         double[,] matrixArrayXY =
                                         {
-                            {
-                                chunk.XY[0].X, chunk.XY[1].X, chunk.XY[2].X
-                            },
-                            {
-                                chunk.XY[0].Y, chunk.XY[1].Y, chunk.XY[2].Y
-                            },
-                            {
-                                1, 1, 1
-                            }
-                        };
+                                            {
+                                                chunk.XY[0].X, chunk.XY[1].X, chunk.XY[2].X
+                                            },
+                                            {
+                                                chunk.XY[0].Y, chunk.XY[1].Y, chunk.XY[2].Y
+                                            },
+                                            {
+                                                1, 1, 1
+                                            }
+                                        };
 
                                         var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
                                         var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);

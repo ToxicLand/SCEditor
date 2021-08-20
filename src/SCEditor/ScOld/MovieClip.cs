@@ -1,12 +1,16 @@
-﻿using SCEditor.Helpers;
+﻿using MathNet.Numerics.LinearAlgebra;
+using SCEditor.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace SCEditor.ScOld
 {
@@ -109,6 +113,7 @@ namespace SCEditor.ScOld
         public List<ScObject> Frames => _frames;
         public ushort[] timelineArray => _timelineOffsetArray;
         public bool hasShadow => _hasShadow;
+        public byte FPS => _framePerSeconds;
 
         #endregion
 
@@ -596,6 +601,192 @@ namespace SCEditor.ScOld
 
             input.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
             _offset = _scFile.GetEofOffset();
+        }
+
+        public override Bitmap Render(RenderingOptions options)
+        {
+            return null;
+        }
+
+        public Bitmap renderAnimation(RenderingOptions options, int frameIndex)
+        {
+            if (timelineArray.Length > 0)
+            {
+                List<ushort> addId = new List<ushort>();
+                List<int> IdValue = new List<int>();
+                for (int i = 0; i < this.timelineArray.Length; i++)
+                {
+                    for (int x = 0; x < 3; x++)
+                    {
+                        if (x == 0)
+                        {
+                            int idx = addId.FindIndex(g => g == this.timelineArray[i]);
+                            if (idx == -1)
+                            {
+                                addId.Add(this.timelineArray[i]);
+                                IdValue.Add(1);
+                            }
+                            else
+                            {
+
+                                IdValue[idx] += 1;
+                            }
+                        }
+
+                        x++; i++;
+                    }
+                }
+
+                if (addId.Count != this.Children.Count || this.timelineArray.Length % 6 != 0 || this.timelineArray.Length / 6 != (this.customAdded == true ? this._frames.Count : (this._frames.Count - 1)))
+                {
+                    MessageBox.Show("MoveClip:Render() ShapeCount does not match timeline count or timeline length is not sets of 6 or total shape count does not match frames count");
+                    return null;
+                }
+
+                List<PointF> A = new List<PointF>();
+                foreach (Shape s in Children)
+                {
+                    PointF[] pointsXY = s.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
+                    A.AddRange(pointsXY.ToArray());
+                }
+
+                using (var xyPath = new GraphicsPath())
+                {
+                    xyPath.AddPolygon(A.ToArray());
+
+                    var xyBound = Rectangle.Round(xyPath.GetBounds());
+
+                    setFrame(frameIndex, options, xyBound);
+
+                    if (frameIndex != 0)
+                    {
+                        ((MovieClipFrame)this.Frames[frameIndex - 1]).setBitmap(null);
+                    }
+
+                    return getFrame(frameIndex);
+                }
+            }
+            return null;
+        }
+
+        public Bitmap getFrame(int frameIndex)
+        {
+            return ((MovieClipFrame)this.Frames[frameIndex]).Bitmap != null ? ((MovieClipFrame)this.Frames[frameIndex]).Bitmap : throw new Exception("getFrame Data is null?");
+        }
+
+        public void setFrame(int frameIndex, RenderingOptions options, Rectangle xyBound)
+        {
+            int timelineIndex = frameIndex * 6;
+
+            var x = xyBound.X;
+            var y = xyBound.Y;
+
+            var width = xyBound.Width;
+            width = width > 0 ? width : 1;
+
+            var height = xyBound.Height;
+            height = height > 0 ? height : 1;
+
+            var finalShape = new Bitmap(width, height);
+
+            List<ScObject> shapesData = new List<ScObject>();
+
+            shapesData.Add((Shape)Children[timelineArray[timelineIndex]]);
+            timelineIndex += 3;
+            shapesData.Add((Shape)Children[timelineArray[timelineIndex]]);
+
+            foreach (Shape shape in shapesData)
+            {
+                foreach (ShapeChunk chunk in shape.Children)
+                {
+                    var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
+                    if (texture != null)
+                    {
+                        Bitmap bitmap = texture.Bitmap;
+                        using (var gpuv = new GraphicsPath())
+                        {
+                            gpuv.AddPolygon(chunk.UV.ToArray());
+
+                            var gxyBound = Rectangle.Round(gpuv.GetBounds());
+
+                            int gpuvWidth = gxyBound.Width;
+                            gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
+
+                            int gpuvHeight = gxyBound.Height;
+                            gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
+
+                            var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
+
+                            var chunkX = gxyBound.X;
+                            var chunkY = gxyBound.Y;
+
+                            using (var g = Graphics.FromImage(shapeChunk))
+                            {
+                                gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
+                                g.SetClip(gpuv);
+                                g.DrawImage(bitmap, -chunkX, -chunkY);
+                            }
+
+                            GraphicsPath gp = new GraphicsPath();
+                            gp.AddPolygon(new[] { new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight) });
+
+                            double[,] matrixArrayUV =
+                            {
+                                            {
+                                                gpuv.PathPoints[0].X, gpuv.PathPoints[1].X, gpuv.PathPoints[2].X
+                                            },
+                                            {
+                                                gpuv.PathPoints[0].Y, gpuv.PathPoints[1].Y, gpuv.PathPoints[2].Y
+                                            },
+                                            {
+                                                1, 1, 1
+                                            }
+                                        };
+
+                            double[,] matrixArrayXY =
+                            {
+                                            {
+                                                chunk.XY[0].X, chunk.XY[1].X, chunk.XY[2].X
+                                            },
+                                            {
+                                                chunk.XY[0].Y, chunk.XY[1].Y, chunk.XY[2].Y
+                                            },
+                                            {
+                                                1, 1, 1
+                                            }
+                                        };
+
+                            var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
+                            var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
+                            var inverseMatrixUV = matrixUV.Inverse();
+                            var transformMatrix = matrixXY * inverseMatrixUV;
+                            var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+
+                            //Perform transformations
+                            gp.Transform(m);
+
+                            using (Graphics g = Graphics.FromImage(finalShape))
+                            {
+                                //Set origin
+                                Matrix originTransform = new Matrix();
+                                originTransform.Translate(-x, -y);
+                                g.Transform = originTransform;
+
+                                g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
+
+                                if (options.ViewPolygons)
+                                {
+                                    gpuv.Transform(m);
+                                    g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                }
+                                g.Flush();
+                            }
+                        }
+                    }
+                }
+            }
+
+            ((MovieClipFrame)this.Frames[frameIndex]).setBitmap(finalShape);
         }
 
         public void SetId(ushort id)

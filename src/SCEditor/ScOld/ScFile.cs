@@ -321,17 +321,17 @@ namespace SCEditor.ScOld
 
                                 if (scCompressionType == "53-43-4C-5A")
                                 {
-                                    Console.WriteLine("LZHAM Compression for " + _textureFile);
+                                    Console.WriteLine("LZHAM Compression for " + Path.GetFileName(_textureFile));
                                     Lzma.Decompress(_textureFile);
                                 }
                                 else if (scCompressionType == "28-B5-2F-FD")
                                 {
-                                    Console.WriteLine("Zstandard Compression for " + _textureFile);
+                                    Console.WriteLine("Zstandard Compression for " + Path.GetFileName(_textureFile));
                                     zstandard.decompress(_textureFile);
                                 }
                                 else
                                 {
-                                    Console.WriteLine("LZMA Compression for " + _textureFile);
+                                    Console.WriteLine("LZMA Compression for " + Path.GetFileName(_textureFile));
                                     Lzma.Decompress(_textureFile);
                                 }
                             }
@@ -394,17 +394,17 @@ namespace SCEditor.ScOld
 
                                 if (scCompressionType == "53-43-4C-5A")
                                 {
-                                    Console.WriteLine("LZHAM Compression for " + _infoFile);
+                                    Console.WriteLine("LZHAM Compression for " + Path.GetFileName(_infoFile));
                                     Lzma.Decompress(_textureFile);
                                 }
                                 else if (scCompressionType == "28-B5-2F-FD")
                                 {
-                                    Console.WriteLine("Zstandard Compression for " + _infoFile);
+                                    Console.WriteLine("Zstandard Compression for " + Path.GetFileName(_infoFile));
                                     zstandard.decompress(_infoFile);
                                 }
                                 else
                                 {
-                                    Console.WriteLine("LZMA Compression for " + _infoFile);
+                                    Console.WriteLine("LZMA Compression for " + Path.GetFileName(_infoFile));
                                     Lzma.Decompress(_infoFile);
                                 }
                             }

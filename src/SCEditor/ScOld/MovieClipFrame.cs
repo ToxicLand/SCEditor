@@ -1,10 +1,14 @@
-﻿namespace SCEditor.ScOld
+﻿using System.Drawing;
+
+namespace SCEditor.ScOld
 {
     public unsafe class MovieClipFrame : ScObject
     {
         private ushort* _timeline;
         private string _name;
         private ScFile _scFile;
+        private Bitmap _frameImage;
+        public override Bitmap Bitmap => _frameImage;
         public MovieClipFrame(ScFile scfile)
         {
             _scFile = scfile;
@@ -28,6 +32,11 @@
         public void SetId(ushort id)
         {
             Id = id;
+        }
+
+        public void setBitmap(Bitmap data)
+        {
+            _frameImage = data;
         }
 
         public string Name => _name;
