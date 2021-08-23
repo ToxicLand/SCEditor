@@ -76,11 +76,12 @@ namespace SCEditor.ScOld
         private long _offset;
         private int _shapeChunkCount;
         private int _shapeChunkVertexCount;
-
+        private Matrix _matrix;
 
         // internal string _shapeType; NOT USED
         public override ushort Id => _shapeId;
         public override List<ScObject> Children => _chunks;
+        public Matrix Matrix => _matrix;
 
         #endregion
 
@@ -191,34 +192,36 @@ namespace SCEditor.ScOld
 
         public override Bitmap Render(RenderingOptions options)
         {
-            /*
-            Console.WriteLine("XY:");
-            foreach(ShapeChunk chunk in m_vChunks)
-            {
-                foreach(var p in chunk.GetPointsXY())
-                {
-                    Console.WriteLine("x: " + p.X + ", y: " + p.Y);
-                }
-                Console.WriteLine("");
-            }
-        
-            foreach (ShapeChunk chunk in m_vChunks)
-            {
-                foreach (var p in chunk.GetPointsUV())
-                {
-                    Console.WriteLine("u: " + p.X + ", u: " + p.Y);
-                }
-                Console.WriteLine("");
-            }
-            */
-
             Console.WriteLine("Rendering image of " + _chunks.Count + " polygons");
-            
-            // Calculate et initialize the final shape size
-            PointF[] pointsXY = _chunks.SelectMany(chunk => ((ShapeChunk) chunk).XY).ToArray();
+
+            List<PointF> A = new List<PointF>();
+
+            if (options.MatrixData != null)
+            {
+                foreach (ShapeChunk chunk in _chunks)
+                {
+                    PointF[] newXY = new PointF[chunk.XY.Length];
+
+                    for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                    {
+                        float xNew = options.MatrixData.Elements[4] + options.MatrixData.Elements[0] * chunk.XY[xyIdx].X + options.MatrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                        float yNew = options.MatrixData.Elements[5] + options.MatrixData.Elements[1] * chunk.XY[xyIdx].X + options.MatrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                        newXY[xyIdx] = new PointF(xNew, yNew);
+                    }
+
+                    A.AddRange(newXY);
+                }
+            }
+            else
+            {
+                PointF[] pointsXY = _chunks.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
+                A.AddRange(pointsXY.ToArray());
+            }
+
             using (var xyPath = new GraphicsPath())
             {
-                xyPath.AddPolygon(pointsXY.ToArray());
+                xyPath.AddPolygon(A.ToArray());
 
                 var xyBound = Rectangle.Round(xyPath.GetBounds());
 
@@ -283,13 +286,31 @@ namespace SCEditor.ScOld
                                 1, 1, 1
                             }
                         };
+
+                        PointF[] newXY = new PointF[chunk.XY.Length];
+
+                        if (options.MatrixData != null)
+                        {
+                            for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                            {
+                                float xNew = options.MatrixData.Elements[4] + options.MatrixData.Elements[0] * chunk.XY[xyIdx].X + options.MatrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                float yNew = options.MatrixData.Elements[5] + options.MatrixData.Elements[1] * chunk.XY[xyIdx].X + options.MatrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                                newXY[xyIdx] = new PointF(xNew, yNew);
+                            }
+                        }
+                        else
+                        {
+                            newXY = chunk.XY;
+                        }
+
                         double[,] matrixArrayXY =
                         {
                             {
-                                chunk.XY[0].X, chunk.XY[1].X, chunk.XY[2].X
+                                newXY[0].X, newXY[1].X, newXY[2].X
                             },
                             {
-                                chunk.XY[0].Y, chunk.XY[1].Y, chunk.XY[2].Y
+                                newXY[0].Y, newXY[1].Y, newXY[2].Y
                             },
                             {
                                 1, 1, 1
@@ -492,6 +513,11 @@ namespace SCEditor.ScOld
         public void SetOffset(long offset)
         {
             _offset = offset;
+        }
+
+        public void setMatrix(Matrix data)
+        {
+            _matrix = data;
         }
 
         public Shape Clone()

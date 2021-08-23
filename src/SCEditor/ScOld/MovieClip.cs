@@ -95,7 +95,6 @@ namespace SCEditor.ScOld
         private ScFile _scFile;
         private long _offset;
         private List<ScObject> _frames;
-        private ushort _childMemoryNeeded;
         private unsafe ushort* _timelineOffset;
         private ushort _timelineChildrenCount;
         private ushort[] _timelineChildrenId;
@@ -197,7 +196,7 @@ namespace SCEditor.ScOld
             _timelineOffset = (ushort*)Marshal.AllocHGlobal(_timelineOffsetCount * sizeof(ushort));
             br.Read(new Span<byte>((byte*)_timelineOffset, _timelineOffsetCount * 2));
 
-            for (int i = 0; i < _frameCount + 1; i++)
+            for (int i = 0; i < _frameCount; i++)
             {
                 _frames.Add(new MovieClipFrame(_scFile));
             }
@@ -263,16 +262,16 @@ namespace SCEditor.ScOld
                     switch (frameTag)
                     {
                         case 0:
-                            MovieClipFrame movieClipFrame = (MovieClipFrame) _frames[_frameCount];
+                            //MovieClipFrame movieClipFrame = (MovieClipFrame) _frames[_frameCount];
 
-                            movieClipFrame.SetTimeline(&this._timelineOffset[timelineOffsetIndex]);
+                            //movieClipFrame.SetTimeline(&this._timelineOffset[timelineOffsetIndex]);
 
-                            if (_frameCount >= 2)
-                            {
-                                maxChildMemoryNeed = System.Math.Max(maxChildMemoryNeed, previousFrame.GetAmountOfChildMemoryNeeded((MovieClipFrame) this._frames[0], GetFrameDataLength(0) / 3, previousFrameId));
-                            }
+                            //if (_frameCount >= 2)
+                            //{
+                            //    maxChildMemoryNeed = System.Math.Max(maxChildMemoryNeed, previousFrame.GetAmountOfChildMemoryNeeded((MovieClipFrame) this._frames[0], GetFrameDataLength(0) / 3, previousFrameId));
+                            //}
 
-                            _childMemoryNeeded = (ushort)maxChildMemoryNeed;
+                            //_childMemoryNeeded = (ushort)maxChildMemoryNeed;
 
                             return _clipId;
 
@@ -354,7 +353,7 @@ namespace SCEditor.ScOld
                 // MovieClip Data { id, fps, framecount }
                 input.Write(BitConverter.GetBytes(_clipId), 0, 2);
                 input.Write(BitConverter.GetBytes(_framePerSeconds), 0, 1);
-                input.Write(BitConverter.GetBytes(_frameCount), 0, 2);
+                input.Write(BitConverter.GetBytes(this.Frames.Count), 0, 2);
                 dataLength += 5;
 
                 // timelineOffset
@@ -637,27 +636,51 @@ namespace SCEditor.ScOld
                     }
                 }
 
-                if (addId.Count != this.Children.Count || this.timelineArray.Length % 6 != 0 || this.timelineArray.Length / 6 != (this.customAdded == true ? this._frames.Count : (this._frames.Count - 1)))
+                if (addId.Count != this.Children.Count || this.timelineArray.Length % 6 != 0 || this.timelineArray.Length / 6 != this._frames.Count)
                 {
                     MessageBox.Show("MoveClip:Render() ShapeCount does not match timeline count or timeline length is not sets of 6 or total shape count does not match frames count");
                     return null;
                 }
 
                 List<PointF> A = new List<PointF>();
-                foreach (Shape s in Children)
+
+                for (int i = 0; i < (timelineArray.Length / 3); i++)
                 {
-                    PointF[] pointsXY = s.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
-                    A.AddRange(pointsXY.ToArray());
+                    Shape shapeToRender = ((Shape)Children[timelineArray[(i * 3)]]);
+                    Matrix matrixData = timelineArray[(i * 3) + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[(i * 3) + 1]] : null;
+                    
+                    if (matrixData != null)
+                    {
+                        foreach (ShapeChunk chunk in shapeToRender.GetChunks())
+                        {
+                            PointF[] newXY = new PointF[chunk.XY.Length];
+
+                            for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                            {
+                                float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                                newXY[xyIdx] = new PointF(xNew, yNew);
+                            }
+
+                            A.AddRange(newXY);
+                        }
+                    }
+                    else
+                    {
+                        PointF[] pointsXY = shapeToRender.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
+                        A.AddRange(pointsXY.ToArray());
+                    }
                 }
 
                 using (var xyPath = new GraphicsPath())
                 {
                     xyPath.AddPolygon(A.ToArray());
-
                     var xyBound = Rectangle.Round(xyPath.GetBounds());
 
                     setFrame(frameIndex, options, xyBound);
 
+                    // REMOVE OLD DATA
                     if (frameIndex != 0)
                     {
                         ((MovieClipFrame)this.Frames[frameIndex - 1]).setBitmap(null);
@@ -689,17 +712,14 @@ namespace SCEditor.ScOld
 
             var finalShape = new Bitmap(width, height);
 
-            List<ScObject> shapesData = new List<ScObject>();
-
-            shapesData.Add((Shape)Children[timelineArray[timelineIndex]]);
-            timelineIndex += 3;
-            shapesData.Add((Shape)Children[timelineArray[timelineIndex]]);
-
-            foreach (Shape shape in shapesData)
+            for (int i = 0; i < 2; i++)
             {
-                foreach (ShapeChunk chunk in shape.Children)
+                Matrix matrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[timelineIndex + 1]] : new Matrix(1, 0, 0, 1, 0, 0);
+
+                foreach (ShapeChunk chunk in ((Shape)Children[timelineArray[timelineIndex]]).Children)
                 {
                     var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
+
                     if (texture != null)
                     {
                         Bitmap bitmap = texture.Bitmap;
@@ -743,13 +763,23 @@ namespace SCEditor.ScOld
                                             }
                                         };
 
+                            PointF[] newXY = new PointF[chunk.XY.Length];
+
+                            for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                            {
+                                float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                                newXY[xyIdx] = new PointF(xNew, yNew);
+                            }
+
                             double[,] matrixArrayXY =
                             {
                                             {
-                                                chunk.XY[0].X, chunk.XY[1].X, chunk.XY[2].X
+                                                newXY[0].X, newXY[1].X, newXY[2].X
                                             },
                                             {
-                                                chunk.XY[0].Y, chunk.XY[1].Y, chunk.XY[2].Y
+                                                newXY[0].Y, newXY[1].Y, newXY[2].Y
                                             },
                                             {
                                                 1, 1, 1
@@ -784,7 +814,10 @@ namespace SCEditor.ScOld
                         }
                     }
                 }
+
+                timelineIndex += 3;
             }
+            
 
             ((MovieClipFrame)this.Frames[frameIndex]).setBitmap(finalShape);
         }

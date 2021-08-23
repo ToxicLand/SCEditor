@@ -561,17 +561,32 @@ namespace SCEditor
                     form.addData();
                     if (form.ShowDialog() == DialogResult.OK)
                     {
-                        List<OriginalData> saveChanges = form._originalData.ToList();
-
-                        foreach (OriginalData data in saveChanges)
+                        if (form.saveAsMatrix != true)
                         {
-                            Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
+                            List<OriginalData> saveChanges = form._originalData.ToList();
 
-                            foreach (ShapeChunk chunkData in shapeData.GetChunks())
+                            foreach (OriginalData data in saveChanges)
                             {
-                                _scFile.AddChange(chunkData);
+                                Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
+
+                                foreach (ShapeChunk chunkData in shapeData.GetChunks())
+                                {
+                                    _scFile.AddChange(chunkData);
+                                }
                             }
                         }
+                        else
+                        {
+                            List<OriginalData> saveChanges = form._originalData.ToList();
+
+                            foreach (OriginalData data in saveChanges)
+                            {
+                                Console.WriteLine($"Saved Matrix with id {_scFile.GetMatrixs().Count} for Shape id {data.shapeId}");
+
+                                _scFile.addMatrix(data.matrixData);
+                                _scFile.addPendingMatrix(data.matrixData);
+                            }
+                        }                     
 
                         Render();
                     }
@@ -1028,7 +1043,7 @@ namespace SCEditor
 
                                 if (exportExist == true && exportIndex != -1)
                                 {
-                                    int changesIdx = _scFile.GetPendingChanges().FindIndex(sco => sco.Id == movieClipData.Id);
+                                    int changesIdx = _scFile.GetPendingChanges().FindIndex(sco => sco.Id == movieClipData.Id && sco.GetDataType() == 1);
 
                                     if (changesIdx != -1)
                                     {

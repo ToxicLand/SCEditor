@@ -169,6 +169,11 @@ namespace SCEditor.ScOld
             _eofTexOffset = offset;
         }
 
+        public void addPendingMatrix(Matrix data)
+        {
+            _pendingMatrixs.Add(data);
+        }
+
         public void SetSofTagsOffset(long offset)
         {
             _sofTagsOffset = offset;

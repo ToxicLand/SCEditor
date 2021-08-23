@@ -181,14 +181,45 @@ namespace SCEditor.ScOld
                 if (Children.Count > 0)
                 {
                     List<PointF> A = new List<PointF>();
-                    foreach (Shape s in Children)
+
+                    // FINAL SIZE WITH MATRIX = POINTS
+                    for (int shapeIndex = 0; shapeIndex < Children.Count; shapeIndex++)
                     {
-                        PointF[] pointsXY = s.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
-                        A.AddRange(pointsXY.ToArray());
-                    }
-                    foreach (PointF p in A)
-                    {
-                        Console.WriteLine("x: " + p.X + ", y: " + p.Y);
+                        Shape shapeToRender = (Shape)Children[shapeIndex];
+                        Matrix matrixData = new Matrix(1, 0, 0, 1, 0, 0);
+
+                        int matrixIdx = -1;
+
+                        if (options.editedMatrixs.Count > 0)
+                        {
+                            matrixIdx = options.editedMatrixs.FindIndex(data => data.shapeId == shapeToRender.Id);
+                        }    
+
+                        if (matrixIdx != -1)
+                        {
+                            matrixData = options.editedMatrixs[matrixIdx].matrixData;
+
+                            foreach (ShapeChunk chunk in shapeToRender.GetChunks())
+                            {
+                                PointF[] newXY = new PointF[chunk.XY.Length];
+
+                                for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                                {
+                                    float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                    float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                                    newXY[xyIdx] = new PointF(xNew, yNew);
+                                }
+
+                                A.AddRange(newXY);
+                            }
+                        }
+                        else
+                        {
+                            PointF[] pointsXY = shapeToRender.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
+                            A.AddRange(pointsXY.ToArray());
+                        }
+
                     }
 
                     using (var xyPath = new GraphicsPath())
@@ -211,6 +242,18 @@ namespace SCEditor.ScOld
 
                         foreach (Shape shape in Children)
                         {
+                            Matrix matrixData = new Matrix(1, 0, 0, 1, 0, 0);
+
+                            int matrixIdx = -1;
+
+                            if (options.editedMatrixs.Count > 0)
+                            {
+                                matrixIdx = options.editedMatrixs.FindIndex(data => data.shapeId == shape.Id);
+                                
+                                if (matrixIdx != -1)
+                                    matrixData = options.editedMatrixs[matrixIdx].matrixData;
+                            }
+
                             foreach (ShapeChunk chunk in shape.Children)
                             {
                                 var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
@@ -259,13 +302,23 @@ namespace SCEditor.ScOld
                                             }
                                         };
 
+                                        PointF[] newXY = new PointF[chunk.XY.Length];
+
+                                        for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                                        {
+                                            float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                            float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                                            newXY[xyIdx] = new PointF(xNew, yNew);
+                                        }
+
                                         double[,] matrixArrayXY =
                                         {
                                             {
-                                                chunk.XY[0].X, chunk.XY[1].X, chunk.XY[2].X
+                                                newXY[0].X, newXY[1].X, newXY[2].X
                                             },
                                             {
-                                                chunk.XY[0].Y, chunk.XY[1].Y, chunk.XY[2].Y
+                                                newXY[0].Y, newXY[1].Y, newXY[2].Y
                                             },
                                             {
                                                 1, 1, 1
@@ -277,15 +330,12 @@ namespace SCEditor.ScOld
                                         var inverseMatrixUV = matrixUV.Inverse();
                                         var transformMatrix = matrixXY * inverseMatrixUV;
                                         var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
-                                        //m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)Math.Round(transformMatrix[0, 2]), (float)Math.Round(transformMatrix[1, 2]));
 
                                         //Perform transformations
                                         gp.Transform(m);
 
                                         using (Graphics g = Graphics.FromImage(finalShape))
                                         {
-                                            //g.InterpolationMode = InterpolationMode.NearestNeighbor;
-                                            //g.PixelOffsetMode = PixelOffsetMode.None;
 
                                             //Set origin
                                             Matrix originTransform = new Matrix();

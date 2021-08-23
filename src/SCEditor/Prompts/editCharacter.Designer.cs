@@ -73,14 +73,18 @@ namespace SCEditor.Prompts
             this.revertButton = new System.Windows.Forms.Button();
             this.scaleFactorTextBox = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
+            this.panel1 = new System.Windows.Forms.Panel();
+            this.editMatrixButton = new System.Windows.Forms.Button();
+            this.timelineEditButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Location = new System.Drawing.Point(242, 12);
+            this.pictureBox1.Location = new System.Drawing.Point(242, 70);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(546, 484);
+            this.pictureBox1.Size = new System.Drawing.Size(546, 426);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
@@ -237,12 +241,48 @@ namespace SCEditor.Prompts
             this.label3.TabIndex = 5;
             this.label3.Text = "Scale Factor";
             // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.timelineEditButton);
+            this.panel1.Controls.Add(this.editMatrixButton);
+            this.panel1.Location = new System.Drawing.Point(242, 12);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(546, 52);
+            this.panel1.TabIndex = 9;
+            // 
+            // editMatrixButton
+            // 
+            this.editMatrixButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
+            this.editMatrixButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.editMatrixButton.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.editMatrixButton.Location = new System.Drawing.Point(0, 0);
+            this.editMatrixButton.Name = "editMatrixButton";
+            this.editMatrixButton.Size = new System.Drawing.Size(104, 37);
+            this.editMatrixButton.TabIndex = 0;
+            this.editMatrixButton.Text = "Edit as Matrix";
+            this.editMatrixButton.UseVisualStyleBackColor = false;
+            this.editMatrixButton.Click += new System.EventHandler(this.editMatrixButton_Click);
+            // 
+            // timelineEditButton
+            // 
+            this.timelineEditButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(36)))), ((int)(((byte)(36)))));
+            this.timelineEditButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.timelineEditButton.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.timelineEditButton.Location = new System.Drawing.Point(111, 1);
+            this.timelineEditButton.Name = "timelineEditButton";
+            this.timelineEditButton.Size = new System.Drawing.Size(129, 36);
+            this.timelineEditButton.TabIndex = 1;
+            this.timelineEditButton.Text = "Edit Timeline Data";
+            this.timelineEditButton.UseVisualStyleBackColor = false;
+            this.timelineEditButton.Click += new System.EventHandler(this.timelineEditButton_Click);
+            // 
             // editCharacter
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
             this.ClientSize = new System.Drawing.Size(800, 558);
+            this.Controls.Add(this.panel1);
             this.Controls.Add(this.scaleFactorTextBox);
             this.Controls.Add(this.revertButton);
             this.Controls.Add(this.saveButton);
@@ -263,6 +303,7 @@ namespace SCEditor.Prompts
             this.Text = "Edit Character";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.editCharacter_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.panel1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -284,5 +325,8 @@ namespace SCEditor.Prompts
         private System.Windows.Forms.Button revertButton;
         private System.Windows.Forms.TextBox scaleFactorTextBox;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Button editMatrixButton;
+        private System.Windows.Forms.Button timelineEditButton;
     }
 }
