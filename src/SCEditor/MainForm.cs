@@ -626,7 +626,7 @@ namespace SCEditor
                                             {
                                                 int index = i * 3;
 
-                                                if (index == shapeIdx)
+                                                if (newArray[index] == (ushort)shapeIdx)
                                                 {
                                                     newArray[index + 1] = (ushort)matrixId;
                                                 }

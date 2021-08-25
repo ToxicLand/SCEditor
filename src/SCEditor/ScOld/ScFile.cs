@@ -307,6 +307,8 @@ namespace SCEditor.ScOld
                     case 99: // ShapeChunk
                         data.Write(input);
                         shapeChunkAdd += 1;
+
+                        
                         break;
 
                     case -256:

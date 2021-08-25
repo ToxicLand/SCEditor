@@ -40,6 +40,7 @@ namespace SCEditor.Prompts
             this.addFrameBeforeSelectedButton = new System.Windows.Forms.Button();
             this.addFrameAfterSelectedButton = new System.Windows.Forms.Button();
             this.deleteSelectedButton = new System.Windows.Forms.Button();
+            this.replaceMultipleShapeDataButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // timelineArrayBox
@@ -64,7 +65,7 @@ namespace SCEditor.Prompts
             // 
             this.saveButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(31)))), ((int)(((byte)(31)))), ((int)(((byte)(31)))));
             this.saveButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveButton.Location = new System.Drawing.Point(345, 207);
+            this.saveButton.Location = new System.Drawing.Point(512, 164);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(84, 33);
             this.saveButton.TabIndex = 2;
@@ -76,16 +77,16 @@ namespace SCEditor.Prompts
             // 
             this.timelineDataBox.FormattingEnabled = true;
             this.timelineDataBox.ItemHeight = 15;
-            this.timelineDataBox.Location = new System.Drawing.Point(12, 146);
+            this.timelineDataBox.Location = new System.Drawing.Point(216, 88);
             this.timelineDataBox.Name = "timelineDataBox";
-            this.timelineDataBox.Size = new System.Drawing.Size(170, 94);
+            this.timelineDataBox.Size = new System.Drawing.Size(170, 109);
             this.timelineDataBox.TabIndex = 3;
             this.timelineDataBox.SelectedIndexChanged += new System.EventHandler(this.timelineDataBox_SelectedIndexChanged);
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(12, 128);
+            this.label2.Location = new System.Drawing.Point(216, 70);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(82, 15);
             this.label2.TabIndex = 1;
@@ -94,16 +95,16 @@ namespace SCEditor.Prompts
             // dataTypeTextBox
             // 
             this.dataTypeTextBox.Enabled = false;
-            this.dataTypeTextBox.Location = new System.Drawing.Point(217, 89);
+            this.dataTypeTextBox.Location = new System.Drawing.Point(412, 89);
             this.dataTypeTextBox.Name = "dataTypeTextBox";
-            this.dataTypeTextBox.Size = new System.Drawing.Size(141, 23);
+            this.dataTypeTextBox.Size = new System.Drawing.Size(124, 23);
             this.dataTypeTextBox.TabIndex = 4;
             this.dataTypeTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.dataTypeTextBox_KeyDown);
             // 
             // editDataTypeLabel
             // 
             this.editDataTypeLabel.AutoSize = true;
-            this.editDataTypeLabel.Location = new System.Drawing.Point(217, 71);
+            this.editDataTypeLabel.Location = new System.Drawing.Point(412, 71);
             this.editDataTypeLabel.Name = "editDataTypeLabel";
             this.editDataTypeLabel.Size = new System.Drawing.Size(80, 15);
             this.editDataTypeLabel.TabIndex = 5;
@@ -114,10 +115,10 @@ namespace SCEditor.Prompts
             this.dataTypeEditSubmitButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(51)))), ((int)(((byte)(51)))));
             this.dataTypeEditSubmitButton.Enabled = false;
             this.dataTypeEditSubmitButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.dataTypeEditSubmitButton.Location = new System.Drawing.Point(332, 88);
+            this.dataTypeEditSubmitButton.Location = new System.Drawing.Point(527, 88);
             this.dataTypeEditSubmitButton.Margin = new System.Windows.Forms.Padding(1);
             this.dataTypeEditSubmitButton.Name = "dataTypeEditSubmitButton";
-            this.dataTypeEditSubmitButton.Size = new System.Drawing.Size(86, 24);
+            this.dataTypeEditSubmitButton.Size = new System.Drawing.Size(69, 24);
             this.dataTypeEditSubmitButton.TabIndex = 6;
             this.dataTypeEditSubmitButton.Text = "Change";
             this.dataTypeEditSubmitButton.UseVisualStyleBackColor = false;
@@ -159,13 +160,25 @@ namespace SCEditor.Prompts
             this.deleteSelectedButton.UseVisualStyleBackColor = true;
             this.deleteSelectedButton.Click += new System.EventHandler(this.deleteSelectedButton_Click);
             // 
+            // replaceMultipleShapeDataButton
+            // 
+            this.replaceMultipleShapeDataButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.replaceMultipleShapeDataButton.Location = new System.Drawing.Point(447, 12);
+            this.replaceMultipleShapeDataButton.Name = "replaceMultipleShapeDataButton";
+            this.replaceMultipleShapeDataButton.Size = new System.Drawing.Size(149, 34);
+            this.replaceMultipleShapeDataButton.TabIndex = 8;
+            this.replaceMultipleShapeDataButton.Text = "Replace Shape Data";
+            this.replaceMultipleShapeDataButton.UseVisualStyleBackColor = true;
+            this.replaceMultipleShapeDataButton.Click += new System.EventHandler(this.replaceMultipleShapeDataButton_Click);
+            // 
             // timelineEditDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
-            this.ClientSize = new System.Drawing.Size(448, 255);
+            this.ClientSize = new System.Drawing.Size(618, 217);
             this.Controls.Add(this.addFrameAfterSelectedButton);
+            this.Controls.Add(this.replaceMultipleShapeDataButton);
             this.Controls.Add(this.deleteSelectedButton);
             this.Controls.Add(this.addFrameBeforeSelectedButton);
             this.Controls.Add(this.dataTypeEditSubmitButton);
@@ -200,5 +213,6 @@ namespace SCEditor.Prompts
         private System.Windows.Forms.Button addFrameBeforeSelectedButton;
         private System.Windows.Forms.Button addFrameAfterSelectedButton;
         private System.Windows.Forms.Button deleteSelectedButton;
+        private System.Windows.Forms.Button replaceMultipleShapeDataButton;
     }
 }

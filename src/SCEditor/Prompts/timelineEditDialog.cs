@@ -37,7 +37,7 @@ namespace SCEditor.Prompts
             {
                 timelineArrayBox.Items.Add(i + " | Shape " + _timelineArray[i * 6] + "," + _timelineArray[(i * 6) + 3]);
             }
-            
+
         }
 
         public void addItemDataToBox()
@@ -131,7 +131,7 @@ namespace SCEditor.Prompts
                     {
                         _timelineArray[(timelineArrayBox.SelectedIndex * 6) + timelineDataBox.SelectedIndex] = (ushort)newValue;
                     }
-                } 
+                }
                 else if (timelineDataBox.SelectedIndex == 1 || timelineDataBox.SelectedIndex == 4)
                 {
                     if (newValue >= _scfile.GetMatrixs().Count && newValue != 65535)
@@ -257,6 +257,66 @@ namespace SCEditor.Prompts
 
             _isEdited = true;
             refreshMenu();
+        }
+
+        private void replaceMultipleShapeDataButton_Click(object sender, EventArgs e)
+        {
+            int changes = 0;
+            
+            using (inputDataDialog form = new inputDataDialog(1))
+            {
+                form.setLabelText("Enter Shape ID:");
+
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    int? shapeIndex = form.inputTextBoxInt;
+
+                    if (shapeIndex != null)
+                    {
+                        shapeIndex = form.inputTextBoxInt;
+
+                        if (shapeIndex >= _data.Children.Count)
+                        {
+                            MessageBox.Show($"Shape with specified ID {shapeIndex} not found.");
+                            return;
+                        }
+
+                        using (inputDataDialog matrixForm = new inputDataDialog(1))
+                        {
+                            matrixForm.setLabelText("Enter Matrix ID:");
+
+                            if (matrixForm.ShowDialog() == DialogResult.OK)
+                            {
+                                int? matrixId = matrixForm.inputTextBoxInt;
+
+                                if (matrixId != null)
+                                {
+                                    if (matrixId >= _scfile.GetMatrixs().Count)
+                                    {
+                                        MessageBox.Show($"Matrix with specified ID {matrixId} not found.");
+                                        return;
+                                    }
+
+                                    for (int i = 0; i < _timelineArray.Length / 3; i++)
+                                    {
+                                        if (_timelineArray[i * 3] == shapeIndex)
+                                        {
+                                            _timelineArray[(i * 3) + 1] = (ushort)matrixId;
+
+                                            changes++;
+                                        }
+                                    }
+
+                                    if (changes > 0)
+                                        MessageBox.Show($"Successfully changed {changes} matrix with id {matrixId} for shape index {shapeIndex}.", "Matrix Replaced");
+                                    else
+                                        MessageBox.Show($"No changes for shape index {shapeIndex}.", "No changes");
+                                }  
+                            }
+                        }
+                    }
+                }
+            } 
         }
     }
 }
