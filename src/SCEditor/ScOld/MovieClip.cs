@@ -106,6 +106,7 @@ namespace SCEditor.ScOld
         private exportType _exportType;
         private iconType _iconType;
         private animationType _animationType;
+        private uint _length;
         private bool _hasShadow;
         public override ushort Id => _clipId;
         public override List<ScObject> Children => _shapes;
@@ -165,11 +166,12 @@ namespace SCEditor.ScOld
             return exportResult;
         }
 
-        public unsafe override ushort ReadMV(BinaryReader br, string packetId)
+        public unsafe override ushort ReadMV(BinaryReader br, string packetId, uint length)
         {
             _clipId = br.ReadUInt16();
             _framePerSeconds = br.ReadByte();
             _frameCount = br.ReadInt16();
+            _length = length;
 
             if (packetId == "0E")
             {
@@ -596,10 +598,53 @@ namespace SCEditor.ScOld
                         }
                     }
                 }
+                else if (_offset > 0) 
+                {
+                    input.Seek(0, SeekOrigin.Begin);
+
+                    _length = (uint)((_length - ((_frameCount * 6) * 2)) + _timelineOffsetArray.Length);
+
+                    using (MemoryStream finalData = new MemoryStream())
+                    {
+                        byte[] beforeData = new byte[_offset + 8];
+                        input.Read(beforeData, 0, beforeData.Length);
+                        finalData.Write(beforeData, 0, beforeData.Length);
+
+                        finalData.Seek(-7, SeekOrigin.Current);
+                        finalData.Write(BitConverter.GetBytes(_length), 0, 4);
+                        finalData.Seek(3, SeekOrigin.Current);
+
+                        finalData.Write(BitConverter.GetBytes((short)_frames.Count),0,2);
+                        finalData.Write(BitConverter.GetBytes(_timelineOffsetArray.Length / 3), 0, 4);
+
+                        for (int i = 0; i < _timelineOffsetArray.Length; i++)
+                        {
+                            finalData.Write(BitConverter.GetBytes(_timelineOffsetArray[i]),0,2);
+                        }
+
+                        input.Seek((((_frameCount * 6) * 2) + 6), SeekOrigin.Current);
+
+                        _frameCount = (short)_frames.Count;
+                        _timelineOffsetCount = _frameCount * 2;
+
+                        byte[] afterData = new byte[input.Length - input.Position];
+                        input.Read(afterData, 0, afterData.Length);
+                        finalData.Write(afterData, 0, afterData.Length);
+
+                        input.Seek(0, SeekOrigin.Begin);
+                        finalData.Seek(0, SeekOrigin.Begin);
+                        finalData.CopyTo(input);
+                    }
+
+                    _scFile.SetEofOffset(input.Length - 5);
+                }
             }
 
-            input.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
-            _offset = _scFile.GetEofOffset();
+            if (_offset < 0 || customAdded == true)
+            {
+                input.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
+                _offset = _scFile.GetEofOffset();
+            }
         }
 
         public override Bitmap Render(RenderingOptions options)

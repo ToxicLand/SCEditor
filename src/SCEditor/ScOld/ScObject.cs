@@ -74,7 +74,7 @@ namespace SCEditor.ScOld
             // Space
         }
 
-        public virtual ushort ReadMV(BinaryReader br, string id)
+        public virtual ushort ReadMV(BinaryReader br, string id, uint length)
         {
             return Id;
         }

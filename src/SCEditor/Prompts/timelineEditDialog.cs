@@ -17,6 +17,9 @@ namespace SCEditor.Prompts
         private ScFile _scfile;
         private ScObject _data;
         private ScObject[] _frames;
+        private bool _isEdited;
+        public ushort[] timelineArray => _timelineArray;
+        public ScObject[] frames => _frames;
         public timelineEditDialog(ScFile file, ScObject data)
         {
             InitializeComponent();
@@ -25,6 +28,7 @@ namespace SCEditor.Prompts
             _data = data;
             _timelineArray = (ushort[])((MovieClip)_data).timelineArray.Clone();
             _frames = (ScObject[])((MovieClip)_data).Frames.ToArray().Clone();
+            _isEdited = false;
         }
 
         public void addItemsToBox()
@@ -58,17 +62,12 @@ namespace SCEditor.Prompts
 
         private void saveButton_Click(object sender, EventArgs e)
         {
-            if (_timelineArray != ((MovieClip)_data).timelineArray)
+            if (_isEdited)
             {
                 DialogResult saveChanges = MessageBox.Show("Would you like to save changes?", "Save Changes?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
 
                 if (saveChanges == DialogResult.Yes)
                 {
-                    if (_timelineArray.Length != ((MovieClip)_data).timelineArray.Length)
-                        ((MovieClip)_data).SetFrames(_frames.ToList());
-
-                    ((MovieClip)_data).setTimelineOffsetArray(_timelineArray);
-
                     this.DialogResult = DialogResult.OK;
                     Close();
                 }
@@ -155,6 +154,7 @@ namespace SCEditor.Prompts
                     throw new Exception("Not possible");
                 }
 
+                _isEdited = true;
                 refreshMenu();
             }
         }
@@ -172,9 +172,9 @@ namespace SCEditor.Prompts
 
         private void timelineEditDialog_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_timelineArray != ((MovieClip)_data).timelineArray)
+            if (_isEdited && this.DialogResult != DialogResult.OK)
             {
-                DialogResult closeForm = MessageBox.Show("There are unsaved changed. Are you sure you want to close without saving?", "Unsaved Changes", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+                DialogResult closeForm = MessageBox.Show("There are unsaved changes. Are you sure you want to close without saving?", "Unsaved Changes", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
 
                 if (closeForm != DialogResult.Yes)
                 {
@@ -233,6 +233,7 @@ namespace SCEditor.Prompts
             List<ScObject> newFramesList = new List<ScObject>(_frames.ToList());
             newFramesList.Add(data);
             _frames = newFramesList.ToArray();
+            _isEdited = true;
         }
 
         private void deleteSelectedButton_Click(object sender, EventArgs e)
@@ -254,6 +255,7 @@ namespace SCEditor.Prompts
             newFramesList.RemoveAt(0);
             _frames = newFramesList.ToArray();
 
+            _isEdited = true;
             refreshMenu();
         }
     }

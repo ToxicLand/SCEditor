@@ -209,6 +209,14 @@ namespace SCEditor.Prompts
                         float scaleDown = scaleFactor > 1 ? 1 / scaleFactor : 1 - scaleFactor;
                         data.matrixData.Scale(scaleDown, scaleDown);
                         break;
+
+                    case editType.AngleAntiClockWise:
+                        data.matrixData.Rotate(-scaleFactor);
+                        break;
+
+                    case editType.AngleClockWise:
+                        data.matrixData.Rotate(scaleFactor);
+                        break;
                 }
             }
             else
@@ -246,6 +254,14 @@ namespace SCEditor.Prompts
                                 xyData[i].X -= xyData[i].X * scaleFactor;
                                 xyData[i].Y -= xyData[i].Y * scaleFactor;
                                 break;
+
+                            case editType.AngleAntiClockWise:
+                                // TODO
+                                break;
+
+                            case editType.AngleClockWise:
+                                // TODO
+                                break;
                         }
                     }
                 }
@@ -278,6 +294,8 @@ namespace SCEditor.Prompts
                     editCharacterButtonRight.Enabled = true;
                     editCharacterButtonSizeDecrease.Enabled = true;
                     editCharacterButtonSizeIncrease.Enabled = true;
+                    rotateAntiClockWiseButton.Enabled = true;
+                    rotateClockWiseButton.Enabled = true;
                 }
             }
             else
@@ -288,6 +306,8 @@ namespace SCEditor.Prompts
                 editCharacterButtonRight.Enabled = false;
                 editCharacterButtonSizeDecrease.Enabled = false;
                 editCharacterButtonSizeIncrease.Enabled = false;
+                rotateAntiClockWiseButton.Enabled = false;
+                rotateClockWiseButton.Enabled = false;
             }
 
             pictureBox1.Image = null;
@@ -421,6 +441,16 @@ namespace SCEditor.Prompts
             editData(editType.PositionDown);
         }
 
+        private void rotateAntiClockWiseButton_Click(object sender, EventArgs e)
+        {
+            editData(editType.AngleAntiClockWise);
+        }
+
+        private void rotateClockWiseButton_Click(object sender, EventArgs e)
+        {
+            editData(editType.AngleClockWise);
+        }
+
         private void button1_Click(object sender, EventArgs e)
         {
             if (_originalData.Count > 0)
@@ -442,7 +472,9 @@ namespace SCEditor.Prompts
             PositionUp,
             PositionDown,
             PositionLeft,
-            PositionRight
+            PositionRight,
+            AngleClockWise,
+            AngleAntiClockWise
         }
 
         private void scaleFactorTextBox_TextChanged(object sender, EventArgs e)
@@ -736,33 +768,6 @@ namespace SCEditor.Prompts
             _saveAsMatrix = !_saveAsMatrix;
         }
 
-        private void timelineEditButton_Click(object sender, EventArgs e)
-        {
-            ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
-
-            if (data != null)
-            {
-                if (data.GetDataType() == 7)
-                {
-                    data = data.GetDataObject();
-
-                    using (timelineEditDialog form = new timelineEditDialog(_scFile, data))
-                    {
-                        //form.setTimelineArray(((MovieClip)data).timelineArray);
-                        form.addItemsToBox();
-
-                        if (form.ShowDialog() == DialogResult.OK)
-                        {
-                            // OK
-                        }
-                        else
-                        {
-
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public class OriginalData

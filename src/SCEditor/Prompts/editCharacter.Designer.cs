@@ -75,16 +75,18 @@ namespace SCEditor.Prompts
             this.label3 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
             this.editMatrixButton = new System.Windows.Forms.Button();
-            this.timelineEditButton = new System.Windows.Forms.Button();
+            this.rotateAntiClockWiseButton = new System.Windows.Forms.Button();
+            this.rotateClockWiseButton = new System.Windows.Forms.Button();
+            this.label4 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Location = new System.Drawing.Point(242, 70);
+            this.pictureBox1.Location = new System.Drawing.Point(242, 60);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(546, 426);
+            this.pictureBox1.Size = new System.Drawing.Size(546, 396);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
@@ -200,7 +202,7 @@ namespace SCEditor.Prompts
             this.saveButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.saveButton.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.saveButton.ForeColor = System.Drawing.Color.LawnGreen;
-            this.saveButton.Location = new System.Drawing.Point(695, 515);
+            this.saveButton.Location = new System.Drawing.Point(695, 485);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(93, 31);
             this.saveButton.TabIndex = 6;
@@ -213,7 +215,7 @@ namespace SCEditor.Prompts
             this.revertButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.revertButton.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.revertButton.ForeColor = System.Drawing.Color.LightCoral;
-            this.revertButton.Location = new System.Drawing.Point(552, 515);
+            this.revertButton.Location = new System.Drawing.Point(552, 485);
             this.revertButton.Name = "revertButton";
             this.revertButton.Size = new System.Drawing.Size(93, 31);
             this.revertButton.TabIndex = 7;
@@ -223,7 +225,7 @@ namespace SCEditor.Prompts
             // 
             // scaleFactorTextBox
             // 
-            this.scaleFactorTextBox.Location = new System.Drawing.Point(74, 473);
+            this.scaleFactorTextBox.Location = new System.Drawing.Point(258, 492);
             this.scaleFactorTextBox.Name = "scaleFactorTextBox";
             this.scaleFactorTextBox.Size = new System.Drawing.Size(100, 23);
             this.scaleFactorTextBox.TabIndex = 8;
@@ -235,7 +237,7 @@ namespace SCEditor.Prompts
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label3.Location = new System.Drawing.Point(81, 451);
+            this.label3.Location = new System.Drawing.Point(265, 470);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(81, 19);
             this.label3.TabIndex = 5;
@@ -243,11 +245,10 @@ namespace SCEditor.Prompts
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.timelineEditButton);
             this.panel1.Controls.Add(this.editMatrixButton);
             this.panel1.Location = new System.Drawing.Point(242, 12);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(546, 52);
+            this.panel1.Size = new System.Drawing.Size(546, 42);
             this.panel1.TabIndex = 9;
             // 
             // editMatrixButton
@@ -263,32 +264,56 @@ namespace SCEditor.Prompts
             this.editMatrixButton.UseVisualStyleBackColor = false;
             this.editMatrixButton.Click += new System.EventHandler(this.editMatrixButton_Click);
             // 
-            // timelineEditButton
+            // rotateAntiClockWiseButton
             // 
-            this.timelineEditButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(36)))), ((int)(((byte)(36)))));
-            this.timelineEditButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.timelineEditButton.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.timelineEditButton.Location = new System.Drawing.Point(111, 1);
-            this.timelineEditButton.Name = "timelineEditButton";
-            this.timelineEditButton.Size = new System.Drawing.Size(129, 36);
-            this.timelineEditButton.TabIndex = 1;
-            this.timelineEditButton.Text = "Edit Timeline Data";
-            this.timelineEditButton.UseVisualStyleBackColor = false;
-            this.timelineEditButton.Click += new System.EventHandler(this.timelineEditButton_Click);
+            this.rotateAntiClockWiseButton.Enabled = false;
+            this.rotateAntiClockWiseButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.rotateAntiClockWiseButton.Location = new System.Drawing.Point(30, 485);
+            this.rotateAntiClockWiseButton.Name = "rotateAntiClockWiseButton";
+            this.rotateAntiClockWiseButton.Size = new System.Drawing.Size(75, 31);
+            this.rotateAntiClockWiseButton.TabIndex = 3;
+            this.rotateAntiClockWiseButton.Text = "Anti-CW";
+            this.rotateAntiClockWiseButton.UseVisualStyleBackColor = true;
+            this.rotateAntiClockWiseButton.Click += new System.EventHandler(this.rotateAntiClockWiseButton_Click);
+            // 
+            // rotateClockWiseButton
+            // 
+            this.rotateClockWiseButton.Enabled = false;
+            this.rotateClockWiseButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.rotateClockWiseButton.Location = new System.Drawing.Point(140, 485);
+            this.rotateClockWiseButton.Name = "rotateClockWiseButton";
+            this.rotateClockWiseButton.Size = new System.Drawing.Size(75, 31);
+            this.rotateClockWiseButton.TabIndex = 4;
+            this.rotateClockWiseButton.Text = "Clockwise";
+            this.rotateClockWiseButton.UseVisualStyleBackColor = true;
+            this.rotateClockWiseButton.Click += new System.EventHandler(this.rotateClockWiseButton_Click);
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label4.Location = new System.Drawing.Point(91, 461);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(49, 19);
+            this.label4.TabIndex = 5;
+            this.label4.Text = "Rotate";
             // 
             // editCharacter
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
-            this.ClientSize = new System.Drawing.Size(800, 558);
+            this.ClientSize = new System.Drawing.Size(800, 527);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.scaleFactorTextBox);
             this.Controls.Add(this.revertButton);
             this.Controls.Add(this.saveButton);
+            this.Controls.Add(this.label4);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label3);
+            this.Controls.Add(this.rotateClockWiseButton);
             this.Controls.Add(this.label1);
+            this.Controls.Add(this.rotateAntiClockWiseButton);
             this.Controls.Add(this.editCharacterButtonSizeDecrease);
             this.Controls.Add(this.editCharacterButtonSizeIncrease);
             this.Controls.Add(this.treeView1);
@@ -327,6 +352,8 @@ namespace SCEditor.Prompts
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Button editMatrixButton;
-        private System.Windows.Forms.Button timelineEditButton;
+        internal System.Windows.Forms.Button rotateAntiClockWiseButton;
+        internal System.Windows.Forms.Button rotateClockWiseButton;
+        private System.Windows.Forms.Label label4;
     }
 }

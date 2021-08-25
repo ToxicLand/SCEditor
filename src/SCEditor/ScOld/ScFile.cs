@@ -189,6 +189,7 @@ namespace SCEditor.ScOld
             int exportAdd = 0;
             int textureAdd = 0;
             int movieClipAdd = 0;
+            int movieClipEdits = 0;
             int shapeAdd = 0;
             int shapeChunkAdd = 0;
             int matrixAdd = 0;
@@ -211,8 +212,15 @@ namespace SCEditor.ScOld
 
                     case 1: // MovieClip
                         data.Write(input);
-                        movieClipAdd += 1;
-                        goto case -256;
+
+                        if (data.customAdded == true)
+                        {
+                            movieClipAdd += 1;
+                            goto case -256;
+                        }
+
+                        movieClipEdits += 1;
+                        break;
 
                     case 0: // Shape
                         data.Write(input);
@@ -297,7 +305,7 @@ namespace SCEditor.ScOld
             input.Read(new byte[2], 0, 2); // SKIP
             input.Write(BitConverter.GetBytes((ushort)this._matrixCount + matrixAdd), 0, 2);
 
-            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd}");
+            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd}");
         }
 
         public void Load()
@@ -494,7 +502,8 @@ namespace SCEditor.ScOld
                         {
                             case "00": //0
                                 if (_shapeCount != shapeIndex ||
-                                _movieClipCount != movieClipIndex)
+                                _movieClipCount != movieClipIndex || 
+                                _matrixCount != matrixIndex)
                                 {
                                     throw new Exception("Didn't load whole .sc properly.");
                                 }
@@ -508,6 +517,13 @@ namespace SCEditor.ScOld
                                 }
                                 break;
 
+                            case "01":
+                            case "10": //16
+                            case "13": //19
+                            case "1B": //27
+                            case "1C": //28
+                            case "1D": //29
+                            case "22": //34
                             case "18": //24 - not using check
                                 if (tagSize > 6)
                                 {
@@ -529,6 +545,7 @@ namespace SCEditor.ScOld
                                 }
                                 break;
 
+                            case "02":
                             case "12": //18
                                 if (shapeIndex >= _shapeCount)
                                     throw new Exception($"Trying to load too many shapes.\n Index: {shapeIndex} | Count: {_shapeCount}");
@@ -541,22 +558,39 @@ namespace SCEditor.ScOld
                                 shapeIndex += 1;
                                 break;
 
-                            case "23":
-                                goto case "0C";
-
-                            case "0C": //12 = 0C | NEW 35 = 23
+                            case "03":
+                            case "0A": //10
+                            case "0E": //14
+                            case "23": //35
+                            case "0C": //12
                                 if (movieClipIndex >= _movieClipCount)
                                     throw new Exception($"Trying to load too many movieclips.\n Index: {movieClipIndex} | Count: {_movieClipCount}");
 
                                 var movieClip = new MovieClip(this, datatag);
                                 movieClip.SetOffset(offset);
-                                ushort clipId = movieClip.ReadMV(reader, tag);
+                                ushort clipId = movieClip.ReadMV(reader, tag, tagSize);
                                 _movieClips.Add(movieClip);
 
                                 movieClipIndex += 1;
                                 break;
 
-                            case "08": //8 Matrix
+                            case "07":
+                            case "0F": //15
+                            case "14": //20
+                            case "15": //21
+                            case "19": //25
+                            case "21": //33
+                            case "2B": //43
+                            case "2C": //44
+                                if (textFieldIndex >= _textFieldCount)
+                                    throw new Exception("Trying to load too many TextFields from ");
+
+                                reader.ReadBytes(Convert.ToInt32(tagSize)); // TODO
+
+                                textFieldIndex += 1;
+                                break;
+
+                            case "08":
                                 if (matrixIndex >= _matrixCount)
                                     throw new Exception($"Trying to load too many shapes.\n Index: {shapeIndex} | Count: {_shapeCount}");
 
@@ -574,7 +608,7 @@ namespace SCEditor.ScOld
                                 matrixIndex++;
                                 break;
 
-                            case "09": //9 Colors Transform
+                            case "09":
                                 var ra = reader.ReadByte();
                                 var ga = reader.ReadByte();
                                 var ba = reader.ReadByte();
@@ -585,7 +619,7 @@ namespace SCEditor.ScOld
                                 this._colors.Add(new Tuple<Color, byte, Color>(Color.FromArgb(ra, ga, ba), am, Color.FromArgb(rm, gm, bm)));
                                 break;
 
-                            case "0D": // 13
+                            case "0D": // 13 
                                 reader.ReadInt32();
                                 throw new Exception("TAG_TIMELINE_INDEXES no longer in use");
 
@@ -593,17 +627,13 @@ namespace SCEditor.ScOld
                                 // TODO
                                 break;
 
-                            case "1E": // 30
-                                // CUSTOM TEXFILE
+                            case "1A": //26
+                                canLoadTex = false;
+                                _texDependency = true;
                                 break;
 
-                            case "2C": // 30
-                                if (textFieldIndex >= _textFieldCount)
-                                    throw new Exception("Trying to load too many TextFields from ");
-
-                                reader.ReadBytes(Convert.ToInt32(tagSize)); // TODO
-
-                                textFieldIndex += 1;
+                            case "1E": // 30
+                                // CUSTOM TEXFILE
                                 break;
 
                             case "20": // 32
@@ -621,22 +651,37 @@ namespace SCEditor.ScOld
                                 //TODO
                                 break;
 
+                            case "24": // 36
+                                if (matrixIndex >= _matrixCount)
+                                    throw new Exception($"Trying to load too many shapes.\n Index: {shapeIndex} | Count: {_shapeCount}");
+
+                                float[] Points2 = new float[6];
+                                for (int Index = 0; Index < 6; Index++)
+                                {
+                                    Points2[Index] = reader.ReadInt32();
+                                }
+                                Matrix _Matrix2 = new Matrix(Points2[0] / 65535f, Points2[1] / 65535f, Points2[2] / 65535f,
+                                    Points2[3] / 65535f, Points2[4] / 20f, Points2[5] / 20f);
+                                this._matrixs.Add(_Matrix2);
+
+                                _eofMatrixOffset = reader.BaseStream.Position;
+
+                                matrixIndex++;
+                                break;
+
                             case "25": //37
                                 ushort movieClipModifierCount = reader.ReadUInt16();
 
                                 for (int i = 0; i < movieClipModifierCount; i++)
                                 {
-                                    this._movieClipsModifier.Add(new MovieClipModifierOriginal(this));
+                                    this._movieClipsModifier.Add(new MovieClipModifier(this));
                                 }
                                 break;
 
-                            case "1A": //26
-                                canLoadTex = false;
-                                _texDependency = true;
-                                break;
-
+                            case "26": //38
+                            case "27": //39
                             case "28": //40
-                                MovieClipModifierOriginal mcmo = new MovieClipModifierOriginal(this);
+                                MovieClipModifier mcmo = new MovieClipModifier(this);
                                 mcmo.Read(reader, tag);
 
                                 this._movieClipsModifier[movieClipModifierIndex++] = mcmo;

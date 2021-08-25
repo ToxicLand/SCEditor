@@ -608,6 +608,47 @@ namespace SCEditor
             }
         }
 
+        private void editTimelineToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
+
+            if (data == null)
+                return;
+
+            if (data.GetDataType() != 7 && data.GetDataType() != 1)
+                return;
+
+            foreach (ScObject check in _scFile.GetPendingChanges())
+            {
+                if (check.Id == data.Id)
+                {
+                    MessageBox.Show("Data you are trying to edit is already in pending changes. Please save before trying to use this function", "Save before proceeding");
+                    return;
+                }
+            }
+
+            if (data.GetDataType() == 7)
+                data = data.GetDataObject();
+
+            using (timelineEditDialog form = new timelineEditDialog(_scFile, data))
+            {
+                form.addItemsToBox();
+
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    if (form.timelineArray.Length != ((MovieClip)data).timelineArray.Length)
+                        ((MovieClip)data).SetFrames(form.frames.ToList());
+
+                    ((MovieClip)data).setTimelineOffsetArray(form.timelineArray);
+
+                    _scFile.AddChange(data);
+
+                    Render();
+                }
+            }
+
+        }
+
         private void importExportToolStripMenuItem_Click(object sender, EventArgs e)
         {
             MessageBox.Show("In order to import export names, use TexturePacker by Code&Web and export sprite data as JSON.\nMake sure to import the texture and select the corrosponding one.");
