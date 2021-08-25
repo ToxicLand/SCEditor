@@ -47,7 +47,6 @@ namespace SCEditor.ScOld
         private PointF[] _xy;
         private PointF[] _uv;
         private int _vertexCount;
-        private long _offset;
         private bool _disposed;
 
         public PointF[] XY => _xy;

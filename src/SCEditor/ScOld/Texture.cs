@@ -90,7 +90,6 @@ namespace SCEditor.ScOld
         internal bool _disposed;
         internal ScFile _scFile;
         internal ScImage _image;
-        internal long _offset;
 
         public override Bitmap Bitmap => _image.GetBitmap();
 

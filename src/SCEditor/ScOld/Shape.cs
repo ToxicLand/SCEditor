@@ -73,7 +73,6 @@ namespace SCEditor.ScOld
         private int _length;
         private List<ScObject> _chunks;
         private ScFile _scFile;
-        private long _offset;
         private int _shapeChunkCount;
         private int _shapeChunkVertexCount;
         private Matrix _matrix;

@@ -93,7 +93,6 @@ namespace SCEditor.ScOld
         private byte _framePerSeconds;
         private List<ScObject> _shapes;
         private ScFile _scFile;
-        private long _offset;
         private List<ScObject> _frames;
         private unsafe ushort* _timelineOffset;
         private ushort _timelineChildrenCount;

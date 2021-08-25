@@ -19,7 +19,8 @@ namespace SCEditor.ScOld
         public virtual ushort Id { get; protected set; }
         public virtual bool customAdded { get; set; }
         public virtual Bitmap Bitmap => null;
-
+        public virtual long _offset { get; set; }
+        public virtual long offset => _offset;
         public virtual List<ScObject> Children => new List<ScObject>();
         #endregion
 

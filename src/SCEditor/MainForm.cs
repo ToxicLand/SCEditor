@@ -372,7 +372,7 @@ namespace SCEditor
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (_scFile.GetPendingChanges().Count > 0)
+            if (_scFile.GetPendingChanges().Count > 0 || _scFile.GetPendingMatrixChanges().Count > 0)
             {
                 using (FileStream input = new FileStream(_scFile.GetInfoFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
                 {
@@ -553,11 +553,13 @@ namespace SCEditor
 
         private void toolStripMenuItemEditCharacter_Click(object sender, EventArgs e)
         {
+            ScObject scData = (ScObject)treeView1.SelectedNode?.Tag;
+
             using (editCharacter form = new editCharacter())
             {
-                if (treeView1.SelectedNode?.Tag != null)
+                if (scData != null)
                 {
-                    form.setScData((ScObject)treeView1.SelectedNode.Tag, _scFile);
+                    form.setScData(scData, _scFile);
                     form.addData();
                     if (form.ShowDialog() == DialogResult.OK)
                     {
@@ -579,13 +581,65 @@ namespace SCEditor
                         {
                             List<OriginalData> saveChanges = form._originalData.ToList();
 
+                            DialogResult matrixReplaceAll = MessageBox.Show("Replace all matrix within the chosen export if timeline includes specified edited shape?\nYes to replace all automatically\nNo to ask for each edit\nCancel if you want to edit manually", "Replace Matrix in Timeline", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                            bool matrixEdit = false;
+
+                            ScObject eachData = scData;
+
+                            if (eachData.GetDataType() == 7)
+                                eachData = scData.GetDataObject();
+
                             foreach (OriginalData data in saveChanges)
                             {
-                                Console.WriteLine($"Saved Matrix with id {_scFile.GetMatrixs().Count} for Shape id {data.shapeId}");
+                                int matrixId = _scFile.GetMatrixs().Count;
+                                Console.WriteLine($"Saved Matrix with id {matrixId} for Shape id {data.shapeId}");
 
                                 _scFile.addMatrix(data.matrixData);
                                 _scFile.addPendingMatrix(data.matrixData);
+
+                                if (matrixReplaceAll != DialogResult.Cancel)
+                                {
+                                    bool replaceCurrent = false;
+
+                                    if (matrixReplaceAll == DialogResult.No)
+                                    {
+                                        DialogResult matrixReplace = MessageBox.Show($"Replace edited matrix for all shapes with ID: {data.shapeId}?\nYes to replace matrix for specified shape id\nNo to skip editing matrix for specified shape ID\nCancel to not ask again for any shape edited", $"Replace Matrix in Timeline for Shape {data.shapeId}", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                                        if (matrixReplace == DialogResult.Cancel)
+                                            matrixReplaceAll = DialogResult.Cancel;
+
+                                        replaceCurrent = matrixReplace == DialogResult.Yes ? true : false;    
+                                    }
+
+                                    bool replaceForAll = matrixReplaceAll == DialogResult.Yes ? true : false;
+
+                                    if (replaceForAll || replaceCurrent)
+                                    {
+                                        ushort[] newArray = ((MovieClip)eachData).timelineArray;
+
+                                        int shapeIdx = eachData.Children.FindIndex(shape => shape.Id == data.shapeId);
+
+                                        if (shapeIdx != -1)
+                                        {
+                                            for (int i = 0; i < newArray.Length / 3; i++)
+                                            {
+                                                int index = i * 3;
+
+                                                if (index == shapeIdx)
+                                                {
+                                                    newArray[index + 1] = (ushort)matrixId;
+                                                }
+                                            }
+
+                                            matrixEdit = true;
+                                        }   
+                                    }
+                                } 
                             }
+
+                            if (matrixEdit == true)
+                                _scFile.AddChange(eachData);
                         }                     
 
                         Render();

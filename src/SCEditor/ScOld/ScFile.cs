@@ -7,6 +7,7 @@ using System.Text;
 using System.IO;
 using System.Windows.Forms;
 using SCEditor.Compression;
+using System.Linq;
 
 namespace SCEditor.ScOld
 {
@@ -40,20 +41,22 @@ namespace SCEditor.ScOld
         private ushort _textureCount;
         private int _textFieldCount; 
         private int _matrixCount;
-        private readonly List<ScObject> _textures;
-        private readonly List<ScObject> _shapes;
-        private readonly List<ScObject> _exports;
-        private readonly List<Matrix> _matrixs;
-        private readonly List<Tuple<Color, byte, Color>> _colors;
-        private readonly List<ScObject> _movieClips;
-        private readonly List<ScObject> _pendingChanges;
-        private readonly List<ScObject> _movieClipsModifier;
-        private readonly List<Matrix> _pendingMatrixs;
+        private List<ScObject> _textures;
+        private List<ScObject> _shapes;
+        private List<ScObject> _exports;
+        private List<Matrix> _matrixs;
+        private List<Tuple<Color, byte, Color>> _colors;
+        private List<ScObject> _movieClips;
+        private List<ScObject> _pendingChanges;
+        private List<ScObject> _movieClipsModifier;
+        private List<Matrix> _pendingMatrixs;
 
         private readonly string _infoFile;
         private readonly string _textureFile;
         private long _eofOffset;
         private long _eofMatrixOffset;
+        private long _eofMovieClipOffset;
+        private long _eofShapeOffset;
         private long _eofTexOffset;
         private long _exportStartOffset;
         private long _sofTagsOffset;
@@ -137,6 +140,11 @@ namespace SCEditor.ScOld
         {
             return _pendingChanges;
         }
+
+        public List<Matrix> GetPendingMatrixChanges()
+        {
+            return _pendingMatrixs;
+        }
         public ushort getShapesChunksCount()
         {
             ushort total = 0;
@@ -194,10 +202,63 @@ namespace SCEditor.ScOld
             int shapeChunkAdd = 0;
             int matrixAdd = 0;
 
+            if (_pendingMatrixs.Count > 0)
+            {
+                input.Seek(0, SeekOrigin.Begin);
+
+                using (MemoryStream newData = new MemoryStream())
+                {
+                    long offsetBefore = _eofMatrixOffset;
+
+                    byte[] tillMatrixEndData = new byte[_eofMatrixOffset];
+                    input.Read(tillMatrixEndData, 0, (int)_eofMatrixOffset);
+
+                    newData.Write(tillMatrixEndData, 0, tillMatrixEndData.Length);
+
+                    foreach (Matrix matrix in _pendingMatrixs)
+                    {
+                        newData.WriteByte(8);
+                        newData.Write(BitConverter.GetBytes(24), 0, 4);
+
+                        Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
+                            matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
+
+                        for (int i = 0; i < 6; i++)
+                        {
+                            newData.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
+                        }
+
+                        _eofMatrixOffset = newData.Position;
+
+                        matrixAdd += 1;
+                    }
+
+                    byte[] restData = new byte[input.Length - offsetBefore];
+                    input.Read(restData, 0, restData.Length);
+                    newData.Write(restData, 0, restData.Length);
+
+                    input.Seek(0, SeekOrigin.Begin);
+                    newData.Seek(0, SeekOrigin.Begin);
+                    newData.CopyTo(input);
+                }
+
+                _pendingMatrixs.Clear();
+
+                input.Seek(8, SeekOrigin.Begin);
+                this._matrixCount += matrixAdd;
+                input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
+
+                input.Close();
+                reloadInfoFile();
+                input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            } 
+
             // Flushing depending edits.
             List<ScObject> exports = new List<ScObject>();
-            foreach (ScObject data in _pendingChanges)
+            for (int i = 0; i < _pendingChanges.Count; i++)
             {
+                ScObject data = _pendingChanges[i];
+
                 switch (data.GetDataType())
                 {
                     case 7: // Exports
@@ -216,16 +277,32 @@ namespace SCEditor.ScOld
                         if (data.customAdded == true)
                         {
                             movieClipAdd += 1;
+                            this._movieClipCount += 1;
+                            input.Seek(2, SeekOrigin.Begin);
+                            input.Write(BitConverter.GetBytes(this._movieClipCount), 0, 2);
                             goto case -256;
                         }
 
+                        _pendingChanges.RemoveAt(i);
+                        
+                        input.Close();
+                        reloadInfoFile();
+                        input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
                         movieClipEdits += 1;
                         break;
 
                     case 0: // Shape
                         data.Write(input);
                         shapeAdd += 1;
-                        goto case -256;
+
+                        if (data.customAdded == true)
+                        {
+                            this._shapeCount += 1;
+                            input.Seek(0, SeekOrigin.Begin);
+                            input.Write(BitConverter.GetBytes(this._shapeCount), 0, 2);
+                            goto case -256;
+                        }
+                        break;
 
                     case 99: // ShapeChunk
                         data.Write(input);
@@ -236,7 +313,8 @@ namespace SCEditor.ScOld
                         if (data.GetDataType() == -256)
                             throw new Exception("Datatype equals -256 Save()");
 
-                        this.SetEofOffset(input.Position);
+                        this.SetEofOffset(input.Length);
+                        input.Seek(0, SeekOrigin.End);
                         input.Write(new byte[] { 0, 0, 0, 0, 0 });
                         break;
 
@@ -245,7 +323,12 @@ namespace SCEditor.ScOld
                         break;
                 }
             }
+
             _pendingChanges.Clear();
+
+            input.Close();
+            reloadInfoFile();
+            input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
 
             if (exports.Count > 0)
             {
@@ -255,55 +338,10 @@ namespace SCEditor.ScOld
                 }
             }
 
-            if (_pendingMatrixs.Count > 0)
-            {
-                input.Seek(0, SeekOrigin.Begin);
-
-                using (MemoryStream newData = new MemoryStream())
-                {
-                    byte[] tillMatrixEndData = new byte[_eofMatrixOffset];
-                    input.Read(tillMatrixEndData, 0, (int)_eofMatrixOffset);
-
-                    newData.Write(tillMatrixEndData, 0, tillMatrixEndData.Length);
-
-                    foreach (Matrix matrix in _pendingMatrixs)
-                    {
-                        newData.WriteByte(8);
-                        newData.Write(BitConverter.GetBytes(24), 0, 4);
-
-                        Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
-                            matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
-                        
-                        for (int i = 0; i < 6; i++)
-                        {
-                            newData.Write(BitConverter.GetBytes((int) newMatrix.Elements[i]), 0, 4);
-                        }
-
-                        _eofMatrixOffset = newData.Position;
-
-                        matrixAdd += 1;
-                    }
-
-                    tillMatrixEndData = null;
-
-                    byte[] restData = new byte[input.Length - _eofMatrixOffset];
-                    input.Read(tillMatrixEndData, (int)_eofMatrixOffset, (int) restData.Length);
-
-                    newData.Write(restData, 0, restData.Length);
-
-                    input.Seek(0, SeekOrigin.Begin);
-                    newData.Seek(0, SeekOrigin.Begin);
-                    newData.CopyTo(input);
-                }
-            }
-
             // Saving metadata/header.
-            input.Seek(0, SeekOrigin.Begin);
-            input.Write(BitConverter.GetBytes((ushort)this._shapeCount + shapeAdd), 0, 2);
-            input.Write(BitConverter.GetBytes((ushort)this._movieClipCount + movieClipAdd), 0, 2);
-            input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2); // Add
-            input.Read(new byte[2], 0, 2); // SKIP
-            input.Write(BitConverter.GetBytes((ushort)this._matrixCount + matrixAdd), 0, 2);
+            input.Seek(4, SeekOrigin.Begin);
+            input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2);
+            input.Close();
 
             Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd}");
         }
@@ -311,6 +349,18 @@ namespace SCEditor.ScOld
         public void Load()
         {
             var sw = Stopwatch.StartNew();
+
+            LoadTextureFile();
+            loadInfoFile();
+
+            sw.Stop();
+            Program.Interface.Text = $@"SC Editor :  {Path.GetFileNameWithoutExtension(_textureFile)}";
+            Program.Interface.Update();
+            Console.WriteLine(@"SC File loading finished in {0}ms", sw.Elapsed.TotalMilliseconds);
+        }
+
+        public void LoadTextureFile()
+        {
             while (true)
             {
                 using (var texReader = new BinaryReader(File.OpenRead(_textureFile)))
@@ -382,7 +432,10 @@ namespace SCEditor.ScOld
                 }
                 break;
             }
+        }
 
+        public void loadInfoFile()
+        {
             while (true)
             {
                 using (var reader = new BinaryReader(File.OpenRead(_infoFile)))
@@ -452,7 +505,7 @@ namespace SCEditor.ScOld
                     Console.WriteLine(@"Matrix2x3Count: " + _matrixCount);
                     Console.WriteLine(@"ColorTransformCount: " + colorTransformCount);
 #endif
-                    
+
                     // Reads the Export IDs.
                     for (int i = 0; i < _exportCount; i++)
                     {
@@ -479,10 +532,8 @@ namespace SCEditor.ScOld
                     int textFieldIndex = 0;
                     int matrixIndex = 0;
 
-#pragma warning disable CS0219 // CHECK
-
-                    bool canLoadTex = true;
-                    bool _texDependency = false;
+                    //bool canLoadTex = true;
+                    //bool _texDependency = false;
 
                     _sofTagsOffset = reader.BaseStream.Position;
 
@@ -502,7 +553,7 @@ namespace SCEditor.ScOld
                         {
                             case "00": //0
                                 if (_shapeCount != shapeIndex ||
-                                _movieClipCount != movieClipIndex || 
+                                _movieClipCount != movieClipIndex ||
                                 _matrixCount != matrixIndex)
                                 {
                                     throw new Exception("Didn't load whole .sc properly.");
@@ -555,6 +606,8 @@ namespace SCEditor.ScOld
                                 shape.Read(reader, tag);
                                 this._shapes.Add(shape);
 
+                                _eofShapeOffset = reader.BaseStream.Position;
+
                                 shapeIndex += 1;
                                 break;
 
@@ -570,6 +623,8 @@ namespace SCEditor.ScOld
                                 movieClip.SetOffset(offset);
                                 ushort clipId = movieClip.ReadMV(reader, tag, tagSize);
                                 _movieClips.Add(movieClip);
+
+                                _eofMovieClipOffset = reader.BaseStream.Position;
 
                                 movieClipIndex += 1;
                                 break;
@@ -591,9 +646,6 @@ namespace SCEditor.ScOld
                                 break;
 
                             case "08":
-                                if (matrixIndex >= _matrixCount)
-                                    throw new Exception($"Trying to load too many shapes.\n Index: {shapeIndex} | Count: {_shapeCount}");
-
                                 float[] Points = new float[6];
                                 for (int Index = 0; Index < 6; Index++)
                                 {
@@ -628,8 +680,8 @@ namespace SCEditor.ScOld
                                 break;
 
                             case "1A": //26
-                                canLoadTex = false;
-                                _texDependency = true;
+                                //canLoadTex = false;
+                                //_texDependency = true;
                                 break;
 
                             case "1E": // 30
@@ -651,10 +703,7 @@ namespace SCEditor.ScOld
                                 //TODO
                                 break;
 
-                            case "24": // 36
-                                if (matrixIndex >= _matrixCount)
-                                    throw new Exception($"Trying to load too many shapes.\n Index: {shapeIndex} | Count: {_shapeCount}");
-
+                            case "24":
                                 float[] Points2 = new float[6];
                                 for (int Index = 0; Index < 6; Index++)
                                 {
@@ -700,12 +749,90 @@ namespace SCEditor.ScOld
                     if (_shapes.Count < _shapeCount)
                         Console.WriteLine($"Loaded less shapes than expected.\nSCCount: {_shapeCount} | LoadCount: {_shapes.Count}, IndexCount {shapeIndex}");
 
-                    sw.Stop();
-                    Program.Interface.Text = $@"SC Editor :  {Path.GetFileNameWithoutExtension(_textureFile)}";
-                    Program.Interface.Update();
-                    Console.WriteLine(@"SC File loading finished in {0}ms", sw.Elapsed.TotalMilliseconds);
                 }
                 break;
+            }
+        }
+
+        public void reloadInfoFile()
+        {
+            ScObject[] previousPendingChanges = (ScObject[])_pendingChanges.ToArray().Clone();
+            Matrix[] previousPendingMatrix = (Matrix[])_pendingMatrixs.ToArray().Clone();
+            ScObject[] previousTextureData = (ScObject[])_textures.ToArray().Clone();
+
+            _shapes = new List<ScObject>();
+            _exports = new List<ScObject>();
+            _movieClips = new List<ScObject>();
+            _movieClipsModifier = new List<ScObject>();
+            _pendingChanges = new List<ScObject>();
+            _pendingMatrixs = new List<Matrix>();
+            _matrixs = new List<Matrix>();
+            _colors = new List<Tuple<Color, byte, Color>>();
+            _exportCount = 0;
+            _shapeCount = 0;
+            _movieClipCount = 0;
+            _textFieldCount = 0;
+            _matrixCount = 0;
+            _eofOffset = 0;
+            _eofMatrixOffset = 0;
+            _exportStartOffset = 0;
+            _sofTagsOffset = 0;
+
+            this.loadInfoFile();
+
+            this._textures = new List<ScObject>(previousTextureData.ToList());
+
+            foreach (ScObject pendingData in previousPendingChanges)
+            {
+                int pIndex = -1;
+                int type = pendingData._offset < 0 ? -1 : 1;
+
+                switch (pendingData.GetDataType())
+                {
+                    case 1:
+                        pIndex = _movieClips.FindIndex(mv => mv.Id == pendingData.Id);
+                        if (pIndex != -1)
+                        {
+                            long newOffset = _movieClips[pIndex]._offset;
+                            pendingData._offset = newOffset * type;
+                        }
+                        
+                        if (pendingData.customAdded == true)
+                        {
+                            pendingData._offset = this._eofMovieClipOffset;
+                        }
+                        break;
+
+                    case 7:
+                        pIndex = _exports.FindIndex(mv => mv.Id == pendingData.Id);
+                        if (pIndex != -1)
+                        {
+                            long newOffset = _exports[pIndex]._offset;
+                            pendingData._offset = newOffset * type;
+                        }
+                        break;
+
+                    case 0:
+                        pIndex = _shapes.FindIndex(mv => mv.Id == pendingData.Id);
+                        if (pIndex != -1)
+                        {
+                            long newOffset = _shapes[pIndex]._offset;
+                            pendingData._offset = newOffset * type;
+                        }
+
+                        if (pendingData.customAdded == true)
+                        {
+                            pendingData._offset = this._eofShapeOffset;
+                        }
+                        break;
+                } 
+
+                _pendingChanges.Add(pendingData);
+            }
+
+            foreach (Matrix pendingMatrix in previousPendingMatrix)
+            {
+                _pendingMatrixs.Add(pendingMatrix);
             }
         }
 
