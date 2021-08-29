@@ -379,6 +379,16 @@ namespace SCEditor.ScOld
                     dataLength += 2;
                 }
 
+                // CHECK CHANGE
+                if (_exportType == exportType.Icon)
+                {
+                    if (_iconType == iconType.Hero)
+                    {
+                        input.Write(BitConverter.GetBytes((ushort)5971), 0, 2);
+                        dataLength += 2;
+                    }
+                }
+
                 // Shapes Flags - CHECK
                 for (int i = 0; i < _shapes.Count; i++)
                 {
@@ -391,6 +401,16 @@ namespace SCEditor.ScOld
                         input.WriteByte(0);
                     }
                     dataLength += 1;
+                }
+
+                // CHECK CHANGE
+                if (_exportType == exportType.Icon)
+                {
+                    if (_iconType == iconType.Hero)
+                    {
+                        input.WriteByte(0);
+                        dataLength += 1;
+                    }
                 }
 
                 // Shapes Names
@@ -409,6 +429,18 @@ namespace SCEditor.ScOld
                     **/
                     input.WriteByte(0xFF);
                     dataLength += 1;
+                }
+
+                // CHECK CHANGE
+                if (_exportType == exportType.Icon)
+                {
+                    if (_iconType == iconType.Hero)
+                    {
+                        string shapeNameHeroBounds = "bounds";
+                        input.Write(BitConverter.GetBytes(shapeNameHeroBounds.Length), 0, 1);
+                        input.Write(Encoding.ASCII.GetBytes(shapeNameHeroBounds), 0, shapeNameHeroBounds.Length);
+                        dataLength += (1 + shapeNameHeroBounds.Length);
+                    }
                 }
 
                 // Frames
@@ -680,7 +712,13 @@ namespace SCEditor.ScOld
                     }
                 }
 
-                if (addId.Count != this.Children.Count || this.timelineArray.Length % 6 != 0 || this.timelineArray.Length / 6 != this._frames.Count)
+                int totalFrameTimelineCount = 0;
+                foreach(MovieClipFrame frame in this._frames)
+                {
+                    totalFrameTimelineCount += (frame.Id * 3);
+                }
+
+                if (addId.Count != this.Children.Count || this.timelineArray.Length % 3 != 0 || this.timelineArray.Length != totalFrameTimelineCount)
                 {
                     MessageBox.Show("MoveClip:Render() ShapeCount does not match timeline count or timeline length is not sets of 6 or total shape count does not match frames count");
                     return null;
@@ -756,7 +794,9 @@ namespace SCEditor.ScOld
 
             var finalShape = new Bitmap(width, height);
 
-            for (int i = 0; i < 2; i++)
+            int frameTimelineCount = _frames[frameIndex].Id;
+
+            for (int i = 0; i < frameTimelineCount; i++)
             {
                 Matrix matrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[timelineIndex + 1]] : new Matrix(1, 0, 0, 1, 0, 0);
 

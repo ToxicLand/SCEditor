@@ -57,7 +57,7 @@ namespace SCEditor.Prompts
                     {
                         options.MatrixData = _originalData[idx].matrixData;
                     }
-                } 
+                }
                 else if (selectedData.GetDataType() == 7)
                 {
                     options.editedMatrixs = _originalData;
@@ -131,7 +131,7 @@ namespace SCEditor.Prompts
                     isEdited = false;
                 }
             }
-            
+
             if (isEdited)
                 Render();
         }
@@ -157,7 +157,7 @@ namespace SCEditor.Prompts
                     addPointF.Add(pointFData);
                 }
 
-                data = new OriginalData() { shapeId = addShapeId, chunkXYData = addPointF, matrixData = new Matrix(1,0,0,1,0,0) };
+                data = new OriginalData() { shapeId = addShapeId, chunkXYData = addPointF, matrixData = new Matrix(1, 0, 0, 1, 0, 0) };
                 _originalData.Add(data);
             }
             else
@@ -186,9 +186,9 @@ namespace SCEditor.Prompts
                         break;
 
                     case editType.PositionRight:
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[3] + scaleFactor),3);
+                        data.matrixData.Elements.SetValue((data.matrixData.Elements[3] + scaleFactor), 3);
 
-                        data.matrixData.Translate(scaleFactor,0);
+                        data.matrixData.Translate(scaleFactor, 0);
                         break;
 
                     case editType.IncreaseSize:
@@ -225,49 +225,83 @@ namespace SCEditor.Prompts
                 {
                     PointF[] xyData = ((ShapeChunk)shapeData.GetChunks()[s]).XY;
 
-                    for (int i = 0; i < xyData.Length; i++)
+                    if (type != editType.AngleClockWise && type != editType.AngleAntiClockWise)
                     {
-                        switch (type)
+                        for (int i = 0; i < xyData.Length; i++)
                         {
-                            case editType.PositionUp:
-                                xyData[i].Y = xyData[i].Y > 0 ? xyData[i].Y - scaleFactor : ((Math.Abs(xyData[i].Y) + scaleFactor) * -1);
-                                break;
+                            switch (type)
+                            {
+                                case editType.PositionUp:
+                                    xyData[i].Y = xyData[i].Y > 0 ? xyData[i].Y - scaleFactor : ((Math.Abs(xyData[i].Y) + scaleFactor) * -1);
+                                    break;
 
-                            case editType.PositionDown:
-                                xyData[i].Y += scaleFactor;
-                                break;
+                                case editType.PositionDown:
+                                    xyData[i].Y += scaleFactor;
+                                    break;
 
-                            case editType.PositionLeft:
-                                xyData[i].X = xyData[i].X > 0 ? xyData[i].X -= scaleFactor : ((Math.Abs(xyData[i].X) + scaleFactor) * -1);
-                                break;
+                                case editType.PositionLeft:
+                                    xyData[i].X = xyData[i].X > 0 ? xyData[i].X -= scaleFactor : ((Math.Abs(xyData[i].X) + scaleFactor) * -1);
+                                    break;
 
-                            case editType.PositionRight:
-                                xyData[i].X += scaleFactor;
-                                break;
+                                case editType.PositionRight:
+                                    xyData[i].X += scaleFactor;
+                                    break;
 
-                            case editType.IncreaseSize:
-                                xyData[i].X += xyData[i].X * scaleFactor;
-                                xyData[i].Y += xyData[i].Y * scaleFactor;
-                                break;
+                                case editType.IncreaseSize:
+                                    xyData[i].X += xyData[i].X * scaleFactor;
+                                    xyData[i].Y += xyData[i].Y * scaleFactor;
+                                    break;
 
-                            case editType.DecreaseSize:
-                                xyData[i].X -= xyData[i].X * scaleFactor;
-                                xyData[i].Y -= xyData[i].Y * scaleFactor;
-                                break;
-
-                            case editType.AngleAntiClockWise:
-                                // TODO
-                                break;
-
-                            case editType.AngleClockWise:
-                                // TODO
-                                break;
+                                case editType.DecreaseSize:
+                                    xyData[i].X -= xyData[i].X * scaleFactor;
+                                    xyData[i].Y -= xyData[i].Y * scaleFactor;
+                                    break;
+                            }
                         }
                     }
+                    else
+                    {
+                        GraphicsPath test = new GraphicsPath();
+                        test.AddPolygon(xyData);
+                        Matrix rotateMatrix = new Matrix(1, 0, 0, 1, 0, 0);
+                        PointF origin = findCenter(xyData);
+
+                        if (type == editType.AngleClockWise)
+                        {
+                            rotateMatrix.RotateAt(scaleFactor, origin);
+                        } 
+                        else if (type == editType.AngleAntiClockWise)
+                        {
+                            rotateMatrix.RotateAt(-scaleFactor, origin);
+                        }
+
+                        test.Transform(rotateMatrix);
+                        ((ShapeChunk)shapeData.GetChunks()[s]).SetXY(test.PathPoints);
+                        //xyData = test.PathPoints;
+                    }
+                    
                 }
             }
-            
+
         }
+
+        public PointF findCenter(PointF[] data)
+        {
+            float totalX = 0;
+            float totalY = 0;
+
+            foreach (PointF p in data)
+            {
+                totalX += p.X;
+                totalY += p.Y;
+            }
+
+            float centerX = totalX / data.Length;
+            float centerY = totalY / data.Length;
+
+            return new PointF(centerX, centerY);
+        }
+
 
         public void addData()
         {

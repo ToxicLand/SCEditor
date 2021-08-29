@@ -764,13 +764,13 @@ namespace SCEditor
 
                                 if (frameName.Length >= 3)
                                 {
-                                    if (frameName.ToLower() == "icon")
+                                    if (frameName.ToLower().Substring(0, 4) == "icon")
                                     {
                                         _exportType = exportType.Icon;
 
                                         if (frameName.Length >= 8)
                                         {
-                                            switch (frameName.ToLower().Substring(5, 8))
+                                            switch (frameName.ToLower().Substring(5, 4))
                                             {
                                                 case "unit":
                                                     _iconType = iconType.Unit;
@@ -887,13 +887,16 @@ namespace SCEditor
                                             }
 
                                         }
-                                        else if (_scFile.exportExists(frameName) == -1)
+                                        else
                                         {
-                                            break;
+                                            if (_scFile.exportExists(frameName) == -1)
+                                            {
+                                                break;
+                                            }
                                         }
                                     }
 
-                                    if (exportExist == false && exportIndex == -1)
+                                    if (exportExist == false && exportIndex == -1 && _exportType == exportType.Animation)
                                         break;
 
                                     MessageBox.Show($"Export with name {frameName} already exists or is empty. Please change name.", "Invalid/Missing Export Name");
@@ -1045,7 +1048,7 @@ namespace SCEditor
                               
                                 movieClipData.SetFrameCount((short)(movieClipData.GetFrames().Count + 1));
 
-                                if (!exportExist && movieClipData.GetShapes().Count == 0)
+                                if (!exportExist && movieClipData.GetShapes().Count == 0 && _exportType == exportType.Animation)
                                 {
                                     inputDataDialog shadowIdInput = new inputDataDialog(1);
                                     shadowIdInput.Text = "Input Shadow Shape ID";
@@ -1090,8 +1093,8 @@ namespace SCEditor
 
                                     if (_iconType == iconType.Hero)
                                     {
-                                        //timelineOffset = new ushort[] { 0, 24351, 65535 };
-                                    } 
+                                        timelineOffset = new ushort[] { 0, 24351, 65535, 1, 65535, 65535 }; // CHECK change
+                                    }
                                 }
                                 else if (_exportType == exportType.Animation)
                                 {
@@ -1127,7 +1130,7 @@ namespace SCEditor
                                     // MOVIECLIP FRAME DATA
                                     MovieClipFrame movieClipFrameData = new MovieClipFrame(_scFile);
 
-                                    ushort MovieClipFrameId = (ushort)(_exportType == exportType.Animation ? 2 : 1);
+                                    ushort MovieClipFrameId = (ushort)(_exportType == exportType.Animation ? 2 : _exportType == exportType.Icon ? _iconType == iconType.Hero ? 2 : 1 : 1);
 
                                     movieClipFrameData.SetId(MovieClipFrameId);
                                     movieClipData.AddFrame(movieClipFrameData);

@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using MathNet.Numerics.LinearAlgebra;
 using SCEditor.Helpers;
+using System.Windows.Forms;
 
 namespace SCEditor.ScOld
 {
@@ -191,90 +192,92 @@ namespace SCEditor.ScOld
 
         public override Bitmap Render(RenderingOptions options)
         {
-            Console.WriteLine("Rendering image of " + _chunks.Count + " polygons");
-
-            List<PointF> A = new List<PointF>();
-
-            if (options.MatrixData != null)
+            try
             {
-                foreach (ShapeChunk chunk in _chunks)
+                Console.WriteLine("Rendering image of " + _chunks.Count + " polygons");
+
+                List<PointF> A = new List<PointF>();
+
+                if (options.MatrixData != null)
                 {
-                    PointF[] newXY = new PointF[chunk.XY.Length];
-
-                    for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                    foreach (ShapeChunk chunk in _chunks)
                     {
-                        float xNew = options.MatrixData.Elements[4] + options.MatrixData.Elements[0] * chunk.XY[xyIdx].X + options.MatrixData.Elements[2] * chunk.XY[xyIdx].Y;
-                        float yNew = options.MatrixData.Elements[5] + options.MatrixData.Elements[1] * chunk.XY[xyIdx].X + options.MatrixData.Elements[3] * chunk.XY[xyIdx].Y;
+                        PointF[] newXY = new PointF[chunk.XY.Length];
 
-                        newXY[xyIdx] = new PointF(xNew, yNew);
-                    }
-
-                    A.AddRange(newXY);
-                }
-            }
-            else
-            {
-                PointF[] pointsXY = _chunks.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
-                A.AddRange(pointsXY.ToArray());
-            }
-
-            using (var xyPath = new GraphicsPath())
-            {
-                xyPath.AddPolygon(A.ToArray());
-
-                var xyBound = Rectangle.Round(xyPath.GetBounds());
-
-                var width = xyBound.Width;
-                width = width > 0 ? width : 1;
-
-                var height =  xyBound.Height;
-                height = height > 0 ? height : 1;
-
-                var x = xyBound.X;
-                var y = xyBound.Y;
-
-                var finalShape = new Bitmap(width, height);
-                Console.WriteLine($"Rendering shape: W:{finalShape.Width} H:{finalShape.Height}\n");
-                Console.WriteLine("Length: " + _length + " | Offset: " + _offset);
-
-                
-                // Assemble shape chunks
-                foreach (ShapeChunk chunk in _chunks)
-                {
-                    var texture = (Texture) _scFile.GetTextures()[chunk.GetTextureId()];
-                    Bitmap bitmap = texture.Bitmap;
-
-                    using (var gpuv = new GraphicsPath())
-                    {
-                        gpuv.AddPolygon(chunk.UV.ToArray());
-
-                        var gxyBound = Rectangle.Round(gpuv.GetBounds());
-
-                        int gpuvWidth = gxyBound.Width;
-                        gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
-
-                        int gpuvHeight = gxyBound.Height;
-                        gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
-
-                        var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
-
-                        var chunkX = gxyBound.X;
-                        var chunkY = gxyBound.Y;
-                        
-                        using (var g = Graphics.FromImage(shapeChunk))
+                        for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
                         {
-                            gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
-                            g.SetClip(gpuv);
-                            g.DrawImage(bitmap, -chunkX, -chunkY);
+                            float xNew = options.MatrixData.Elements[4] + options.MatrixData.Elements[0] * chunk.XY[xyIdx].X + options.MatrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                            float yNew = options.MatrixData.Elements[5] + options.MatrixData.Elements[1] * chunk.XY[xyIdx].X + options.MatrixData.Elements[3] * chunk.XY[xyIdx].Y;
+
+                            newXY[xyIdx] = new PointF(xNew, yNew);
                         }
 
-                        GraphicsPath gp = new GraphicsPath();
-                        gp.AddPolygon(new[] {new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight)});
+                        A.AddRange(newXY);
+                    }
+                }
+                else
+                {
+                    PointF[] pointsXY = _chunks.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
+                    A.AddRange(pointsXY.ToArray());
+                }
 
-                        //Calculate transformation Matrix of UV
-                        //double[,] matrixArrayUV = { { polygonUV[0].X, polygonUV[1].X, polygonUV[2].X }, { polygonUV[0].Y, polygonUV[1].Y, polygonUV[2].Y }, { 1, 1, 1 } };
-                        double[,] matrixArrayUV =
+                using (var xyPath = new GraphicsPath())
+                {
+                    xyPath.AddPolygon(A.ToArray());
+
+                    var xyBound = Rectangle.Round(xyPath.GetBounds());
+
+                    var width = xyBound.Width;
+                    width = width > 0 ? width : 1;
+
+                    var height = xyBound.Height;
+                    height = height > 0 ? height : 1;
+
+                    var x = xyBound.X;
+                    var y = xyBound.Y;
+
+                    var finalShape = new Bitmap(width, height);
+                    Console.WriteLine($"Rendering shape: W:{finalShape.Width} H:{finalShape.Height}\n");
+                    Console.WriteLine("Length: " + _length + " | Offset: " + _offset);
+
+
+                    // Assemble shape chunks
+                    foreach (ShapeChunk chunk in _chunks)
+                    {
+                        var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
+                        Bitmap bitmap = texture.Bitmap;
+
+                        using (var gpuv = new GraphicsPath())
                         {
+                            gpuv.AddPolygon(chunk.UV.ToArray());
+
+                            var gxyBound = Rectangle.Round(gpuv.GetBounds());
+
+                            int gpuvWidth = gxyBound.Width;
+                            gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
+
+                            int gpuvHeight = gxyBound.Height;
+                            gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
+
+                            var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
+
+                            var chunkX = gxyBound.X;
+                            var chunkY = gxyBound.Y;
+
+                            using (var g = Graphics.FromImage(shapeChunk))
+                            {
+                                gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
+                                g.SetClip(gpuv);
+                                g.DrawImage(bitmap, -chunkX, -chunkY);
+                            }
+
+                            GraphicsPath gp = new GraphicsPath();
+                            gp.AddPolygon(new[] { new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight) });
+
+                            //Calculate transformation Matrix of UV
+                            //double[,] matrixArrayUV = { { polygonUV[0].X, polygonUV[1].X, polygonUV[2].X }, { polygonUV[0].Y, polygonUV[1].Y, polygonUV[2].Y }, { 1, 1, 1 } };
+                            double[,] matrixArrayUV =
+                            {
                             {
                                 gpuv.PathPoints[0].X, gpuv.PathPoints[1].X, gpuv.PathPoints[2].X
                             },
@@ -286,25 +289,25 @@ namespace SCEditor.ScOld
                             }
                         };
 
-                        PointF[] newXY = new PointF[chunk.XY.Length];
+                            PointF[] newXY = new PointF[chunk.XY.Length];
 
-                        if (options.MatrixData != null)
-                        {
-                            for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                            if (options.MatrixData != null)
                             {
-                                float xNew = options.MatrixData.Elements[4] + options.MatrixData.Elements[0] * chunk.XY[xyIdx].X + options.MatrixData.Elements[2] * chunk.XY[xyIdx].Y;
-                                float yNew = options.MatrixData.Elements[5] + options.MatrixData.Elements[1] * chunk.XY[xyIdx].X + options.MatrixData.Elements[3] * chunk.XY[xyIdx].Y;
+                                for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                                {
+                                    float xNew = options.MatrixData.Elements[4] + options.MatrixData.Elements[0] * chunk.XY[xyIdx].X + options.MatrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                    float yNew = options.MatrixData.Elements[5] + options.MatrixData.Elements[1] * chunk.XY[xyIdx].X + options.MatrixData.Elements[3] * chunk.XY[xyIdx].Y;
 
-                                newXY[xyIdx] = new PointF(xNew, yNew);
+                                    newXY[xyIdx] = new PointF(xNew, yNew);
+                                }
                             }
-                        }
-                        else
-                        {
-                            newXY = chunk.XY;
-                        }
+                            else
+                            {
+                                newXY = chunk.XY;
+                            }
 
-                        double[,] matrixArrayXY =
-                        {
+                            double[,] matrixArrayXY =
+                            {
                             {
                                 newXY[0].X, newXY[1].X, newXY[2].X
                             },
@@ -316,40 +319,46 @@ namespace SCEditor.ScOld
                             }
                         };
 
-                        var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
-                        var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
-                        var inverseMatrixUV = matrixUV.Inverse();
-                        var transformMatrix = matrixXY * inverseMatrixUV;
-                        var m = new Matrix((float) transformMatrix[0, 0], (float) transformMatrix[1, 0], (float) transformMatrix[0, 1], (float) transformMatrix[1, 1], (float) transformMatrix[0, 2], (float) transformMatrix[1, 2]);
-                        //m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)Math.Round(transformMatrix[0, 2]), (float)Math.Round(transformMatrix[1, 2]));
+                            var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
+                            var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
+                            var inverseMatrixUV = matrixUV.Inverse();
+                            var transformMatrix = matrixXY * inverseMatrixUV;
+                            var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+                            //m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)Math.Round(transformMatrix[0, 2]), (float)Math.Round(transformMatrix[1, 2]));
 
-                        //Perform transformations
-                        gp.Transform(m);
+                            //Perform transformations
+                            gp.Transform(m);
 
-                        using (Graphics g = Graphics.FromImage(finalShape))
-                        {
-                            //Set origin
-                            Matrix originTransform = new Matrix();
-                            originTransform.Translate(-x, -y);
-                            g.Transform = originTransform;
-
-                            g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
-
-                            if (options.ViewPolygons)
+                            using (Graphics g = Graphics.FromImage(finalShape))
                             {
-                                gpuv.Transform(m);
-                                g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                //Set origin
+                                Matrix originTransform = new Matrix();
+                                originTransform.Translate(-x, -y);
+                                g.Transform = originTransform;
+
+                                g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
+
+                                if (options.ViewPolygons)
+                                {
+                                    gpuv.Transform(m);
+                                    g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                }
+                                g.Flush();
                             }
-                            g.Flush();
+
                         }
-                        
+
                     }
 
+                    return finalShape;
+
                 }
-                
-                return finalShape;
-                    
+            } catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Exception Shape:Render()");
+                return null;
             }
+            
         }
 
         public override void Write(FileStream input)
