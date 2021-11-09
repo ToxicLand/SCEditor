@@ -368,6 +368,14 @@ namespace SCEditor.ScOld
 
                 int shapesCount = _shapes.Count;
 
+                if (_exportType == exportType.Icon)
+                {
+                    if (_iconType == iconType.Hero)
+                    {
+                        shapesCount += 1;
+                    }
+                }
+
                 // Shapes Count
                 input.Write(BitConverter.GetBytes((ushort)shapesCount), 0, 2);
                 dataLength += 2;
@@ -379,12 +387,11 @@ namespace SCEditor.ScOld
                     dataLength += 2;
                 }
 
-                // CHECK CHANGE
                 if (_exportType == exportType.Icon)
                 {
                     if (_iconType == iconType.Hero)
                     {
-                        input.Write(BitConverter.GetBytes((ushort)5971), 0, 2);
+                        input.Write(BitConverter.GetBytes((ushort)5975), 0, 2); // CHANGE AFTER EVERY UPDATE
                         dataLength += 2;
                     }
                 }
@@ -400,6 +407,7 @@ namespace SCEditor.ScOld
                     {
                         input.WriteByte(0);
                     }
+
                     dataLength += 1;
                 }
 
@@ -718,7 +726,7 @@ namespace SCEditor.ScOld
                     totalFrameTimelineCount += (frame.Id * 3);
                 }
 
-                if (addId.Count != this.Children.Count || this.timelineArray.Length % 3 != 0 || this.timelineArray.Length != totalFrameTimelineCount)
+                if (/**addId.Count != this.Children.Count || **/this.timelineArray.Length % 3 != 0 || this.timelineArray.Length != totalFrameTimelineCount)
                 {
                     MessageBox.Show("MoveClip:Render() ShapeCount does not match timeline count or timeline length is not sets of 6 or total shape count does not match frames count");
                     return null;
@@ -911,6 +919,13 @@ namespace SCEditor.ScOld
             _clipId = id;
         }
 
+        public void setLength(uint data)
+        {
+            _length = data;
+        }
+
+        public uint length => _length;
+
         public void SetFrameCount(short count)
         {
             _frameCount = count;
@@ -927,6 +942,42 @@ namespace SCEditor.ScOld
         {
             _shapes.Add(shape);
         }
+
+        public void setFlags(byte[] data)
+        {
+            _flags = data;
+        }
+
+        public void setScalingGrid(Rect data)
+        {
+            _scalingGrid = data;
+        }
+
+        public Rect scalingGrid => _scalingGrid;
+        public byte[] flags => _flags;
+
+        public ushort timelineChildrenCount => _timelineChildrenCount;
+        public ushort[] timelineChildrenId => _timelineChildrenId;
+        public string[] timelineChildrenNames => _timelineChildrenNames;
+        public int timelineOffsetCount => _timelineOffsetCount;
+
+        public void setTimelineChildrenCount(ushort count)
+        {
+            _timelineChildrenCount = count;
+        }
+        public void setTimelineChildrenId(ushort[] id)
+        {
+            _timelineChildrenId = id;
+        }
+        public void setTimelineChildrenNames(string[] names)
+        {
+            _timelineChildrenNames = names;
+        }
+        public void setTimelineOffsetCount(int count)
+        {
+            _timelineOffsetCount = count;
+        }
+
         public List<ScObject> GetFrames()
         {
             return _frames;

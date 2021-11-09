@@ -41,6 +41,7 @@ namespace SCEditor.Prompts
             this.addFrameAfterSelectedButton = new System.Windows.Forms.Button();
             this.deleteSelectedButton = new System.Windows.Forms.Button();
             this.replaceMultipleShapeDataButton = new System.Windows.Forms.Button();
+            this.changeAllButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // timelineArrayBox
@@ -171,6 +172,19 @@ namespace SCEditor.Prompts
             this.replaceMultipleShapeDataButton.UseVisualStyleBackColor = true;
             this.replaceMultipleShapeDataButton.Click += new System.EventHandler(this.replaceMultipleShapeDataButton_Click);
             // 
+            // changeAllButton
+            // 
+            this.changeAllButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(51)))), ((int)(((byte)(51)))));
+            this.changeAllButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.changeAllButton.Location = new System.Drawing.Point(512, 114);
+            this.changeAllButton.Margin = new System.Windows.Forms.Padding(1);
+            this.changeAllButton.Name = "changeAllButton";
+            this.changeAllButton.Size = new System.Drawing.Size(84, 24);
+            this.changeAllButton.TabIndex = 6;
+            this.changeAllButton.Text = "Change All";
+            this.changeAllButton.UseVisualStyleBackColor = false;
+            this.changeAllButton.Click += new System.EventHandler(this.changeAllButton_Click);
+            // 
             // timelineEditDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -181,6 +195,7 @@ namespace SCEditor.Prompts
             this.Controls.Add(this.replaceMultipleShapeDataButton);
             this.Controls.Add(this.deleteSelectedButton);
             this.Controls.Add(this.addFrameBeforeSelectedButton);
+            this.Controls.Add(this.changeAllButton);
             this.Controls.Add(this.dataTypeEditSubmitButton);
             this.Controls.Add(this.editDataTypeLabel);
             this.Controls.Add(this.dataTypeTextBox);
@@ -214,5 +229,6 @@ namespace SCEditor.Prompts
         private System.Windows.Forms.Button addFrameAfterSelectedButton;
         private System.Windows.Forms.Button deleteSelectedButton;
         private System.Windows.Forms.Button replaceMultipleShapeDataButton;
+        private System.Windows.Forms.Button changeAllButton;
     }
 }

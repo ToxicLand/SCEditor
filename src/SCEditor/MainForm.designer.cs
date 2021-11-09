@@ -62,6 +62,8 @@
             this.duplicateToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.exportShapeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItemEditCharacter = new System.Windows.Forms.ToolStripMenuItem();
+            this.editTimelineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addEditMatrixtoolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.shapeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportToolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
@@ -69,7 +71,7 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.editTimelineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.scImportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -208,7 +210,8 @@
             this.viewPolygonsToolStripMenuItem,
             this.exportAllShapeToolStripMenuItem,
             this.exportAllChunkToolStripMenuItem,
-            this.exportAllAnimationToolStripMenuItem});
+            this.exportAllAnimationToolStripMenuItem,
+            this.scImportToolStripMenuItem});
             this.imageToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.imageToolStripMenuItem.Name = "imageToolStripMenuItem";
             this.imageToolStripMenuItem.Size = new System.Drawing.Size(55, 21);
@@ -365,13 +368,13 @@
             this.duplicateToolStripMenuItem1,
             this.exportShapeToolStripMenuItem,
             this.toolStripMenuItemEditCharacter,
-            this.editTimelineToolStripMenuItem});
+            this.editTimelineToolStripMenuItem,
+            this.addEditMatrixtoolStripMenuItem});
             this.objectToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.objectToolStripMenuItem.Name = "objectToolStripMenuItem";
             this.objectToolStripMenuItem.Size = new System.Drawing.Size(58, 21);
             this.objectToolStripMenuItem.Text = "Export";
             this.objectToolStripMenuItem.Visible = false;
-            this.editTimelineToolStripMenuItem.Click += new System.EventHandler(this.editTimelineToolStripMenuItem_Click);
             // 
             // createExportToolStripMenuItem
             // 
@@ -427,6 +430,24 @@
             this.toolStripMenuItemEditCharacter.Size = new System.Drawing.Size(191, 22);
             this.toolStripMenuItemEditCharacter.Text = "Edit Character";
             this.toolStripMenuItemEditCharacter.Click += new System.EventHandler(this.toolStripMenuItemEditCharacter_Click);
+            // 
+            // editTimelineToolStripMenuItem
+            // 
+            this.editTimelineToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
+            this.editTimelineToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.editTimelineToolStripMenuItem.Name = "editTimelineToolStripMenuItem";
+            this.editTimelineToolStripMenuItem.Size = new System.Drawing.Size(191, 22);
+            this.editTimelineToolStripMenuItem.Text = "Edit Timeline/Frame";
+            this.editTimelineToolStripMenuItem.Click += new System.EventHandler(this.editTimelineToolStripMenuItem_Click);
+            // 
+            // addEditMatrixtoolStripMenuItem
+            // 
+            this.addEditMatrixtoolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
+            this.addEditMatrixtoolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.addEditMatrixtoolStripMenuItem.Name = "addEditMatrixtoolStripMenuItem";
+            this.addEditMatrixtoolStripMenuItem.Size = new System.Drawing.Size(191, 22);
+            this.addEditMatrixtoolStripMenuItem.Text = "Matrixes";
+            this.addEditMatrixtoolStripMenuItem.Click += new System.EventHandler(this.addEditMatrixtoolStripMenuItem_Click);
             // 
             // shapeToolStripMenuItem
             // 
@@ -518,13 +539,14 @@
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
-            // editTimelineToolStripMenuItem
+            // scImportToolStripMenuItem
             // 
-            this.editTimelineToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
-            this.editTimelineToolStripMenuItem.ForeColor = System.Drawing.Color.White;
-            this.editTimelineToolStripMenuItem.Name = "editTimelineToolStripMenuItem";
-            this.editTimelineToolStripMenuItem.Size = new System.Drawing.Size(191, 22);
-            this.editTimelineToolStripMenuItem.Text = "Edit Timeline/Frame";
+            this.scImportToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
+            this.scImportToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.scImportToolStripMenuItem.Name = "scImportToolStripMenuItem";
+            this.scImportToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
+            this.scImportToolStripMenuItem.Text = "Import SC";
+            this.scImportToolStripMenuItem.Click += new System.EventHandler(this.scImportToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -599,6 +621,8 @@
         private System.Windows.Forms.ToolStripMenuItem importExpotstoolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemEditCharacter;
         private System.Windows.Forms.ToolStripMenuItem editTimelineToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem addEditMatrixtoolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem scImportToolStripMenuItem;
     }
 }
 

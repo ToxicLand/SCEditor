@@ -82,6 +82,8 @@ namespace SCEditor.ScOld
         public override ushort Id => _shapeId;
         public override List<ScObject> Children => _chunks;
         public Matrix Matrix => _matrix;
+        public int shapeChunkCount => _shapeChunkCount;
+        public int shapeChunkVertexCount => _shapeChunkVertexCount;
 
         #endregion
 
@@ -110,6 +112,11 @@ namespace SCEditor.ScOld
         public void AddChunk(ScObject chunk)
         {
             _chunks.Add(chunk);
+        }
+
+        public void setChunks(List<ScObject> chunks)
+        {
+            _chunks = chunks;
         }
 
         public override string GetInfo()
@@ -517,6 +524,8 @@ namespace SCEditor.ScOld
         {
             _length = length;
         }
+
+        public int length => _length;
 
         public void SetOffset(long offset)
         {

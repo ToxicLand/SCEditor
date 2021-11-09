@@ -50,9 +50,8 @@ namespace SCEditor.ScOld
         private bool _disposed;
 
         public PointF[] XY => _xy;
-
         public PointF[] UV => _uv;
-
+        public int vertexCount => _vertexCount;
         public override ushort Id => _chunkId;
 
         #endregion

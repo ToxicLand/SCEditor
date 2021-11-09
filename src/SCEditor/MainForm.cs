@@ -11,6 +11,7 @@ using SCEditor.Prompts;
 using Newtonsoft.Json.Linq;
 using System.ComponentModel;
 using System.Reflection;
+using System.Drawing.Drawing2D;
 
 namespace SCEditor
 {
@@ -662,6 +663,359 @@ namespace SCEditor
             }
         }
 
+        private void addEditMatrixtoolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            List<Matrix> matrixList = this._scFile.GetMatrixs();
+
+            using (editMatrixes form = new editMatrixes(matrixList))
+            {
+                if (form.ShowDialog() == DialogResult.Yes)
+                {
+                    foreach (Matrix m in form.addedMatrixes)
+                    {
+                        _scFile.addMatrix(m);
+                        _scFile.addPendingMatrix(m);
+                    }
+                }
+            }
+        }
+
+        private void scImportToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_scFile == null)
+                return;
+
+            var dialog = new OpenFileDialog()
+            {
+                Title = @"Please select your infomation file",
+                Filter = @"SC File (*.sc)|*.sc|All files (*.*)|*.*",
+            };
+            var dialog2 = new OpenFileDialog()
+            {
+                Title = @"Please select your texture file",
+                Filter = @"Texture SC File (*_tex.sc)|*_tex.sc|All files (*.*)|*.*",
+
+            };
+
+            DialogResult result = dialog.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                DialogResult result2 = dialog2.ShowDialog();
+                if (result2 != DialogResult.OK)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            string importScFileInfo = dialog.FileName;
+            string importScFileTex = dialog2.FileName;
+
+            ScFile scToImportFrom = new ScFile(importScFileInfo, importScFileTex);
+
+            try
+            {
+                scToImportFrom.LoadTextureFile();
+                scToImportFrom.loadInfoFile();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                return;
+            }          
+
+            scMergeSelection selectImportExportsForm = new scMergeSelection(scToImportFrom.GetExports());
+
+            if (selectImportExportsForm.ShowDialog() == DialogResult.Yes)
+            {
+                long lastShapeOffset = 0;
+                long lastShapeChunkOffset = 0;
+                long lastMovieClipOffset = 0;
+                ushort maxExportId = 30000;
+                ushort maxMovieClipId = 30000;
+                ushort maxShapeId = 30000;
+                foreach (Export eE in _scFile.GetExports())
+                {
+                    if (eE.Id > maxExportId)
+                    {
+                        maxExportId = eE.Id;
+                    }
+
+                    if (eE.GetDataObject() != null)
+                    {
+                        MovieClip eMV = (MovieClip)eE.GetDataObject();
+                        long eMVOffset = eMV.GetOffset();
+                        if (eMVOffset > lastMovieClipOffset)
+                        {
+                            lastMovieClipOffset = eMVOffset;
+                        }
+
+                        if (eMV.Id > maxMovieClipId)
+                        {
+                            maxMovieClipId = eMV.Id;
+                        }
+
+                        if (eMV.Children != null)
+                        {
+                            foreach (Shape eS in eMV.Children)
+                            {
+                                long eSOffset = eS.GetOffset();
+
+                                if (eSOffset > lastShapeOffset)
+                                {
+                                    lastShapeOffset = eSOffset;
+                                }
+
+                                if (eS.Id > maxShapeId)
+                                {
+                                    maxShapeId = eS.Id;
+                                }
+
+                                if (eS.Children != null)
+                                {
+                                    foreach (ShapeChunk eSC in eS.Children)
+                                    {
+                                        long eSCOffset = eSC.GetOffset();
+
+                                        if (eSCOffset > lastShapeChunkOffset)
+                                        {
+                                            lastShapeChunkOffset = eSCOffset;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (lastShapeOffset == 0)
+                    lastShapeOffset = _scFile.GetSofTagsOffset();
+
+                if (lastShapeChunkOffset == 0)
+                    lastShapeChunkOffset = _scFile.GetSofTagsOffset();
+
+                if (lastMovieClipOffset == 0)
+                    lastMovieClipOffset = _scFile.GetSofTagsOffset();
+
+                List<int> matricesToAdd = new List<int>();
+                List<int> colorTransformToAdd = new List<int>();
+                List<int> texturesToAdd = new List<int>();
+
+                foreach (scMergeSelection.exportItemClass item in selectImportExportsForm.checkedExports)
+                {
+                    maxExportId++;
+                    maxMovieClipId++;
+                    Export exportToAdd = (Export)((ScObject)item.exportData);
+                    MovieClip movieClipToAdd = (MovieClip)exportToAdd.GetDataObject();
+                    List<ScObject> shapesToAdd = movieClipToAdd.GetShapes();
+
+                    // SET EXPORT DATA
+                    Export newExport = new Export(_scFile);
+                    newExport.setCustomAdded(true);
+                    newExport.SetId(maxExportId);
+                    newExport.SetExportName(exportToAdd.GetName());
+
+                    // SET MOVIECLIP DATA
+                    MovieClip newMoveClip = new MovieClip(_scFile, movieClipToAdd.GetMovieClipDataType());
+                    newMoveClip.SetOffset(-lastMovieClipOffset);
+                    newMoveClip.setCustomAdded(true);
+                    newMoveClip.SetId(maxMovieClipId);
+                    newMoveClip.SetFrameCount((short)movieClipToAdd.GetFrames().Count);
+                    newMoveClip.setFlags(movieClipToAdd.flags);
+                    newMoveClip.SetFramePerSecond(movieClipToAdd.FPS);
+                    newMoveClip.SetFrames(movieClipToAdd.Frames);
+                    newMoveClip.setScalingGrid(movieClipToAdd.scalingGrid);
+                    newMoveClip.setLength(movieClipToAdd.length);
+
+                    // -Timeline Data
+                    ushort[] newTimelineArray = new ushort[movieClipToAdd.timelineArray.Length];
+                    int i = 0;
+                    while (i < (movieClipToAdd.timelineArray.Length / 3))
+                    {
+                        newTimelineArray[i] = movieClipToAdd.timelineArray[i];
+
+                        if (3 * i + 1 == 65535)
+                        {
+                            newTimelineArray[3 * i + 1] = 65535;
+                        }
+                        else
+                        {
+                            bool matrixIsAdded = false;
+                            int newMatrixId = 0;
+                            foreach (int matrixValue in matricesToAdd)
+                            {
+                                if (matrixValue == newTimelineArray[3 * i + 1])
+                                {
+                                    matrixIsAdded = true;
+                                    break;
+                                }
+                            }
+
+                            if (matrixIsAdded == false)
+                            {
+                                matricesToAdd.Add(newTimelineArray[3 * i + 1]);
+                                newMatrixId = matricesToAdd.Count - 1;
+                            }
+                            else
+                            {
+                                newMatrixId = matricesToAdd.IndexOf(newTimelineArray[3 * i + 1]);
+                            }
+
+                            newTimelineArray[3 * i + 1] = (ushort)(_scFile.GetMatrixs().Count + newMatrixId);
+                        }
+
+                        if (3 * i + 2 == 65535)
+                        {
+                            newTimelineArray[3 * i + 2] = 65535;
+                        }
+                        else
+                        {
+                            bool colorTransformIsAdded = false;
+                            int newcolorTransformId = 0;
+                            foreach (int matrixValue in colorTransformToAdd)
+                            {
+                                if (matrixValue == newTimelineArray[3 * i + 2])
+                                {
+                                    colorTransformIsAdded = true;
+                                    break;
+                                }
+                            }
+
+                            if (colorTransformIsAdded == false)
+                            {
+                                colorTransformToAdd.Add(newTimelineArray[3 * i + 2]);
+                                newcolorTransformId = colorTransformToAdd.Count - 1;
+                            }
+                            else
+                            {
+                                newcolorTransformId = colorTransformToAdd.IndexOf(newTimelineArray[3 * i + 2]);
+                            }
+
+                            newTimelineArray[3 * i + 2] = (ushort)(_scFile.getColors().Count + newcolorTransformId);
+                        }
+
+                        i++;
+                    }
+
+                    newMoveClip.setTimelineOffsetArray(newTimelineArray);
+                    newMoveClip.setTimelineChildrenCount(movieClipToAdd.timelineChildrenCount);
+                    newMoveClip.setTimelineChildrenId(movieClipToAdd.timelineChildrenId);
+                    newMoveClip.setTimelineChildrenNames(movieClipToAdd.timelineChildrenNames);
+                    newMoveClip.setTimelineOffsetCount(movieClipToAdd.timelineOffsetCount);
+
+                    ushort[] newTimelineChildrenId = (ushort[])movieClipToAdd.timelineChildrenId.Clone();
+
+                    // SHAPES DATA
+                    List<ScObject> newShapes = new List<ScObject>();
+
+                    foreach (Shape shapeToAdd in shapesToAdd)
+                    {
+                        maxShapeId++;
+
+                        Shape newShape = new Shape(_scFile);
+                        newShape.setCustomAdded(true);
+                        newShape.SetOffset(-lastShapeOffset);
+                        newShape.SetId(maxShapeId);
+                        newShape.SetLength(shapeToAdd.length);
+
+                        int timelineId = 0;
+                        while (timelineId < newTimelineChildrenId.Length)
+                        {
+                            if (newTimelineChildrenId[timelineId] == shapeToAdd.Id)
+                            {
+                                newTimelineChildrenId[timelineId] = maxShapeId;
+                                break;
+                            }
+
+                            timelineId++;
+
+                            if (timelineId < newTimelineChildrenId.Length)
+                            {
+                                Console.WriteLine("True end");
+                            }
+                        }
+
+                        // SHAPE CHUNK DATA
+                        List<ScObject> newShapeChunks = new List<ScObject>();
+
+                        foreach (ShapeChunk shapeChunkToAdd in shapeToAdd.GetChunks())
+                        {
+                            ShapeChunk newShapeChunk = new ShapeChunk(_scFile);
+                            newShapeChunk.SetChunkId(shapeChunkToAdd.Id);
+                            newShapeChunk.SetShapeId(maxShapeId);
+
+                            bool texIdAdded = false;
+                            int newtexId = 0;
+                            foreach (int texValue in texturesToAdd)
+                            {
+                                if (texValue == shapeChunkToAdd.GetTextureId())
+                                {
+                                    texIdAdded = true;
+                                    break;
+                                }
+                            }
+                            if (texIdAdded == false)
+                            {
+                                texturesToAdd.Add((int)shapeChunkToAdd.GetTextureId());
+                                newtexId = texturesToAdd.Count - 1;
+                            }
+                            else
+                            {
+                                newtexId = texturesToAdd.IndexOf(shapeChunkToAdd.GetTextureId());
+                            }
+
+                            newShapeChunk.SetTextureId((byte)(_scFile.GetTextures().Count + newtexId));
+                            newShapeChunk.SetChunkType(shapeChunkToAdd.GetChunkType());
+                            newShapeChunk.SetUV(shapeChunkToAdd.UV);
+                            newShapeChunk.SetXY(shapeChunkToAdd.XY);
+                            newShapeChunk.SetVertexCount(shapeChunkToAdd.vertexCount);
+
+                            newShapeChunks.Add(newShapeChunk);
+                        }
+
+                        newShape.setChunks(newShapeChunks);
+                        newShapes.Add(newShape);
+                    }
+
+                    newMoveClip.setTimelineChildrenId(newTimelineChildrenId);
+
+                    newMoveClip.SetShapes(newShapes);
+                    newExport.SetDataObject(newMoveClip);     
+
+                    foreach (Shape shape in newMoveClip.GetShapes())
+                    {
+                        _scFile.AddShape(shape);
+                        _scFile.AddChange(shape);
+                    }
+
+                    _scFile.AddMovieClip(newMoveClip);
+                    _scFile.AddChange(newMoveClip);
+
+                    _scFile.AddExport(newExport);
+                    _scFile.AddChange(newExport);  
+                }
+
+                foreach (int id in texturesToAdd)
+                {
+                    Texture newTextureToAdd = new Texture(_scFile, ((Texture)scToImportFrom.GetTextures()[id]).Bitmap);
+                    _scFile.AddTexture(newTextureToAdd);
+                    _scFile.AddChange(newTextureToAdd);
+                }
+
+                foreach (int id in matricesToAdd)
+                {
+                    _scFile.addMatrix(scToImportFrom.GetMatrixs()[id]);
+                    _scFile.addPendingMatrix(scToImportFrom.GetMatrixs()[id]);
+                }
+
+                reloadMenu();
+            }
+        }
+
+
         private void editTimelineToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
@@ -1093,7 +1447,7 @@ namespace SCEditor
 
                                     if (_iconType == iconType.Hero)
                                     {
-                                        timelineOffset = new ushort[] { 0, 24351, 65535, 1, 65535, 65535 }; // CHECK change
+                                        timelineOffset = new ushort[] { 0, 24353, 65535, 1, 65535, 65535 }; // change after every coc update
                                     }
                                 }
                                 else if (_exportType == exportType.Animation)

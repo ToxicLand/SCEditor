@@ -113,6 +113,11 @@ namespace SCEditor.ScOld
             return _infoFile;
         }
 
+        public List<Tuple<Color, byte, Color>> getColors()
+        {
+            return _colors;
+        }
+
         public string GetTextureFileName()
         {
             return _textureFile;

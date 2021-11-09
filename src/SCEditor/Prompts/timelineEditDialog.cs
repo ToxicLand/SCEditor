@@ -114,6 +114,49 @@ namespace SCEditor.Prompts
             }
         }
 
+        private void changeAllButton_Click(object sender, EventArgs e)
+        {
+            DialogResult ask = MessageBox.Show("This is not to be used on production.", "Experimental Feature", MessageBoxButtons.OKCancel);
+
+            if (!string.IsNullOrEmpty(dataTypeTextBox.Text) && ask == DialogResult.OK)
+            {
+                int newValue = int.Parse(dataTypeTextBox.Text);
+
+                if (timelineDataBox.SelectedIndex == 0 || timelineDataBox.SelectedIndex == 3)
+                {
+                    // TODO
+                    return;
+                }
+                else if (timelineDataBox.SelectedIndex == 1 || timelineDataBox.SelectedIndex == 4)
+                {
+                    if (newValue >= _scfile.GetMatrixs().Count && newValue != 65535)
+                    {
+                        MessageBox.Show($"Matrix with specified ID {newValue} not found.");
+                        return;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < (_timelineArray.Length / 6); i++)
+                        {
+                            _timelineArray[(i * 6) + 1] = (ushort)newValue;
+                        }
+                    }
+                }
+                else if (timelineDataBox.SelectedIndex == 2 || timelineDataBox.SelectedIndex == 5)
+                {
+                    // TODO
+                    return;
+                }
+                else
+                {
+                    throw new Exception("Not possible");
+                }
+
+                _isEdited = true;
+                refreshMenu();
+            }
+        }
+
         private void dataTypeEditSubmitButton_Click(object sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(dataTypeTextBox.Text))
@@ -318,5 +361,7 @@ namespace SCEditor.Prompts
                 }
             } 
         }
+
+        
     }
 }
