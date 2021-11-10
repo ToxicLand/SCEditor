@@ -816,7 +816,16 @@ namespace SCEditor
                     Export newExport = new Export(_scFile);
                     newExport.setCustomAdded(true);
                     newExport.SetId(maxExportId);
-                    newExport.SetExportName(exportToAdd.GetName());
+
+                    string newExportName = exportToAdd.GetName();
+                    while (_scFile.exportExists(newExportName) != -1)
+                    {
+                        MessageBox.Show($"Export name {newExportName} already exists, changing name to {newExportName + "_imported"}");
+                        newExportName = newExportName + "_imported";
+                        Console.WriteLine($"Duplicate new name: {newExportName}");
+                    }
+
+                    newExport.SetExportName(newExportName);
 
                     // SET MOVIECLIP DATA
                     MovieClip newMoveClip = new MovieClip(_scFile, movieClipToAdd.GetMovieClipDataType());
@@ -1009,6 +1018,12 @@ namespace SCEditor
                 {
                     _scFile.addMatrix(scToImportFrom.GetMatrixs()[id]);
                     _scFile.addPendingMatrix(scToImportFrom.GetMatrixs()[id]);
+                }
+
+                foreach (int id in colorTransformToAdd)
+                {
+                    _scFile.addColor(scToImportFrom.getColors()[id]);
+                    _scFile.addPendingColor(scToImportFrom.getColors()[id]);
                 }
 
                 reloadMenu();

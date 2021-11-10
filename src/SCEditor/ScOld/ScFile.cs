@@ -41,6 +41,7 @@ namespace SCEditor.ScOld
         private ushort _textureCount;
         private int _textFieldCount; 
         private int _matrixCount;
+        private int _colorsCount;
         private List<ScObject> _textures;
         private List<ScObject> _shapes;
         private List<ScObject> _exports;
@@ -50,11 +51,13 @@ namespace SCEditor.ScOld
         private List<ScObject> _pendingChanges;
         private List<ScObject> _movieClipsModifier;
         private List<Matrix> _pendingMatrixs;
+        private List<Tuple<Color, byte, Color>> _pendingColors;
 
         private readonly string _infoFile;
         private readonly string _textureFile;
         private long _eofOffset;
         private long _eofMatrixOffset;
+        private long _eofColorsOffset;
         private long _eofMovieClipOffset;
         private long _eofShapeOffset;
         private long _eofTexOffset;
@@ -206,6 +209,7 @@ namespace SCEditor.ScOld
             int shapeAdd = 0;
             int shapeChunkAdd = 0;
             int matrixAdd = 0;
+            int colorsAdd = 0;
 
             if (_pendingMatrixs.Count > 0)
             {
@@ -256,7 +260,58 @@ namespace SCEditor.ScOld
                 input.Close();
                 reloadInfoFile();
                 input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-            } 
+            }
+
+            if (_pendingColors.Count > 0)
+            {
+                input.Seek(0, SeekOrigin.Begin);
+
+                using (MemoryStream newData = new MemoryStream())
+                {
+                    long offsetBefore = _eofColorsOffset;
+
+                    byte[] tillColorEndData = new byte[_eofColorsOffset];
+                    input.Read(tillColorEndData, 0, (int)_eofColorsOffset);
+
+                    newData.Write(tillColorEndData, 0, tillColorEndData.Length);
+
+                    foreach (Tuple<Color, byte, Color> color in _pendingColors)
+                    {
+                        newData.WriteByte(9);
+                        newData.Write(BitConverter.GetBytes(7), 0, 4);
+
+                        newData.WriteByte(color.Item1.R);
+                        newData.WriteByte(color.Item1.G);
+                        newData.WriteByte(color.Item1.B);
+                        newData.WriteByte(color.Item2);
+                        newData.WriteByte(color.Item1.R);
+                        newData.WriteByte(color.Item1.G);
+                        newData.WriteByte(color.Item1.B);
+
+                        _eofColorsOffset = newData.Position;
+
+                        colorsAdd += 1;
+                    }
+
+                    byte[] restData = new byte[input.Length - offsetBefore];
+                    input.Read(restData, 0, restData.Length);
+                    newData.Write(restData, 0, restData.Length);
+
+                    input.Seek(0, SeekOrigin.Begin);
+                    newData.Seek(0, SeekOrigin.Begin);
+                    newData.CopyTo(input);
+                }
+
+                _pendingColors.Clear();
+
+                input.Seek(10, SeekOrigin.Begin);
+                this._colorsCount += colorsAdd;
+                input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
+
+                input.Close();
+                reloadInfoFile();
+                input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            }
 
             // Flushing depending edits.
             List<ScObject> exports = new List<ScObject>();
@@ -350,7 +405,7 @@ namespace SCEditor.ScOld
             input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2);
             input.Close();
 
-            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd}");
+            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd}");
         }
 
         public void Load()
@@ -493,7 +548,7 @@ namespace SCEditor.ScOld
                     _textureCount = reader.ReadUInt16();
                     _textFieldCount = reader.ReadUInt16();
                     _matrixCount = reader.ReadUInt16();
-                    var colorTransformCount = reader.ReadUInt16();
+                    _colorsCount = reader.ReadUInt16();
 
                     // 5 useless bytes
                     reader.ReadByte();
@@ -510,7 +565,7 @@ namespace SCEditor.ScOld
                     Console.WriteLine(@"TextureCount: " + _textureCount);
                     Console.WriteLine(@"TextFieldCount: " + _textFieldCount);
                     Console.WriteLine(@"Matrix2x3Count: " + _matrixCount);
-                    Console.WriteLine(@"ColorTransformCount: " + colorTransformCount);
+                    Console.WriteLine(@"ColorTransformCount: " + _colorsCount);
 #endif
 
                     // Reads the Export IDs.
@@ -676,6 +731,8 @@ namespace SCEditor.ScOld
                                 var gm = reader.ReadByte();
                                 var bm = reader.ReadByte();
                                 this._colors.Add(new Tuple<Color, byte, Color>(Color.FromArgb(ra, ga, ba), am, Color.FromArgb(rm, gm, bm)));
+
+                                _eofColorsOffset = reader.BaseStream.Position;
                                 break;
 
                             case "0D": // 13 
@@ -766,6 +823,7 @@ namespace SCEditor.ScOld
             ScObject[] previousPendingChanges = (ScObject[])_pendingChanges.ToArray().Clone();
             Matrix[] previousPendingMatrix = (Matrix[])_pendingMatrixs.ToArray().Clone();
             ScObject[] previousTextureData = (ScObject[])_textures.ToArray().Clone();
+            Tuple<Color, byte, Color>[] previousPendingColor = (Tuple<Color, byte, Color>[])_pendingColors.ToArray().Clone();
 
             _shapes = new List<ScObject>();
             _exports = new List<ScObject>();
@@ -780,10 +838,12 @@ namespace SCEditor.ScOld
             _movieClipCount = 0;
             _textFieldCount = 0;
             _matrixCount = 0;
+            _colorsCount = 0;
             _eofOffset = 0;
             _eofMatrixOffset = 0;
             _exportStartOffset = 0;
             _sofTagsOffset = 0;
+            _eofColorsOffset = 0;
 
             this.loadInfoFile();
 
@@ -841,6 +901,11 @@ namespace SCEditor.ScOld
             {
                 _pendingMatrixs.Add(pendingMatrix);
             }
+
+            foreach (Tuple<Color, byte, Color> color in previousPendingColor)
+            {
+                _pendingColors.Add(color);
+            }
         }
 
         public int exportExists(string exportName)
@@ -853,6 +918,16 @@ namespace SCEditor.ScOld
         {
             int value = this._shapes.FindIndex(shp => shp.Id == id);
             return value;
+        }
+
+        public void addColor(Tuple<Color, byte, Color> color)
+        {
+            _colors.Add(color);
+        }
+
+        public void addPendingColor(Tuple<Color, byte, Color> color)
+        {
+            _pendingColors.Add(color);
         }
     }
 }
