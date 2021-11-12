@@ -821,6 +821,10 @@ namespace SCEditor
                     // -Timeline Data
                     ushort[] newTimelineArray = new ushort[movieClipToAdd.timelineArray.Length];
                     int i = 0;
+
+                    if (movieClipToAdd.timelineArray.Length % 3 != 0)
+                        throw new Exception("timelineArray length not divisible by 3");
+
                     while (i < (movieClipToAdd.timelineArray.Length / 3))
                     {
                         newTimelineArray[i * 3] = movieClipToAdd.timelineArray[i * 3];
@@ -843,7 +847,7 @@ namespace SCEditor
                                 newMatrixId = matricesToAdd.IndexOf(movieClipToAdd.timelineArray[3 * i + 1]);
                             }
 
-                            newTimelineArray[3 * i + 1] = (ushort)((_scFile.GetMatrixs().Count - 1) + newMatrixId);
+                            newTimelineArray[3 * i + 1] = (ushort)(_scFile.GetMatrixs().Count + newMatrixId);
                         }
 
                         if (movieClipToAdd.timelineArray[3 * i + 2] == 65535)
@@ -864,7 +868,7 @@ namespace SCEditor
                                 newcolorTransformId = colorTransformToAdd.IndexOf(movieClipToAdd.timelineArray[3 * i + 2]);
                             }
 
-                            newTimelineArray[3 * i + 2] = (ushort)((_scFile.getColors().Count - 1) + newcolorTransformId);
+                            newTimelineArray[3 * i + 2] = (ushort)(_scFile.getColors().Count + newcolorTransformId);
                         }
 
                         i++;
