@@ -738,7 +738,7 @@ namespace SCEditor.ScOld
                 {
                     Shape shapeToRender = ((Shape)Children[timelineArray[(i * 3)]]);
                     Matrix matrixData = timelineArray[(i * 3) + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[(i * 3) + 1]] : null;
-                    
+
                     if (matrixData != null)
                     {
                         foreach (ShapeChunk chunk in shapeToRender.GetChunks())
@@ -789,7 +789,20 @@ namespace SCEditor.ScOld
 
         public void setFrame(int frameIndex, RenderingOptions options, Rectangle xyBound)
         {
-            int timelineIndex = frameIndex * 6;
+            int frameIndextoAdd = 0;
+            int idxToAdd = 0;
+            foreach (MovieClipFrame mvframe in Frames)
+            {
+                if (idxToAdd == frameIndex)
+                {
+                    break;
+                }
+
+                frameIndextoAdd += mvframe.Id;
+                idxToAdd++;
+            }
+
+            int timelineIndex = frameIndextoAdd * 3;
 
             var x = xyBound.X;
             var y = xyBound.Y;

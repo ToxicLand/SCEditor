@@ -15,11 +15,13 @@ namespace SCEditor.Prompts
     {
         private List<ScObject> exportsToList;
         public CheckedListBox.CheckedItemCollection checkedExports => exportsListBox.CheckedItems;
+        private bool allChecked;
 
         public scMergeSelection(List<ScObject> exportsList)
         {
             InitializeComponent();
             exportsToList = exportsList;
+            allChecked = true;
             populateListBox();
         }
 
@@ -56,6 +58,14 @@ namespace SCEditor.Prompts
                     this.Close();
                 }
             }
+        }
+
+        private void checkAllButton_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < exportsListBox.Items.Count; i++)
+                exportsListBox.SetItemChecked(i, !allChecked);
+
+            allChecked = !allChecked;
         }
     }
 }

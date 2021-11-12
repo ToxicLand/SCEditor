@@ -31,6 +31,7 @@ namespace SCEditor.Prompts
         {
             this.exportsListBox = new System.Windows.Forms.CheckedListBox();
             this.importButton = new System.Windows.Forms.Button();
+            this.checkAllButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // exportsListBox
@@ -41,27 +42,40 @@ namespace SCEditor.Prompts
             this.exportsListBox.FormattingEnabled = true;
             this.exportsListBox.Location = new System.Drawing.Point(12, 12);
             this.exportsListBox.Name = "exportsListBox";
-            this.exportsListBox.Size = new System.Drawing.Size(221, 526);
+            this.exportsListBox.Size = new System.Drawing.Size(221, 464);
             this.exportsListBox.TabIndex = 0;
             // 
             // importButton
             // 
             this.importButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(46)))), ((int)(((byte)(46)))), ((int)(((byte)(46)))));
             this.importButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.importButton.Location = new System.Drawing.Point(446, 490);
+            this.importButton.Location = new System.Drawing.Point(251, 490);
             this.importButton.Name = "importButton";
-            this.importButton.Size = new System.Drawing.Size(183, 48);
+            this.importButton.Size = new System.Drawing.Size(84, 48);
             this.importButton.TabIndex = 1;
             this.importButton.Text = "Import";
             this.importButton.UseVisualStyleBackColor = false;
             this.importButton.Click += new System.EventHandler(this.importButton_Click);
+            // 
+            // checkAllButton
+            // 
+            this.checkAllButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(46)))), ((int)(((byte)(46)))), ((int)(((byte)(46)))));
+            this.checkAllButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.checkAllButton.Location = new System.Drawing.Point(12, 490);
+            this.checkAllButton.Name = "checkAllButton";
+            this.checkAllButton.Size = new System.Drawing.Size(221, 48);
+            this.checkAllButton.TabIndex = 1;
+            this.checkAllButton.Text = "Check All";
+            this.checkAllButton.UseVisualStyleBackColor = false;
+            this.checkAllButton.Click += new System.EventHandler(this.checkAllButton_Click);
             // 
             // scMergeSelection
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
-            this.ClientSize = new System.Drawing.Size(641, 560);
+            this.ClientSize = new System.Drawing.Size(347, 560);
+            this.Controls.Add(this.checkAllButton);
             this.Controls.Add(this.importButton);
             this.Controls.Add(this.exportsListBox);
             this.ForeColor = System.Drawing.Color.White;
@@ -76,5 +90,6 @@ namespace SCEditor.Prompts
 
         private System.Windows.Forms.CheckedListBox exportsListBox;
         private System.Windows.Forms.Button importButton;
+        private System.Windows.Forms.Button checkAllButton;
     }
 }

@@ -29,6 +29,7 @@ namespace SCEditor.ScOld
             _colors = new List<Tuple<Color, byte, Color>>();
             _infoFile = infoFile;
             _textureFile = textureFile;
+            _pendingColors = new List<Tuple<Color, byte, Color>>();
         }
 
         #endregion
