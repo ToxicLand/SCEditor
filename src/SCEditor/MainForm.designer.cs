@@ -45,6 +45,7 @@
             this.exportAllShapeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportAllChunkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportAllAnimationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.scImportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.textureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createTextureStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addTextureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -71,7 +72,6 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.scImportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -257,6 +257,15 @@
             this.exportAllAnimationToolStripMenuItem.Text = "Export All Animation";
             this.exportAllAnimationToolStripMenuItem.Visible = false;
             this.exportAllAnimationToolStripMenuItem.Click += new System.EventHandler(this.exportAllAnimationToolStripMenuItem_Click);
+            // 
+            // scImportToolStripMenuItem
+            // 
+            this.scImportToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
+            this.scImportToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.scImportToolStripMenuItem.Name = "scImportToolStripMenuItem";
+            this.scImportToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
+            this.scImportToolStripMenuItem.Text = "Import SC";
+            this.scImportToolStripMenuItem.Click += new System.EventHandler(this.scImportToolStripMenuItem_Click);
             // 
             // textureToolStripMenuItem
             // 
@@ -512,6 +521,7 @@
             this.treeView1.Name = "treeView1";
             this.treeView1.Size = new System.Drawing.Size(284, 545);
             this.treeView1.TabIndex = 7;
+            this.treeView1.BeforeSelect += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView1_BeforeSelect);
             this.treeView1.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView1_AfterSelect);
             // 
             // panel1
@@ -538,15 +548,6 @@
             this.pictureBox1.Size = new System.Drawing.Size(100, 100);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
-            // 
-            // scImportToolStripMenuItem
-            // 
-            this.scImportToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
-            this.scImportToolStripMenuItem.ForeColor = System.Drawing.Color.White;
-            this.scImportToolStripMenuItem.Name = "scImportToolStripMenuItem";
-            this.scImportToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
-            this.scImportToolStripMenuItem.Text = "Import SC";
-            this.scImportToolStripMenuItem.Click += new System.EventHandler(this.scImportToolStripMenuItem_Click);
             // 
             // MainForm
             // 

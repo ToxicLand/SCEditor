@@ -15,7 +15,7 @@ namespace Test
         static void Main(string[] args)
         {
             //decompress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc");
-            compress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc.clone");
+            //compress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc.clone");
             //byte[] test = new byte[] {0xE2, 0x12, 0x00, 0x00 };
             //byte[] test2 = new byte[] { 0x00, 0x10, 0x97, 0x45 };
 

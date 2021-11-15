@@ -234,6 +234,8 @@ namespace SCEditor
             if (data == null)
                 throw new Exception("MainForm:Render() datatype is 1 or 7 but dataobject is null");
 
+            ((MovieClip)data).generatePointFList(null);
+
             if (((MovieClip)data).Frames.Count <= 2)
             {
                 pictureBox1.Image = ((MovieClip)data).renderAnimation(options, 0);
@@ -308,6 +310,25 @@ namespace SCEditor
             _animationTimer = new System.Windows.Forms.Timer();
             _animationTimer.Enabled = false;
             animationState = MovieClipState.Stopped;
+        }
+
+        private void treeView1_BeforeSelect(object sender, TreeViewCancelEventArgs e)
+        {
+            ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
+
+            if (data != null)
+            {
+                if (data.GetDataType() == 1 || data.GetDataType() == 7)
+                {
+                    if (data.GetDataType() == 7)
+                        data = ((Export)data).GetDataObject();
+
+                    if (data == null)
+                        throw new Exception("MainForm:Render() datatype is 1 or 7 but dataobject is null");
+
+                    ((MovieClip)data).destroyPointFList();
+                }
+            }
         }
 
         public void ExportAllChunk()
@@ -732,58 +753,11 @@ namespace SCEditor
 
             if (selectImportExportsForm.ShowDialog() == DialogResult.Yes)
             {
-                long lastShapeOffset = 0;
-                long lastMovieClipOffset = 0;
-                ushort maxId = 20000;
-                foreach (Export eE in _scFile.GetExports())
-                {
-                    if (eE.Id > maxId)
-                    {
-                        maxId = eE.Id;
-                    }
-
-                    if (eE.GetDataObject() != null)
-                    {
-                        MovieClip eMV = (MovieClip)eE.GetDataObject();
-                        long eMVOffset = eMV.GetOffset();
-                        if (eMVOffset > lastMovieClipOffset)
-                        {
-                            lastMovieClipOffset = eMVOffset;
-                        }
-
-                        if (eMV.Id > maxId)
-                        {
-                            maxId = eMV.Id;
-                        }
-
-                        if (eMV.Children != null)
-                        {
-                            foreach (Shape eS in eMV.Children)
-                            {
-                                long eSOffset = eS.GetOffset();
-
-                                if (eSOffset > lastShapeOffset)
-                                {
-                                    lastShapeOffset = eSOffset;
-                                }
-
-                                if (eS.Id > maxId)
-                                {
-                                    maxId = eS.Id;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (lastShapeOffset == 0)
-                    lastShapeOffset = _scFile.GetSofTagsOffset();
-
-                if (lastMovieClipOffset == 0)
-                    lastMovieClipOffset = _scFile.GetSofTagsOffset();
+                ushort maxId = _scFile.getMaxId();
 
                 Dictionary<ushort, ushort> shapesAlreadyAdded = new Dictionary<ushort, ushort>();
                 Dictionary<ushort, ushort> movieClipsAlreadyAdded = new Dictionary<ushort, ushort>();
+                Dictionary<ushort, ushort> textFieldsAlreadyAdded = new Dictionary<ushort, ushort>();
                 List<ushort> matricesToAdd = new List<ushort>();
                 List<ushort> colorTransformToAdd = new List<ushort>();
                 List<int> texturesToAdd = new List<int>();
@@ -809,7 +783,7 @@ namespace SCEditor
 
                     newExport.SetExportName(newExportName);
 
-                    MovieClip newMovieClip = addImportedMovieClip(movieClipToAdd, lastMovieClipOffset, ref maxId, ref movieClipsAlreadyAdded, ref matricesToAdd, ref colorTransformToAdd, scToImportFrom, ref shapesAlreadyAdded, lastShapeOffset, newExportName, ref texturesToAdd);
+                    MovieClip newMovieClip = addImportedMovieClip(movieClipToAdd, ref maxId, ref movieClipsAlreadyAdded, ref textFieldsAlreadyAdded, ref matricesToAdd, ref colorTransformToAdd, scToImportFrom, ref shapesAlreadyAdded, newExportName, ref texturesToAdd);
 
                     newExport.SetDataObject(newMovieClip);     
 
@@ -827,16 +801,6 @@ namespace SCEditor
 
                     _scFile.AddExport(newExport);
                     _scFile.AddChange(newExport);  
-                }
-
-                foreach (var (key, value) in movieClipsAlreadyAdded)
-                {
-                    int movieClipIndex = _scFile.GetMovieClips().FindIndex(mv => mv.Id == value);
-                    
-                    if (movieClipIndex == -1)
-                    {
-                        
-                    }
                 }
 
                 foreach (int id in texturesToAdd)
@@ -874,11 +838,11 @@ namespace SCEditor
             }
         }
 
-        private MovieClip addImportedMovieClip(MovieClip movieClipToAdd, long lastMovieClipOffset, ref ushort maxId, ref Dictionary<ushort, ushort> movieClipsAlreadyAdded, ref List<ushort> matricesToAdd, ref List<ushort> colorTransformToAdd, ScFile scToImportFrom, ref Dictionary<ushort, ushort> shapesAlreadyAdded, long lastShapeOffset, string newExportName, ref List<int> texturesToAdd)
+        private MovieClip addImportedMovieClip(MovieClip movieClipToAdd, ref ushort maxId, ref Dictionary<ushort, ushort> movieClipsAlreadyAdded, ref Dictionary<ushort, ushort> textFieldsAlreadyAdded, ref List<ushort> matricesToAdd, ref List<ushort> colorTransformToAdd, ScFile scToImportFrom, ref Dictionary<ushort, ushort> shapesAlreadyAdded, string newExportName, ref List<int> texturesToAdd)
         {
             // SET MOVIECLIP DATA
             MovieClip newMoveClip = new MovieClip(_scFile, movieClipToAdd.GetMovieClipDataType());
-            newMoveClip.SetOffset(-lastMovieClipOffset);
+            newMoveClip.SetOffset(-1);
             newMoveClip.setCustomAdded(true);
             newMoveClip.SetId(maxId);
             newMoveClip.SetFrameCount((short)movieClipToAdd.GetFrames().Count);
@@ -949,7 +913,22 @@ namespace SCEditor
             newMoveClip.setTimelineOffsetArray(newTimelineArray);
             newMoveClip.setTimelineChildrenCount(movieClipToAdd.timelineChildrenCount);
             newMoveClip.setTimelineChildrenId(movieClipToAdd.timelineChildrenId);
-            newMoveClip.setTimelineChildrenNames(movieClipToAdd.timelineChildrenNames);
+
+            string[] newTimelineChildrenNames = (string[])movieClipToAdd.timelineChildrenNames.Clone();
+
+            for (int tcnIdx = 0; tcnIdx < newTimelineChildrenNames.Length; tcnIdx++)
+            {
+                if (!string.IsNullOrEmpty(newTimelineChildrenNames[tcnIdx]))
+                {
+                    Console.WriteLine($"{newExportName} children name {newTimelineChildrenNames[tcnIdx]}");
+                    if (newTimelineChildrenNames[tcnIdx].Contains("pivot"))
+                    {
+                        newTimelineChildrenNames[tcnIdx] = "pivot";
+                    }
+                }
+            }
+
+            newMoveClip.setTimelineChildrenNames(newTimelineChildrenNames);
             newMoveClip.setTimelineOffsetCount(movieClipToAdd.timelineOffsetCount);
 
             ushort[] newTimelineChildrenId = (ushort[])movieClipToAdd.timelineChildrenId.Clone();
@@ -977,7 +956,7 @@ namespace SCEditor
                     else
                     {
                         Shape shapeToAdd = (Shape)scToImportFrom.GetShapes().Find(s => s.Id == childrenId);
-                        Shape newShape = addImportedShape(ref maxId, lastShapeOffset, shapeToAdd, ref texturesToAdd);
+                        Shape newShape = addImportedShape(ref maxId, shapeToAdd, ref texturesToAdd);
 
                         newShapes.Add(newShape);
                         newTimelineChildrenId[idx] = maxId;
@@ -986,8 +965,6 @@ namespace SCEditor
                 }
                 else if (scToImportFrom.GetMovieClips().FindIndex(mv => mv.Id == childrenId) != -1)
                 {
-                    Console.WriteLine($"{newExportName}: movieclip type of children id {childrenId}");
-
                     if (movieClipsAlreadyAdded.ContainsKey(childrenId))
                     {
                         newTimelineChildrenId[idx] = movieClipsAlreadyAdded[childrenId];
@@ -996,7 +973,7 @@ namespace SCEditor
                     {
                         maxId++;
                         MovieClip extraMovieClip = (MovieClip)scToImportFrom.GetMovieClips().Find(mv => mv.Id == childrenId);
-                        MovieClip extraNewMovieClip = addImportedMovieClip(extraMovieClip, lastMovieClipOffset, ref maxId, ref movieClipsAlreadyAdded, ref matricesToAdd, ref colorTransformToAdd, scToImportFrom, ref shapesAlreadyAdded, lastShapeOffset, newExportName, ref texturesToAdd);
+                        MovieClip extraNewMovieClip = addImportedMovieClip(extraMovieClip, ref maxId, ref movieClipsAlreadyAdded, ref textFieldsAlreadyAdded, ref matricesToAdd, ref colorTransformToAdd, scToImportFrom, ref shapesAlreadyAdded, newExportName, ref texturesToAdd);
 
                         _scFile.AddMovieClip(extraNewMovieClip);
                         _scFile.AddChange(extraNewMovieClip);
@@ -1004,9 +981,30 @@ namespace SCEditor
                         newTimelineChildrenId[idx] = maxId;
                     }
                 }
+                else if (scToImportFrom.getTextFields().FindIndex(n => n.Id == childrenId) != -1)
+                {
+                    if (textFieldsAlreadyAdded.ContainsKey(childrenId))
+                    {
+                        newTimelineChildrenId[idx] = textFieldsAlreadyAdded[childrenId];
+                    }
+                    else
+                    {
+                        maxId++;
+                        TextField extraTextField = (TextField)scToImportFrom.getTextFields().Find(tf => tf.Id == childrenId);
+                        TextField extraNewTextField = (TextField)((object)extraTextField);
+
+                        extraNewTextField.setId(maxId);
+                        extraNewTextField.setCustomAdded(true);
+
+                        _scFile.addTextField(extraNewTextField);
+                        _scFile.AddChange(extraNewTextField);
+
+                        newTimelineChildrenId[idx] = maxId;
+                    }
+                }
                 else
                 {
-                    Console.WriteLine($"{newExportName}: unknown type of children id {childrenId}");
+                    throw new Exception($"{newExportName}: unknown type of children id {childrenId}");
                 }
 
                 idx++;
@@ -1018,11 +1016,11 @@ namespace SCEditor
             return newMoveClip;
         }
 
-        private Shape addImportedShape(ref ushort maxId, long lastShapeOffset, Shape shapeToAdd, ref List<int> texturesToAdd)
+        private Shape addImportedShape(ref ushort maxId, Shape shapeToAdd, ref List<int> texturesToAdd)
         {
             Shape newShape = new Shape(_scFile);
             newShape.setCustomAdded(true);
-            newShape.SetOffset(-lastShapeOffset);
+            newShape.SetOffset(-1);
             maxId++; newShape.SetId(maxId);
             newShape.SetLength(shapeToAdd.length);
 
@@ -1321,75 +1319,7 @@ namespace SCEditor
                                     }
                                 }
 
-                                long lastShapeOffset = 0;
-                                long lastShapeChunkOffset = 0;
-                                long lastMovieClipOffset = 0;
-
-                                ushort maxId = 30000;
-
-                                foreach (Export eE in _scFile.GetExports())
-                                {
-                                    if (eE.Id > maxId)
-                                    {
-                                        maxId = eE.Id;
-                                    }    
-
-                                    if (eE.GetDataObject() != null)
-                                    {
-                                        MovieClip eMV = (MovieClip) eE.GetDataObject();
-                                        long eMVOffset = eMV.GetOffset();
-                                        if (eMVOffset > lastMovieClipOffset)
-                                        {
-                                            lastMovieClipOffset = eMVOffset;
-                                        }
-
-                                        if (eMV.Id > maxId)
-                                        {
-                                            maxId = eMV.Id;
-                                        }
-
-                                        if (eMV.Children != null)
-                                        {
-                                            foreach (Shape eS in eMV.Children)
-                                            {
-                                                long eSOffset = eS.GetOffset();
-
-                                                if (eSOffset > lastShapeOffset)
-                                                {
-                                                    lastShapeOffset = eSOffset;
-                                                }
-
-                                                if (eS.Id > maxId)
-                                                {
-                                                    maxId = eS.Id;
-                                                }  
-
-                                                if (eS.Children != null)
-                                                {
-                                                    foreach (ShapeChunk eSC in eS.Children)
-                                                    {
-                                                        long eSCOffset = eSC.GetOffset();
-
-                                                        if (eSCOffset > lastShapeChunkOffset)
-                                                        {
-                                                            lastShapeChunkOffset = eSCOffset;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }        
-                                }
-
-                                if (lastShapeOffset == 0)
-                                    lastShapeOffset = _scFile.GetSofTagsOffset();
-
-                                if (lastShapeChunkOffset == 0)
-                                    lastShapeChunkOffset = _scFile.GetSofTagsOffset();
-
-                                if (lastMovieClipOffset == 0)
-                                    lastMovieClipOffset = _scFile.GetSofTagsOffset();
-
+                                ushort maxId = _scFile.getMaxId();
                                 maxId++;
 
                                 // SHAPECHUNK DATA
@@ -1398,7 +1328,7 @@ namespace SCEditor
                                 shapeChunkData.SetTextureId(Convert.ToByte(selectedTexture));
                                 shapeChunkData.SetChunkType(22);
                                 shapeChunkData.setCustomAdded(true);
-                                shapeChunkData.SetOffset(lastShapeChunkOffset * -1);
+                                shapeChunkData.SetOffset(-1);
                                 shapeChunkData.SetShapeId(maxId);
 
                                 PointF[] frameXY = new PointF[frameVerticies.Count];
@@ -1427,7 +1357,7 @@ namespace SCEditor
                                 shapeData.SetId(maxId);
                                 shapeData.AddChunk(shapeChunkData);
                                 shapeData.setCustomAdded(true);
-                                shapeData.SetOffset(lastShapeOffset * -1);
+                                shapeData.SetOffset(-1);
 
                                 _scFile.AddShape(shapeData);
                                 _scFile.AddChange(shapeData);
@@ -1444,7 +1374,7 @@ namespace SCEditor
                                 else
                                 {
                                     movieClipData.SetId(maxId);
-                                    movieClipData.SetOffset(lastMovieClipOffset * -1);
+                                    movieClipData.SetOffset(-1);
                                     movieClipData.SetDataType(12);
                                     movieClipData.setCustomAdded(true);
                                     movieClipData.SetFramePerSecond(24);
@@ -1926,6 +1856,5 @@ namespace SCEditor
             Playing,
             None
         }
-
     }
 }

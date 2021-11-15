@@ -244,11 +244,10 @@ namespace SCEditor.ScOld
                     var y = xyBound.Y;
 
                     var finalShape = new Bitmap(width, height);
+
                     Console.WriteLine($"Rendering shape: W:{finalShape.Width} H:{finalShape.Height}\n");
                     Console.WriteLine("Length: " + _length + " | Offset: " + _offset);
 
-
-                    // Assemble shape chunks
                     foreach (ShapeChunk chunk in _chunks)
                     {
                         var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];

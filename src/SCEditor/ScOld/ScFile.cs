@@ -62,6 +62,7 @@ namespace SCEditor.ScOld
         private readonly string _textureFile;
         private long _eofOffset;
         private long _eofMatrixOffset;
+        private long _eofTextFieldOffset;
         private long _eofColorsOffset;
         private long _eofMovieClipOffset;
         private long _eofShapeOffset;
@@ -215,6 +216,7 @@ namespace SCEditor.ScOld
             int shapeChunkAdd = 0;
             int matrixAdd = 0;
             int colorsAdd = 0;
+            int textFieldsAdd = 0;
 
             if (_pendingMatrixs.Count > 0)
             {
@@ -334,6 +336,11 @@ namespace SCEditor.ScOld
                     case 2: // Texture
                         data.Write(texinput);
                         textureAdd += 1;
+                        break;
+
+                    case 5: // TextFields
+                        data.Write(input);
+                        textFieldsAdd += 1;
                         break;
 
                     case 1: // MovieClip
@@ -707,9 +714,11 @@ namespace SCEditor.ScOld
                                 if (textFieldIndex >= _textFieldCount)
                                     throw new Exception($"Trying to load too many TextFields. \n Index: {textFieldIndex} | Count: {_textFieldCount}");
 
-                                TextField textField = new TextField(this);
+                                TextField textField = new TextField(this, datatag);
                                 textField.Read(reader, tag);
                                 _textFields.Add(textField);
+
+                                _eofTextFieldOffset = reader.BaseStream.Position;
 
                                 textFieldIndex += 1;
                                 break;
@@ -813,8 +822,8 @@ namespace SCEditor.ScOld
                                 break;
                         }
 
-                        if ((offset + tagSize + 5) != reader.BaseStream.Position)
-                            throw new Exception($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
+                        //if ((offset + tagSize + 5) != reader.BaseStream.Position)
+                        //    throw new Exception($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
                     }
 
                     if (_movieClips.Count < _movieClipCount)
@@ -945,6 +954,11 @@ namespace SCEditor.ScOld
             return _textFields;
         }
 
+        public void addTextField(ScObject data)
+        {
+            _textFields.Add(data);
+        }
+
         public void addColor(Tuple<Color, byte, Color> color)
         {
             _colors.Add(color);
@@ -953,6 +967,45 @@ namespace SCEditor.ScOld
         public void addPendingColor(Tuple<Color, byte, Color> color)
         {
             _pendingColors.Add(color);
+        }
+
+        public ushort getMaxId()
+        {
+            ushort maxId = 0;
+
+            foreach (Export ex in _exports)
+            {
+                if (ex.Id > maxId)
+                {
+                    maxId = ex.Id;
+                }
+            }
+
+            foreach (Shape s in _shapes)
+            {
+                if (s.Id > maxId)
+                {
+                    maxId = s.Id;
+                }
+            }
+
+            foreach (MovieClip mv in _movieClips)
+            {
+                if (mv.Id > maxId)
+                {
+                    maxId = mv.Id;
+                }
+            }
+
+            foreach (TextField tx in _textFields)
+            {
+                if (tx.Id > maxId)
+                {
+                    maxId = tx.Id;
+                }
+            }
+
+            return (maxId += 100);
         }
     }
 }

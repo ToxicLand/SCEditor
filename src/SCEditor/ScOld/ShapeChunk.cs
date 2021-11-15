@@ -166,8 +166,8 @@ namespace SCEditor.ScOld
             Console.WriteLine("Rendering Chunk " + _chunkId + " from shape " + _shapeId + " | Texture ID: " + _textureId + " | Chunk Type: " + _chunkType);
 
             Bitmap result = null;
-
             var texture = (Texture) _scFile.GetTextures()[_textureId];
+
             if (texture != null)
             {
                 Bitmap bitmap = texture.Bitmap;
