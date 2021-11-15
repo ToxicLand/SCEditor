@@ -184,6 +184,7 @@ namespace SCEditor
             treeView1.Populate(_scFile.GetExports());
             treeView1.Populate(_scFile.GetShapes());
             treeView1.Populate(_scFile.GetMovieClips());
+            treeView1.Populate(_scFile.getTextFields());
         }
 
         private void Render()
@@ -1642,6 +1643,7 @@ namespace SCEditor
             treeView1.Populate(_scFile.GetExports());
             treeView1.Populate(_scFile.GetShapes());
             treeView1.Populate(_scFile.GetMovieClips());
+            treeView1.Populate(_scFile.getTextFields());
         }
 
         private void addToolStripMenuItem_Click(object sender, EventArgs e)

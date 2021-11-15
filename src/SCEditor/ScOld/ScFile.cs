@@ -30,6 +30,8 @@ namespace SCEditor.ScOld
             _infoFile = infoFile;
             _textureFile = textureFile;
             _pendingColors = new List<Tuple<Color, byte, Color>>();
+            _fontNames = new List<string>();
+            _textFields = new List<ScObject>();
         }
 
         #endregion
@@ -53,6 +55,8 @@ namespace SCEditor.ScOld
         private List<ScObject> _movieClipsModifier;
         private List<Matrix> _pendingMatrixs;
         private List<Tuple<Color, byte, Color>> _pendingColors;
+        private List<string> _fontNames;
+        private List<ScObject> _textFields;
 
         private readonly string _infoFile;
         private readonly string _textureFile;
@@ -701,9 +705,11 @@ namespace SCEditor.ScOld
                             case "2B": //43
                             case "2C": //44
                                 if (textFieldIndex >= _textFieldCount)
-                                    throw new Exception("Trying to load too many TextFields from ");
+                                    throw new Exception($"Trying to load too many TextFields. \n Index: {textFieldIndex} | Count: {_textFieldCount}");
 
-                                reader.ReadBytes(Convert.ToInt32(tagSize)); // TODO
+                                TextField textField = new TextField(this);
+                                textField.Read(reader, tag);
+                                _textFields.Add(textField);
 
                                 textFieldIndex += 1;
                                 break;
@@ -806,6 +812,9 @@ namespace SCEditor.ScOld
                                 reader.ReadBytes(Convert.ToInt32(tagSize));
                                 break;
                         }
+
+                        if ((offset + tagSize + 5) != reader.BaseStream.Position)
+                            throw new Exception($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
                     }
 
                     if (_movieClips.Count < _movieClipCount)
@@ -915,10 +924,25 @@ namespace SCEditor.ScOld
             return value;
         }
 
+        public void addFontName(string name)
+        {
+            _fontNames.Add(name);
+        }
+
+        public List<string> getFontNames()
+        {
+            return _fontNames;
+        }
+
         public int shapeExists(int id)
         {
             int value = this._shapes.FindIndex(shp => shp.Id == id);
             return value;
+        }
+
+        public List<ScObject> getTextFields()
+        {
+            return _textFields;
         }
 
         public void addColor(Tuple<Color, byte, Color> color)
