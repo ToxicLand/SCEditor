@@ -341,14 +341,22 @@ namespace SCEditor.ScOld
                     case 5: // TextFields
                         data.Write(input);
                         textFieldsAdd += 1;
+
+                        if (data.customAdded == true)
+                        {
+                            this._textFieldCount += 1;
+                            input.Seek(6, SeekOrigin.Begin);
+                            input.Write(BitConverter.GetBytes(this._textFieldCount), 0, 2);
+                            goto case -256;
+                        }
                         break;
 
                     case 1: // MovieClip
                         data.Write(input);
+                        movieClipAdd += 1;
 
                         if (data.customAdded == true)
                         {
-                            movieClipAdd += 1;
                             this._movieClipCount += 1;
                             input.Seek(2, SeekOrigin.Begin);
                             input.Write(BitConverter.GetBytes(this._movieClipCount), 0, 2);
