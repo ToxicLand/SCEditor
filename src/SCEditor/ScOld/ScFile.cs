@@ -425,14 +425,16 @@ namespace SCEditor.ScOld
             input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2);
             input.Close();
 
-            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd}");
+            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd} | TextFields {textFieldsAdd}");
         }
 
         public void Load()
         {
             var sw = Stopwatch.StartNew();
 
-            LoadTextureFile();
+            if (this._textureFile != this._infoFile)
+                LoadTextureFile();
+
             loadInfoFile();
 
             sw.Stop();
@@ -613,6 +615,7 @@ namespace SCEditor.ScOld
                     int movieClipModifierIndex = 0;
                     int textFieldIndex = 0;
                     int matrixIndex = 0;
+                    int textureIndex = 0;
 
                     //bool canLoadTex = true;
                     //bool _texDependency = false;
@@ -657,13 +660,15 @@ namespace SCEditor.ScOld
                             case "1C": //28
                             case "1D": //29
                             case "22": //34
-                            case "18": //24 - not using check
+                                if (textureIndex >= _textureCount)
+                                    throw new Exception($"Trying to load too many shapes.\n Index: {textureIndex} | Count: {_textureCount}");
+
                                 if (tagSize > 6)
                                 {
                                     var texture = new Texture(this);
                                     texture.SetOffset(offset);
                                     texture.Read(datatag, tagSize, reader);
-                                    //_eofTexOffset = reader.BaseStream.Position;
+                                    _eofTexOffset = reader.BaseStream.Position;
                                     this._textures.Add(texture);
                                 }
                                 else
@@ -676,6 +681,8 @@ namespace SCEditor.ScOld
                                     Console.WriteLine("width: " + width);
                                     Console.WriteLine("height: " + height);
                                 }
+
+                                textureIndex += 1;
                                 break;
 
                             case "02":
@@ -830,8 +837,8 @@ namespace SCEditor.ScOld
                                 break;
                         }
 
-                        //if ((offset + tagSize + 5) != reader.BaseStream.Position)
-                        //    throw new Exception($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
+                        if ((offset + tagSize + 5) != reader.BaseStream.Position)
+                            Console.WriteLine($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
                     }
 
                     if (_movieClips.Count < _movieClipCount)
@@ -855,6 +862,7 @@ namespace SCEditor.ScOld
             _shapes = new List<ScObject>();
             _exports = new List<ScObject>();
             _movieClips = new List<ScObject>();
+            _textFields = new List<ScObject>();
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
             _pendingMatrixs = new List<Matrix>();
@@ -871,6 +879,7 @@ namespace SCEditor.ScOld
             _exportStartOffset = 0;
             _sofTagsOffset = 0;
             _eofColorsOffset = 0;
+            _eofTextFieldOffset = 0;
 
             this.loadInfoFile();
 

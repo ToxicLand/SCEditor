@@ -53,6 +53,36 @@ namespace SCEditor.ScOld
             _dataType = dataType;
         }
 
+        public TextField(ScFile scFile, TextField data, ushort id)
+        {
+            Id = id;
+            _scFile = scFile;
+            _fontName = data._fontName;
+            _unk16 = data._unk16;
+            _unk18 = data._unk18;
+            _unk20 = data._unk20;
+            _unk22 = data._unk22;
+            _unk24 = data._unk24;
+            _unk28 = data._unk28;
+            _unk32 = data._unk32;
+            _flag = data._flag;
+            _unk42 = data._unk42;
+            _unk43 = data._unk43;
+            _unk44 = data._unk44;
+            _unk46 = data._unk46;
+            _scFile = scFile;
+            _dataType = data._dataType;
+            _flag1 = data._flag1;
+            _flag2 = data._flag2;
+            _flag4 = data._flag4;
+            _flag8 = data._flag8;
+            _flag16 = data._flag16;
+            _flag64 = data._flag64;
+            _unkR1 = data._unkR1;
+            _unkR2 = data._unkR2;
+            _unk46tmp = data._unk46tmp;
+        }
+
         public override int GetDataType()
         {
             return 5;
@@ -182,12 +212,12 @@ namespace SCEditor.ScOld
                 // Font Name
                 if (string.IsNullOrEmpty(_fontName))
                 {
-                    input.Write(BitConverter.GetBytes(0xFF));
+                    input.WriteByte((byte)0xFF);
                 }
                 else
                 {
                     byte[] stringData = Encoding.ASCII.GetBytes(_fontName);
-                    input.WriteByte(BitConverter.GetBytes(stringData.Length)[0]);
+                    input.WriteByte((byte)stringData.Length);
                     input.Write(stringData, 0, stringData.Length);
 
                     dataLength += stringData.Length;
@@ -218,12 +248,12 @@ namespace SCEditor.ScOld
                 // unk32
                 if (string.IsNullOrEmpty(_unk32))
                 {
-                    input.Write(BitConverter.GetBytes(0xFF));
+                    input.WriteByte((byte)0xFF);
                 }
                 else
                 {
                     byte[] stringData = Encoding.ASCII.GetBytes(_unk32);
-                    input.WriteByte(BitConverter.GetBytes(stringData.Length)[0]);
+                    input.WriteByte((byte)stringData.Length);
                     input.Write(stringData, 0, stringData.Length);
 
                     dataLength += stringData.Length;
@@ -275,12 +305,6 @@ namespace SCEditor.ScOld
                 input.Write(BitConverter.GetBytes(dataLength + 5), 0, 4);
                 input.Seek(dataLength, SeekOrigin.Current);
             }
-
-            if (_offset < 0 || customAdded == true)
-            {
-                input.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
-                _offset = _scFile.GetEofOffset();
-            }
         }
 
         public override Bitmap Render(RenderingOptions options)
@@ -325,7 +349,7 @@ namespace SCEditor.ScOld
 
         public void setId(ushort id)
         {
-            this.Id = id;
+            Id = id;
         }
     }
 }

@@ -1029,6 +1029,7 @@ namespace SCEditor.ScOld
                     }
                     else
                     {
+                        this.GetName();
                         throw new Exception($"Unknown type of children with id {timelineChildrenId[timelineArray[(i * 3)]]} for movieclip id {this.Id}");
                     }
                 }

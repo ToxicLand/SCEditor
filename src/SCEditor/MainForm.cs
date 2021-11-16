@@ -484,7 +484,6 @@ namespace SCEditor
                     //Texture _defaultTexture = new Texture(0,800,800);
                     //_newScFile.AddTexture(_defaultTexture);
 
-
                     try
                     {
                         _newScFile.Load();
@@ -740,7 +739,8 @@ namespace SCEditor
 
             try
             {
-                scToImportFrom.LoadTextureFile();
+                if (importScFileInfo != importScFileTex)
+                    scToImportFrom.LoadTextureFile();
                 scToImportFrom.loadInfoFile();
             }
             catch (Exception ex)
@@ -760,7 +760,7 @@ namespace SCEditor
                 Dictionary<ushort, ushort> textFieldsAlreadyAdded = new Dictionary<ushort, ushort>();
                 List<ushort> matricesToAdd = new List<ushort>();
                 List<ushort> colorTransformToAdd = new List<ushort>();
-                List<int> texturesToAdd = new List<int>();
+                Dictionary<int, int> texturesToAdd = new Dictionary<int, int>();
 
                 foreach (scMergeSelection.exportItemClass item in selectImportExportsForm.checkedExports)
                 {
@@ -783,31 +783,34 @@ namespace SCEditor
 
                     newExport.SetExportName(newExportName);
 
-                    MovieClip newMovieClip = addImportedMovieClip(movieClipToAdd, ref maxId, ref movieClipsAlreadyAdded, ref textFieldsAlreadyAdded, ref matricesToAdd, ref colorTransformToAdd, scToImportFrom, ref shapesAlreadyAdded, newExportName, ref texturesToAdd);
+                    MovieClip newMovieClip = null;
 
-                    newExport.SetDataObject(newMovieClip);     
-
-                    foreach (Shape shape in newMovieClip.GetShapes())
+                    if (movieClipsAlreadyAdded.ContainsKey(movieClipToAdd.Id))
                     {
-                        if (_scFile.GetShapes().FindIndex(s => s.Id == shape.Id) == -1)
-                        {
-                            _scFile.AddShape(shape);
-                            _scFile.AddChange(shape);
-                        }
+                        newMovieClip = (MovieClip)_scFile.GetMovieClips().Find(mv => mv.Id == movieClipsAlreadyAdded[movieClipToAdd.Id]);
+                    }
+                    else
+                    {
+                        newMovieClip = addImportedMovieClip(movieClipToAdd, ref maxId, ref movieClipsAlreadyAdded, ref textFieldsAlreadyAdded, ref matricesToAdd, ref colorTransformToAdd, scToImportFrom, ref shapesAlreadyAdded, newExportName, ref texturesToAdd);
                     }
 
-                    _scFile.AddMovieClip(newMovieClip);
-                    _scFile.AddChange(newMovieClip);
+                    if (newMovieClip == null)
+                        throw new Exception("Movieclip can not be null?");
+
+                    newExport.SetDataObject(newMovieClip);
 
                     _scFile.AddExport(newExport);
                     _scFile.AddChange(newExport);  
                 }
 
-                foreach (int id in texturesToAdd)
+                foreach (var (key , value) in texturesToAdd)
                 {
-                    Texture newTextureToAdd = new Texture(_scFile, ((Texture)scToImportFrom.GetTextures()[id]).Bitmap);
-                    _scFile.AddTexture(newTextureToAdd);
-                    _scFile.AddChange(newTextureToAdd);
+                    if (value >= _scFile.GetTextures().Count)
+                    {
+                        Texture newTextureToAdd = new Texture(_scFile, ((Texture)scToImportFrom.GetTextures()[key]).Bitmap);
+                        _scFile.AddTexture(newTextureToAdd);
+                        _scFile.AddChange(newTextureToAdd);
+                    }  
                 }
 
                 foreach (int id in matricesToAdd)
@@ -838,19 +841,19 @@ namespace SCEditor
             }
         }
 
-        private MovieClip addImportedMovieClip(MovieClip movieClipToAdd, ref ushort maxId, ref Dictionary<ushort, ushort> movieClipsAlreadyAdded, ref Dictionary<ushort, ushort> textFieldsAlreadyAdded, ref List<ushort> matricesToAdd, ref List<ushort> colorTransformToAdd, ScFile scToImportFrom, ref Dictionary<ushort, ushort> shapesAlreadyAdded, string newExportName, ref List<int> texturesToAdd)
+        private MovieClip addImportedMovieClip(MovieClip movieClipToAdd, ref ushort maxId, ref Dictionary<ushort, ushort> movieClipsAlreadyAdded, ref Dictionary<ushort, ushort> textFieldsAlreadyAdded, ref List<ushort> matricesToAdd, ref List<ushort> colorTransformToAdd, ScFile scToImportFrom, ref Dictionary<ushort, ushort> shapesAlreadyAdded, string newExportName, ref Dictionary<int, int> texturesToAdd)
         {
             // SET MOVIECLIP DATA
-            MovieClip newMoveClip = new MovieClip(_scFile, movieClipToAdd.GetMovieClipDataType());
-            newMoveClip.SetOffset(-1);
-            newMoveClip.setCustomAdded(true);
-            newMoveClip.SetId(maxId);
-            newMoveClip.SetFrameCount((short)movieClipToAdd.GetFrames().Count);
-            newMoveClip.setFlags(movieClipToAdd.flags);
-            newMoveClip.SetFramePerSecond(movieClipToAdd.FPS);
-            newMoveClip.SetFrames(movieClipToAdd.Frames);
-            newMoveClip.setScalingGrid(movieClipToAdd.scalingGrid);
-            newMoveClip.setLength(movieClipToAdd.length);
+            MovieClip newMovieClip = new MovieClip(_scFile, movieClipToAdd.GetMovieClipDataType());
+            newMovieClip.SetOffset(-1);
+            newMovieClip.setCustomAdded(true);
+            newMovieClip.SetId(maxId);
+            newMovieClip.SetFrameCount((short)movieClipToAdd.GetFrames().Count);
+            newMovieClip.setFlags(movieClipToAdd.flags);
+            newMovieClip.SetFramePerSecond(movieClipToAdd.FPS);
+            newMovieClip.SetFrames(movieClipToAdd.Frames);
+            newMovieClip.setScalingGrid(movieClipToAdd.scalingGrid);
+            newMovieClip.setLength(movieClipToAdd.length);
 
             movieClipsAlreadyAdded.Add(movieClipToAdd.Id, maxId);
 
@@ -910,9 +913,8 @@ namespace SCEditor
                 i++;
             }
 
-            newMoveClip.setTimelineOffsetArray(newTimelineArray);
-            newMoveClip.setTimelineChildrenCount(movieClipToAdd.timelineChildrenCount);
-            newMoveClip.setTimelineChildrenId(movieClipToAdd.timelineChildrenId);
+            newMovieClip.setTimelineOffsetArray(newTimelineArray);
+            newMovieClip.setTimelineChildrenCount(movieClipToAdd.timelineChildrenCount);
 
             string[] newTimelineChildrenNames = (string[])movieClipToAdd.timelineChildrenNames.Clone();
 
@@ -928,8 +930,8 @@ namespace SCEditor
                 }
             }
 
-            newMoveClip.setTimelineChildrenNames(newTimelineChildrenNames);
-            newMoveClip.setTimelineOffsetCount(movieClipToAdd.timelineOffsetCount);
+            newMovieClip.setTimelineChildrenNames(newTimelineChildrenNames);
+            newMovieClip.setTimelineOffsetCount(movieClipToAdd.timelineOffsetCount);
 
             ushort[] newTimelineChildrenId = (ushort[])movieClipToAdd.timelineChildrenId.Clone();
 
@@ -950,6 +952,9 @@ namespace SCEditor
                         int alreadyShapeIdx = newShapes.FindIndex(s => s.Id == newTimelineChildrenId[idx]);
                         if (alreadyShapeIdx == -1)
                         {
+                            if (_scFile.GetShapes().Find(s => s.Id == newTimelineChildrenId[idx]) == null)
+                                throw new Exception("Shape is not supposed to be null?");
+
                             newShapes.Add(_scFile.GetShapes().Find(s => s.Id == newTimelineChildrenId[idx]));
                         }
                     }
@@ -957,6 +962,15 @@ namespace SCEditor
                     {
                         Shape shapeToAdd = (Shape)scToImportFrom.GetShapes().Find(s => s.Id == childrenId);
                         Shape newShape = addImportedShape(ref maxId, shapeToAdd, ref texturesToAdd);
+
+                        if (newShape == null)
+                            throw new Exception("Shape is not supposed to be null?");
+
+                        if (_scFile.GetShapes().FindIndex(s => s.Id == newShape.Id) == -1)
+                        {
+                            _scFile.AddShape(newShape);
+                            _scFile.AddChange(newShape);
+                        }
 
                         newShapes.Add(newShape);
                         newTimelineChildrenId[idx] = maxId;
@@ -991,13 +1005,21 @@ namespace SCEditor
                     {
                         maxId++;
                         TextField extraTextField = (TextField)scToImportFrom.getTextFields().Find(tf => tf.Id == childrenId);
-                        TextField extraNewTextField = (TextField)((object)extraTextField);
+                        TextField extraNewTextField = new TextField(_scFile, extraTextField, maxId);
 
                         extraNewTextField.setId(maxId);
                         extraNewTextField.setCustomAdded(true);
 
+                        textFieldsAlreadyAdded.Add(childrenId, maxId);
+
                         _scFile.addTextField(extraNewTextField);
                         _scFile.AddChange(extraNewTextField);
+
+                        if (_scFile.getFontNames().FindIndex(fn => fn == extraNewTextField.fontName) == -1)
+                        {
+                            Console.WriteLine($"[Font Name Missing]: Imported {newExportName} has TextField with font name {extraNewTextField.fontName} missing in current SC File.");
+                            _scFile.addFontName(extraNewTextField.fontName);
+                        }
 
                         newTimelineChildrenId[idx] = maxId;
                     }
@@ -1010,13 +1032,16 @@ namespace SCEditor
                 idx++;
             }
 
-            newMoveClip.setTimelineChildrenId(newTimelineChildrenId);
-            newMoveClip.SetShapes(newShapes);
+            newMovieClip.setTimelineChildrenId(newTimelineChildrenId);
+            newMovieClip.SetShapes(newShapes);
 
-            return newMoveClip;
+            _scFile.AddMovieClip(newMovieClip);
+            _scFile.AddChange(newMovieClip);
+
+            return newMovieClip;
         }
 
-        private Shape addImportedShape(ref ushort maxId, Shape shapeToAdd, ref List<int> texturesToAdd)
+        private Shape addImportedShape(ref ushort maxId, Shape shapeToAdd, ref Dictionary<int, int> texturesToAdd)
         {
             Shape newShape = new Shape(_scFile);
             newShape.setCustomAdded(true);
@@ -1033,27 +1058,56 @@ namespace SCEditor
                 newShapeChunk.SetChunkId(shapeChunkToAdd.Id);
                 newShapeChunk.SetShapeId(maxId);
 
-                bool texIdAdded = false;
-                int newtexId = 0;
-                foreach (int texValue in texturesToAdd)
+                int newtexId = _scFile.GetTextures().Count - 1;
+                int inputTexId = -1;
+                if (!texturesToAdd.ContainsKey((int)shapeChunkToAdd.GetTextureId()))
                 {
-                    if (texValue == shapeChunkToAdd.GetTextureId())
+                    while (true)
                     {
-                        texIdAdded = true;
-                        break;
+                        DialogResult askImportTexture = MessageBox.Show($"{shapeToAdd.Id}: Has new chunk texture to import with ID {shapeChunkToAdd.GetTextureId()}.\nProcced to import texture or use the ones already available? (Yes for import - no for manual)", "Import Texture or Manual?", MessageBoxButtons.YesNo);
+
+                        if (askImportTexture == DialogResult.No)
+                        {
+                            inputDataDialog popupDialog = new inputDataDialog(1);
+                            popupDialog.setLabelText("Texture ID:");
+
+                            if (popupDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                inputTexId = popupDialog.inputTextBoxInt;
+
+                                if (!(inputTexId < 0 || inputTexId >= _scFile.GetTextures().Count))
+                                {
+                                    texturesToAdd.Add((int)shapeChunkToAdd.GetTextureId(), inputTexId);
+                                    newtexId = inputTexId;
+                                    break;
+                                }
+                            }
+
+                            throw new Exception("Texture id out of range.");
+                        }
+                        else
+                        {
+                            foreach (var (key, value) in texturesToAdd)
+                            {
+                                if (value >= newtexId)
+                                {
+                                    newtexId = value;
+                                }
+                            }
+
+                            newtexId += 1;
+
+                            texturesToAdd.Add((int)shapeChunkToAdd.GetTextureId(), newtexId);
+                            break;
+                        }
                     }
-                }
-                if (texIdAdded == false)
-                {
-                    texturesToAdd.Add((int)shapeChunkToAdd.GetTextureId());
-                    newtexId = texturesToAdd.Count - 1;
                 }
                 else
                 {
-                    newtexId = texturesToAdd.IndexOf(shapeChunkToAdd.GetTextureId());
+                    newtexId = texturesToAdd[(int)shapeChunkToAdd.GetTextureId()];
                 }
 
-                newShapeChunk.SetTextureId((byte)(_scFile.GetTextures().Count + newtexId));
+                newShapeChunk.SetTextureId((byte)(newtexId));
                 newShapeChunk.SetChunkType(shapeChunkToAdd.GetChunkType());
                 newShapeChunk.SetUV(shapeChunkToAdd.UV);
                 newShapeChunk.SetXY(shapeChunkToAdd.XY);
