@@ -16,12 +16,15 @@ namespace SCEditor.Prompts
         private List<ScObject> exportsToList;
         public CheckedListBox.CheckedItemCollection checkedExports => exportsListBox.CheckedItems;
         private bool allChecked;
+        public bool newTextureChecked;
+        public float scaleFactor { get; private set; }
 
         public scMergeSelection(List<ScObject> exportsList)
         {
             InitializeComponent();
             exportsToList = exportsList;
-            allChecked = true;
+            allChecked = false;
+            newTextureChecked = false;
             populateListBox();
         }
 
@@ -66,6 +69,45 @@ namespace SCEditor.Prompts
                 exportsListBox.SetItemChecked(i, !allChecked);
 
             allChecked = !allChecked;
+        }
+
+        private void newTextureCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            newTextureChecked = !newTextureChecked;
+        }
+
+        private void scaleFactorTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyData != Keys.Back)
+            {
+                if (scaleFactorTextBox.Text.Contains(".") && e.KeyData == Keys.OemPeriod)
+                {
+                    e.SuppressKeyPress = true;
+                    return;
+                }
+                else if (e.KeyData != Keys.OemPeriod)
+                {
+                    if (float.TryParse(Convert.ToString((char)e.KeyData), out float _))
+                    {
+                        if ((float)Convert.ToDouble(string.Format("{0}{1}", scaleFactor, float.Parse(Convert.ToString((char)e.KeyData)))) >= float.MaxValue)
+                        {
+                            e.SuppressKeyPress = true;
+                        }
+                    }
+                    else
+                    {
+                        e.SuppressKeyPress = true;
+                    }
+                }
+            }
+        }
+
+        private void scaleFactorTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(scaleFactorTextBox.Text))
+                scaleFactor = float.Parse(scaleFactorTextBox.Text);
+            else
+                scaleFactor = 0;
         }
     }
 }
