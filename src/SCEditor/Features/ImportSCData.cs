@@ -146,8 +146,7 @@ namespace SCEditor.Features
 
                 if (_createNewTexture == true)
                 {
-                    Bitmap newTexBitmap = new Bitmap(1, 1);
-                    Texture newTex = new Texture(_scFile, newTexBitmap);
+                    Texture newTex = new Texture(0, 1, 1, _scFile);
 
                     _textureToImportToID = newTex.Id;
 
@@ -505,6 +504,12 @@ namespace SCEditor.Features
 
         private void generateChunksTexture()
         {
+            if (!_createNewTexture)
+            {
+                _scFile.GetTextures()[_textureToImportToID].Bitmap.Save(tempFolder + "\\" + _textureToImportToID + "_texture.png", ImageFormat.Png);
+                _scFile.AddChange(_scFile.GetTextures()[_textureToImportToID]);
+            }
+
             OpenFileDialog texturePackerPathDialog = new OpenFileDialog() { Filter = "Texture Packer CI Executable (TexturePacker.exe) | *.exe" };
             string texturePackerEXEPath = @"C:\Program Files\CodeAndWeb\TexturePacker\bin\TexturePacker.exe";
 
@@ -533,8 +538,14 @@ namespace SCEditor.Features
 
             if (texturePackerProcess.ExitCode == 0)
             {
-                Bitmap newTexture = (Bitmap)Image.FromFile(tempFolder + "\\output\\data.png");
-                ((Texture)_scFile.GetTextures()[_textureToImportToID]).GetImage().SetBitmap(newTexture);
+                if (!File.Exists(tempFolder + "\\output\\data.png"))
+                    throw new Exception("data.png not found. generatesChunksTexture()");
+
+                using (FileStream stream = new FileStream(tempFolder + "\\output\\data.png", FileMode.Open, FileAccess.Read))
+                {
+                    Bitmap newTexture = (Bitmap)Image.FromStream(stream);
+                    ((Texture)_scFile.GetTextures()[_textureToImportToID]).GetImage().SetBitmap(newTexture);
+                }
 
                 string jsonFileData = File.ReadAllText(tempFolder + "\\output\\data.json");
                 JObject jsonParsedData = JObject.Parse(jsonFileData);
@@ -543,6 +554,9 @@ namespace SCEditor.Features
 
                 foreach (JObject data in framesData)
                 {
+                    if (data["filename"].ToString().Contains("texture"))
+                        continue;
+
                     string frameName = ((string)data["filename"]).Split('.')[0];
                     ushort shapeID = ushort.Parse(frameName.Split('_')[0]);
                     int chunkIndex = ushort.Parse(frameName.Split('_')[1]);
@@ -590,6 +604,83 @@ namespace SCEditor.Features
             chunkTransform.TransformPoints(newPointF);
 
             return newPointF;
+        }
+
+        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN)
+        {
+            PointF[] shapeChunkUVData = (PointF[])shapeChunkIN.UV.Clone();
+            PointF[] shapeChunkXYData = (PointF[])shapeChunkIN.XY.Clone();
+            float leftWidth = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Width;
+            float topHeight = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Height;
+
+            for (int i = 0; i < shapeChunkUVData.Length; i++)
+            {
+                if (shapeChunkUVData[i].X < leftWidth)
+                {
+                    leftWidth = shapeChunkUVData[i].X;
+                }
+
+                if (shapeChunkUVData[i].Y < topHeight)
+                {
+                    topHeight = shapeChunkUVData[i].Y;
+                }
+            }
+
+            for (int i = 0; i < shapeChunkUVData.Length; i++)
+            {
+                shapeChunkUVData[i].X -= leftWidth;
+                shapeChunkUVData[i].Y -= topHeight;
+
+                if (_scaleFactor != 1)
+                {
+                    shapeChunkUVData[i].X *= _scaleFactor;
+                    shapeChunkUVData[i].Y *= _scaleFactor;
+                }
+            }
+
+            if (_scaleFactor != 1)
+            {
+                for (int i = 0; i < shapeChunkXYData.Length; i++)
+                {
+
+                    shapeChunkXYData[i].X *= _scaleFactor;
+                    shapeChunkXYData[i].Y *= _scaleFactor;
+                }
+            }
+
+            double[,] matrixArrayUV =
+            {
+                {
+                    shapeChunkUVData[0].X, shapeChunkUVData[1].X, shapeChunkUVData[2].X
+                },
+                {
+                    shapeChunkUVData[0].Y, shapeChunkUVData[1].Y, shapeChunkUVData[2].Y
+                },
+                {
+                    1, 1, 1
+                }
+            };
+
+
+
+            double[,] matrixArrayXY = {
+                {
+                     shapeChunkIN.XY[0].X, shapeChunkIN.XY[1].X, shapeChunkIN.XY[2].X
+                },
+                {
+                     shapeChunkIN.XY[0].Y, shapeChunkIN.XY[1].Y, shapeChunkIN.XY[2].Y
+                },
+                {
+                     1, 1, 1
+                }
+            };
+
+            var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
+            var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
+            var inverseMatrixUV = matrixUV.Inverse();
+            var transformMatrix = matrixXY * inverseMatrixUV;
+
+            return new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
         }
 
         public void addChunksBitmapToTexture(ref List<ScObject> shapeChunksInput, Texture textureAppendTo, float scaleFactor)
@@ -694,64 +785,6 @@ namespace SCEditor.Features
             }
 
             textureAppendTo.GetImage().SetBitmap(finalImage);
-        }
-
-        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN)
-        {
-            PointF[] shapeChunkUVData = (PointF[])shapeChunkIN.UV.Clone();
-            float leftWidth = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Width;
-            float topHeight = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Height;
-
-            for (int i = 0; i < shapeChunkUVData.Length; i++)
-            {
-                if (shapeChunkUVData[i].X < leftWidth)
-                {
-                    leftWidth = shapeChunkUVData[i].X;
-                }
-
-                if (shapeChunkUVData[i].Y < topHeight)
-                {
-                    topHeight = shapeChunkUVData[i].Y;
-                }
-            }
-
-            for (int i = 0; i < shapeChunkUVData.Length; i++)
-            {
-                shapeChunkUVData[i].X -= leftWidth;
-                shapeChunkUVData[i].Y -= topHeight;
-            }
-
-            double[,] matrixArrayUV =
-                {
-                            {
-                               shapeChunkUVData[0].X, shapeChunkUVData[1].X, shapeChunkUVData[2].X
-                            },
-                            {
-                                shapeChunkUVData[0].Y, shapeChunkUVData[1].Y, shapeChunkUVData[2].Y
-                            },
-                            {
-                                1, 1, 1
-                            }
-                            };
-
-            double[,] matrixArrayXY = {
-                                {
-                                    shapeChunkIN.XY[0].X, shapeChunkIN.XY[1].X, shapeChunkIN.XY[2].X
-                                },
-                                {
-                                    shapeChunkIN.XY[0].Y, shapeChunkIN.XY[1].Y, shapeChunkIN.XY[2].Y
-                                },
-                                {
-                                    1, 1, 1
-                                }
-                            };
-
-            var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
-            var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
-            var inverseMatrixUV = matrixUV.Inverse();
-            var transformMatrix = matrixXY * inverseMatrixUV;
-
-            return new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
         }
 
         private void launchProcess(string fileName, string arguements)
