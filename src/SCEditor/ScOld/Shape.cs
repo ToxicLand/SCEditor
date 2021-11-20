@@ -293,7 +293,7 @@ namespace SCEditor.ScOld
                             {
                                 1, 1, 1
                             }
-                        };
+                            };
 
                             PointF[] newXY = new PointF[chunk.XY.Length];
 
@@ -312,18 +312,17 @@ namespace SCEditor.ScOld
                                 newXY = chunk.XY;
                             }
 
-                            double[,] matrixArrayXY =
-                            {
-                            {
-                                newXY[0].X, newXY[1].X, newXY[2].X
-                            },
-                            {
-                                newXY[0].Y, newXY[1].Y, newXY[2].Y
-                            },
-                            {
-                                1, 1, 1
-                            }
-                        };
+                            double[,] matrixArrayXY = {
+                                {
+                                    newXY[0].X, newXY[1].X, newXY[2].X
+                                },
+                                {
+                                    newXY[0].Y, newXY[1].Y, newXY[2].Y
+                                },
+                                {
+                                    1, 1, 1
+                                }
+                            };
 
                             var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
                             var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
