@@ -160,7 +160,7 @@ namespace SCEditor.Features
                 {
                     Export exportToAdd = (Export)((ScObject)item.exportData);
                     MovieClip movieClipToAdd = (MovieClip)exportToAdd.GetDataObject();
-                    List<ScObject> shapesToAdd = movieClipToAdd.GetShapes();
+                    List<ScObject> shapesToAdd = movieClipToAdd.getChildrens();
 
                     // SET EXPORT DATA
                     Export newExport = new Export(_scFile);
@@ -380,7 +380,7 @@ namespace SCEditor.Features
                         _scFile.AddMovieClip(extraNewMovieClip);
                         _scFile.AddChange(extraNewMovieClip);
 
-                        newTimelineChildrenId[idx] = maxId;
+                        newTimelineChildrenId[idx] = extraNewMovieClip.Id;
                     }
                 }
                 else if (scToImportFrom.getTextFields().FindIndex(n => n.Id == childrenId) != -1)
@@ -421,7 +421,7 @@ namespace SCEditor.Features
             }
 
             newMovieClip.setTimelineChildrenId(newTimelineChildrenId);
-            newMovieClip.SetShapes(newShapes);
+            newMovieClip.setChildrens(newShapes);
 
             _scFile.AddMovieClip(newMovieClip);
             _scFile.AddChange(newMovieClip);
@@ -440,6 +440,7 @@ namespace SCEditor.Features
             // SHAPE CHUNK DATA
             List<ScObject> newShapeChunks = new List<ScObject>();
 
+            int shapeChunkIndex = 0;
             foreach (ShapeChunk shapeChunkToAdd in shapeToAdd.GetChunks())
             {
                 ShapeChunk newShapeChunk = new ShapeChunk(_scFile);
@@ -451,9 +452,10 @@ namespace SCEditor.Features
                 newShapeChunk.SetXY(shapeChunkToAdd.XY);
                 newShapeChunk.SetVertexCount(0);
 
-                exportChunksBitmap(shapeChunkToAdd, maxId, _scaleFactor);
+                exportChunksBitmap(shapeChunkToAdd, shapeChunkIndex, maxId, _scaleFactor);
 
                 newShapeChunks.Add(newShapeChunk);
+                shapeChunkIndex++;
             }
 
             newShape.setChunks(newShapeChunks);
@@ -461,10 +463,8 @@ namespace SCEditor.Features
             return newShape;
         }
 
-        public void exportChunksBitmap(ShapeChunk shapeChunkToAdd, ushort maxId, float scaleFactor)
+        public void exportChunksBitmap(ShapeChunk shapeChunkToAdd, int shapeChunkIndex, ushort maxId, float scaleFactor)
         {
-            int shapeChunkIndex = 0;
-
             RenderingOptions renderOptions = new RenderingOptions() { ViewPolygons = false };
             Bitmap shapeChunkBitmap = shapeChunkToAdd.Render(renderOptions);
 
@@ -519,7 +519,7 @@ namespace SCEditor.Features
                 texturePackerEXEPath = texturePackerPathDialog.FileName;
             }
 
-            string arguements = "--scale 1 --extrude 0 --texture-format png --pack-mode Best --algorithm Polygon --trim-mode Polygon --png-opt-level 0 --trim-threshold 20 --opt RGBA8888 --disable-rotation --max-width 4096 --max-height 4096 --format json-array --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
+            string arguements = "--scale 1 --extrude 0 --texture-format png --pack-mode Best --algorithm Polygon --trim-mode Polygon --png-opt-level 0 --trim-threshold 20 --opt RGBA8888 --disable-rotation --max-width 4096 --max-height 3200 --format json-array --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
 
             texturePackerProcess = new Process();
             launchProcess(texturePackerEXEPath, arguements);
@@ -808,12 +808,12 @@ namespace SCEditor.Features
 
         void process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
         {
-            Console.WriteLine(e.Data + "\n");
+            Console.WriteLine(e.Data);
         }
 
         void process_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
-            Console.WriteLine(e.Data + "\n");
+            Console.WriteLine(e.Data);
         }
     }
 }

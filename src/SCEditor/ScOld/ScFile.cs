@@ -322,6 +322,7 @@ namespace SCEditor.ScOld
 
             // Flushing depending edits.
             List<ScObject> exports = new List<ScObject>();
+            _pendingChanges = _pendingChanges.OrderBy(obj => obj.objectType).ToList();
             for (int i = 0; i < _pendingChanges.Count; i++)
             {
                 ScObject data = _pendingChanges[i];
@@ -387,8 +388,6 @@ namespace SCEditor.ScOld
                     case 99: // ShapeChunk
                         data.Write(input);
                         shapeChunkAdd += 1;
-
-                        
                         break;
 
                     case -256:
@@ -572,6 +571,21 @@ namespace SCEditor.ScOld
                     _matrixCount = reader.ReadUInt16();
                     _colorsCount = reader.ReadUInt16();
 
+                    for (int i = 0; i < _shapeCount; i++)
+                    {
+                        _shapes.Add(null);
+                    }
+
+                    for (int i = 0; i < _movieClipCount; i++)
+                    {
+                        _movieClips.Add(null);
+                    }
+
+                    for (int i = 0; i < _textFieldCount; i++)
+                    {
+                        _textFields.Add(null);
+                    }
+
                     // 5 useless bytes
                     reader.ReadByte();
                     reader.ReadUInt16();
@@ -693,7 +707,7 @@ namespace SCEditor.ScOld
                                 var shape = new Shape(this);
                                 shape.SetOffset(offset);
                                 shape.Read(reader, tag);
-                                this._shapes.Add(shape);
+                                _shapes[shapeIndex] = shape;
 
                                 _eofShapeOffset = reader.BaseStream.Position;
 
@@ -711,7 +725,7 @@ namespace SCEditor.ScOld
                                 var movieClip = new MovieClip(this, datatag);
                                 movieClip.SetOffset(offset);
                                 ushort clipId = movieClip.ReadMV(reader, tag, tagSize);
-                                _movieClips.Add(movieClip);
+                                _movieClips[movieClipIndex] = movieClip;
 
                                 _eofMovieClipOffset = reader.BaseStream.Position;
 
@@ -731,7 +745,7 @@ namespace SCEditor.ScOld
 
                                 TextField textField = new TextField(this, datatag);
                                 textField.Read(reader, tag);
-                                _textFields.Add(textField);
+                                _textFields[textFieldIndex] = textField;
 
                                 _eofTextFieldOffset = reader.BaseStream.Position;
 
@@ -846,8 +860,43 @@ namespace SCEditor.ScOld
 
                     if (_shapes.Count < _shapeCount)
                         Console.WriteLine($"Loaded less shapes than expected.\nSCCount: {_shapeCount} | LoadCount: {_shapes.Count}, IndexCount {shapeIndex}");
-
                 }
+
+                foreach (MovieClip mv in this._movieClips)
+                {
+                    foreach (ushort tcId in mv.timelineChildrenId)
+                    {
+                        if (mv.getChildrens().FindIndex(obj => obj.Id == tcId) != -1)
+                            continue;
+
+                        int findIndex = this.GetShapes().FindIndex(shape => shape.Id == tcId);
+                        if (findIndex != -1)
+                        {
+                            mv.addChildren(this.GetShapes()[findIndex]);
+                        }
+                        else
+                        {
+                            findIndex = this.GetMovieClips().FindIndex(mv => mv.Id == tcId);
+                            if (findIndex != -1)
+                            {
+                                mv.addChildren(this.GetMovieClips()[findIndex]);
+                            }
+                            else
+                            {
+                                findIndex = this.getTextFields().FindIndex(tf => tf.Id == tcId);
+                                if (findIndex != -1)
+                                {
+                                    mv.addChildren(this.getTextFields()[findIndex]);
+                                }
+                                else
+                                {
+                                    throw new Exception($"MovieClip with ID {mv.Id} has children id {tcId} of invalid type.");
+                                }
+                            }
+                        }
+                    }
+                }
+
                 break;
             }
         }

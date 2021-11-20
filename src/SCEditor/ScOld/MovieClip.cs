@@ -22,7 +22,7 @@ namespace SCEditor.ScOld
         {
             _scFile = scs;
             _dataType = dataType;
-            _shapes = new List<ScObject>();
+            _childrens = new List<ScObject>();
             _frames = new List<ScObject>();
         }
 
@@ -30,7 +30,7 @@ namespace SCEditor.ScOld
         {
             _scFile = mv.GetStorageObject();
             _dataType = mv.GetMovieClipDataType();
-            _shapes = mv.GetShapes();
+            _childrens = mv.getChildrens();
             _frames = mv.GetFrames();
 
             this.SetOffset(-System.Math.Abs(mv.GetOffset()));
@@ -69,17 +69,19 @@ namespace SCEditor.ScOld
 
             //Duplicate shapes associated to clip
             List<ScObject> newShapes = new List<ScObject>();
-            foreach (Shape s in _shapes)
+            foreach (Shape s in _childrens)
             {
-                Shape newShape = new Shape(s);
-                newShape.SetId(maxShapeId);
-                maxShapeId++;
-                newShapes.Add(newShape);
+                throw new NotImplementedException();
 
-                _scFile.AddShape(newShape); //Add to global shapelist
-                _scFile.AddChange(newShape);
+                //Shape newShape = new Shape(s);
+                //newShape.SetId(maxShapeId);
+                //maxShapeId++;
+                //newShapes.Add(newShape);
+
+                //_scFile.AddShape(newShape); //Add to global shapelist
+                //_scFile.AddChange(newShape);
             }
-            this._shapes = newShapes;
+            this._childrens = newShapes;
         }
 
         #endregion
@@ -91,7 +93,7 @@ namespace SCEditor.ScOld
         private short _frameCount;
         private byte[] _flags;
         private byte _framePerSeconds;
-        private List<ScObject> _shapes;
+        private List<ScObject> _childrens;
         private ScFile _scFile;
         private List<ScObject> _frames;
         private unsafe ushort* _timelineOffset;
@@ -109,12 +111,13 @@ namespace SCEditor.ScOld
         private bool _hasShadow;
         private List<PointF> _pointFList;
         public override ushort Id => _clipId;
-        public override List<ScObject> Children => _shapes;
+        public override List<ScObject> Children => _childrens;
         public List<ScObject> Frames => _frames;
         public ushort[] timelineArray => _timelineOffsetArray;
         public bool hasShadow => _hasShadow;
         public byte FPS => _framePerSeconds;
         public int _lastPlayedFrame { get; set; }
+        public override SCObjectType objectType => SCObjectType.MovieClip;
 
         #endregion
 
@@ -140,9 +143,9 @@ namespace SCEditor.ScOld
             return _offset;
         }
 
-        public List<ScObject> GetShapes()
+        public List<ScObject> getChildrens()
         {
-            return _shapes;
+            return _childrens;
         }
 
         public ScFile GetStorageObject()
@@ -209,17 +212,7 @@ namespace SCEditor.ScOld
             _timelineChildrenCount = count;
             _timelineChildrenId = new ushort[count];
             br.Read(MemoryMarshal.Cast<ushort, byte>((Span<ushort>)_timelineChildrenId));
-
-            foreach (ushort tcId in _timelineChildrenId)
-            {
-                int findIndex = _scFile.GetShapes().FindIndex(shape => shape.Id == tcId);
-                if (findIndex != -1)
-                    _shapes.Add(_scFile.GetShapes()[findIndex]);
-                else if (_scFile.GetMovieClips().FindIndex(shape => shape.Id == tcId) != -1)
-                    Console.WriteLine("ReadMV(): movieclip hmm need to implement");
-
-            }
-
+            
             if (packetId == "0C" || packetId == "23")
             {
                 _flags = new byte[count];
@@ -371,7 +364,7 @@ namespace SCEditor.ScOld
                 input.Write(target, 0, target.Length);
                 dataLength += target.Length;
 
-                int shapesCount = _shapes.Count;
+                int shapesCount = _childrens.Count;
 
                 if (_exportType == exportType.Icon)
                 {
@@ -564,7 +557,7 @@ namespace SCEditor.ScOld
                             int index = _scFile.GetShapes().FindIndex(shape => shape.Id == BitConverter.ToInt16(id, 0));
                             if (index != -1)
                             {
-                                input.Write(BitConverter.GetBytes(_shapes[cptShape].Id), 0, 2);
+                                input.Write(BitConverter.GetBytes(_childrens[cptShape].Id), 0, 2);
                                 cptShape++;
                             }
                             else
@@ -1062,9 +1055,9 @@ namespace SCEditor.ScOld
         {
             _framePerSeconds = fps;
         }
-        public void AddShape(ScObject shape)
+        public void addChildren(ScObject data)
         {
-            _shapes.Add(shape);
+            _childrens.Add(data);
         }
 
         public void generatePointFList(Matrix matrixIn)
@@ -1123,9 +1116,9 @@ namespace SCEditor.ScOld
         {
             _dataType = dataType;
         }
-        public void SetShapes(List<ScObject> shapes)
+        public void setChildrens(List<ScObject> data)
         {
-            _shapes = shapes;
+            _childrens = data;
         }
         public void SetFrames(List<ScObject> frames)
         {

@@ -1029,7 +1029,7 @@ namespace SCEditor
                               
                                 movieClipData.SetFrameCount((short)(movieClipData.GetFrames().Count + 1));
 
-                                if (!exportExist && movieClipData.GetShapes().Count == 0 && _exportType == exportType.Animation)
+                                if (!exportExist && movieClipData.getChildrens().Count == 0 && _exportType == exportType.Animation)
                                 {
                                     inputDataDialog shadowIdInput = new inputDataDialog(1);
                                     shadowIdInput.Text = "Input Shadow Shape ID";
@@ -1046,7 +1046,7 @@ namespace SCEditor
                                                 int shapeIndex = _scFile.shapeExists(shadowIdInput.inputTextBoxInt);
                                                 if (shapeIndex != -1)
                                                 {
-                                                    movieClipData.AddShape(_scFile.GetShapes()[shapeIndex]);
+                                                    movieClipData.addChildren(_scFile.GetShapes()[shapeIndex]);
                                                     movieClipData.setHasShadow(true);
                                                     break;
                                                 }
@@ -1064,7 +1064,7 @@ namespace SCEditor
 
                                 }
 
-                                movieClipData.AddShape(shapeData);                          
+                                movieClipData.addChildren(shapeData);                          
 
                                 ushort[] timelineOffset = new ushort[] { 0, 65535, 65535 };
 
@@ -1097,7 +1097,7 @@ namespace SCEditor
 
                                         Array.Resize(ref timelineOffset, timeLineOffsetLength + 3);
 
-                                        timelineOffset[timeLineOffsetLength++] = (ushort)(movieClipData.GetShapes().Count - 1);
+                                        timelineOffset[timeLineOffsetLength++] = (ushort)(movieClipData.getChildrens().Count - 1);
                                         timelineOffset[timeLineOffsetLength++] = 65535;
                                         timelineOffset[timeLineOffsetLength++] = 65535;
                                     }

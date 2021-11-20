@@ -25,7 +25,12 @@ namespace SCEditor.Prompts
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
             if (inputTextBoxType == 1)
-                inputTextBoxInt = int.Parse(inputTextBox.Text);
+            {
+                if (!string.IsNullOrEmpty(inputTextBox.Text))
+                    inputTextBoxInt = int.Parse(inputTextBox.Text);
+                else
+                    inputTextBoxInt = 0;
+            }  
             else if (inputTextBoxType == 0)
                 inputTextBoxString = inputTextBox.Text;
         }

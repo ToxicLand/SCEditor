@@ -53,6 +53,7 @@ namespace SCEditor.ScOld
         public PointF[] UV => _uv;
         public int vertexCount => _vertexCount;
         public override ushort Id => _chunkId;
+        public override SCObjectType objectType => SCObjectType.ShapeChunk;
 
         #endregion
 

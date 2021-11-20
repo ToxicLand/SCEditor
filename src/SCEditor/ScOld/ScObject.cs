@@ -22,6 +22,7 @@ namespace SCEditor.ScOld
         public virtual long _offset { get; set; }
         public virtual long offset => _offset;
         public virtual List<ScObject> Children => new List<ScObject>();
+        public virtual SCObjectType objectType => SCObjectType.None;
         #endregion
 
         #region Methods
@@ -89,6 +90,16 @@ namespace SCEditor.ScOld
         public virtual void Write(FileStream input, int inOffset, out int offset)
         {
             offset = inOffset;
+        }
+
+        public enum SCObjectType
+        {
+            TextField = 1,
+            ShapeChunk = 2,
+            Shape = 3,
+            MovieClip = 4,
+            Export = 5,
+            None = 6
         }
 
         #endregion

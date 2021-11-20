@@ -84,6 +84,7 @@ namespace SCEditor.ScOld
         public Matrix Matrix => _matrix;
         public int shapeChunkCount => _shapeChunkCount;
         public int shapeChunkVertexCount => _shapeChunkVertexCount;
+        public override SCObjectType objectType => SCObjectType.Shape;
 
         #endregion
 

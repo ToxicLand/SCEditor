@@ -27,6 +27,7 @@ namespace SCEditor.ScOld
 
         public override ushort Id => _exportId;
         public override List<ScObject> Children => getChildren();
+        public override SCObjectType objectType => SCObjectType.Export;
         #endregion
 
         #region Methods

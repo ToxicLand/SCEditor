@@ -40,6 +40,7 @@ namespace SCEditor.ScOld
         // 228 and 232 highlightRange
         // this + 84 == matrix
 
+        public override SCObjectType objectType => SCObjectType.TextField;
         public string fontName => _fontName;
 
         public TextField(ScFile scFile)
@@ -302,7 +303,7 @@ namespace SCEditor.ScOld
                 }
 
                 input.Seek(-(dataLength + 4), SeekOrigin.Current);
-                input.Write(BitConverter.GetBytes(dataLength + 5), 0, 4);
+                input.Write(BitConverter.GetBytes(dataLength), 0, 4);
                 input.Seek(dataLength, SeekOrigin.Current);
             }
         }
