@@ -57,46 +57,51 @@ namespace SCEditor.Helpers
             return pixels;
         }
 
-        public static Color[,] Create32X32Blocks(int width, int height, Color[,] pixelArrayOld)
+
+        public static Color[,] Create32x32Blocks(int width, int height, Color[,] arrayOld)
         {
-            var modWidth = width % 32;
-            var timeWidth = (width - modWidth) / 32;
+            Color[,] arrayNew = new Color[height, width];
 
-            var modHeight = height % 32;
-            var timeHeight = (height - modHeight) / 32;
-
-            var pixels = new Color[height, width];
-
-            for (var timeH = 0; timeH < timeHeight + 1; timeH++)
+            for (var y = 0; y < height; y++)
             {
-                var offsetX = 0;
-                var offsetY = 0;
+                for (var x = 0; x < width; x++)
+                {
+                    var totIdx = x + y * width;
 
-                var lineH = 32;
-
-                if (timeH == timeHeight)
-                    lineH = modHeight;
-
-                for (var time = 0; time < timeWidth; time++)
-                    for (var positionY = 0; positionY < lineH; positionY++)
-                        for (var positionX = 0; positionX < 32; positionX++)
-                        {
-                            offsetX = time * 32;
-                            offsetY = timeH * 32;
-                            pixels[positionY + offsetY, positionX + offsetX] = GetColorFromPxArray(pixelArrayOld, width);
-                        }
-
-                for (var positionY = 0; positionY < lineH; positionY++)
-                    for (var positionX = 0; positionX < modWidth; positionX++)
+                    var yBlockId = totIdx / (32 * width);
+                    totIdx -= yBlockId * (32 * width);
+                    var xBlockId = 0;
+                    if (yBlockId == (height - 1) / 32)
                     {
-                        offsetX = timeWidth * 32;
-                        offsetY = timeH * 32;
-                        pixels[positionY + offsetY, positionX + offsetX] = GetColorFromPxArray(pixelArrayOld, width);
+                        xBlockId = totIdx / (32 * (height % 32 > 0 ? height % 32 : 32));
+                        totIdx -= xBlockId * (32 * (height % 32 > 0 ? height % 32 : 32));
                     }
+                    else
+                    {
+                        xBlockId = totIdx / (32 * 32);
+                        totIdx -= xBlockId * (32 * 32);
+                    }
+
+                    var xOffset = 0;
+                    var yOffset = 0;
+                    if (xBlockId == (width - 1) / 32)
+                    {
+                        yOffset = totIdx / (width % 32 > 0 ? width % 32 : 32);
+                        xOffset = totIdx % (width % 32 > 0 ? width % 32 : 32);
+                    }
+                    else
+                    {
+                        yOffset = totIdx / 32;
+                        xOffset = totIdx % 32;
+                    }
+
+                    var mapPosX = xBlockId * 32 + xOffset;
+                    var mapPosY = yBlockId * 32 + yOffset;
+                    arrayNew[y, x] = arrayOld[mapPosY, mapPosX];
+                }
             }
-            _countGcfpxaH = 0;
-            _countGcfpxa = 0;
-            return pixels;
+
+            return arrayNew;
         }
 
         private static int _countGcfpxa;

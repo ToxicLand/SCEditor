@@ -64,7 +64,7 @@ namespace SCEditor.Prompts
             // 
             this.checkAllButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(46)))), ((int)(((byte)(46)))), ((int)(((byte)(46)))));
             this.checkAllButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.checkAllButton.Location = new System.Drawing.Point(12, 392);
+            this.checkAllButton.Location = new System.Drawing.Point(12, 394);
             this.checkAllButton.Name = "checkAllButton";
             this.checkAllButton.Size = new System.Drawing.Size(276, 30);
             this.checkAllButton.TabIndex = 1;

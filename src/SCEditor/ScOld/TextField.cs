@@ -17,12 +17,12 @@ namespace SCEditor.ScOld
         private ushort _unk18; // textFieldBounds 2 > float
         private ushort _unk20; // textFieldBounds 3 > float
         private ushort _unk22; // textFieldBounds 4 > float
-        private int _unk24; // numbertext
+        private int _unk24; // numbertext > color transform related
         private int _unk28; // numberValue
         private string _unk32; // stringObject - text
         private byte _flag;
-        private byte _unk42; // align
-        private byte _unk43; // characterScale - fontSize
+        private byte _unk42; // align > matrix related
+        private byte _unk43; // characterScale - fontSize  > color transform related
         private ushort _unk44;
         private ushort _unk46;
         private ScFile _scFile;
@@ -110,7 +110,7 @@ namespace SCEditor.ScOld
                     _scFile.addFontName(_fontName);
             }
 
-            _unk24 = br.ReadInt32(); // 112 224
+            _unk24 = br.ReadInt32(); // 112 224 > color transform?
 
             if (br.ReadBoolean())
             {
@@ -129,7 +129,7 @@ namespace SCEditor.ScOld
             }
 
             _unkR1 = br.ReadBoolean(); // 156
-            _unk42 = br.ReadByte(); // 168 42
+            _unk42 = br.ReadByte(); // 168 42 > related to matrix
             _unk43 = br.ReadByte(); // 172 43
             _unk16 = br.ReadUInt16(); // 176 44 
             _unk18 = br.ReadUInt16(); // 180 45

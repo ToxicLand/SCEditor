@@ -174,7 +174,7 @@ namespace SCEditor.ScOld
             _imageType = br.ReadByte();
 
             if (s_imageTypes.ContainsKey(_imageType))
-                _image = (ScImage) Activator.CreateInstance(s_imageTypes[_imageType]);
+                _image = (ScImage)Activator.CreateInstance(s_imageTypes[_imageType]);
             else
                 _image = new ScImage();
 

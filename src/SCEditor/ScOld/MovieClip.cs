@@ -422,18 +422,18 @@ namespace SCEditor.ScOld
                 // Childrens Names
                 for (int i = 0; i < timelineChildrenId.Length; i++)
                 {
-                    /**
-                    if (string.IsNullOrEmpty(_shapes[i].GetName()))
+                    if (string.IsNullOrEmpty(timelineChildrenNames[i]))
                     {
-                        input.WriteByte(0);
+                        input.WriteByte((byte)0xFF);
                     }
                     else
                     {
-                        input.Write(BitConverter.GetBytes(_shapes[i].GetName().Length), 0, 1);
-                        input.Write(Encoding.ASCII.GetBytes(_shapes[i].GetName()), 0, _shapes[i].GetName().Length);
+                        byte[] stringData = Encoding.ASCII.GetBytes(timelineChildrenNames[i]);
+                        input.WriteByte((byte)stringData.Length);
+                        input.Write(stringData, 0, stringData.Length);
+
+                        dataLength += stringData.Length;
                     }
-                    **/
-                    input.WriteByte(0xFF);
                     dataLength += 1;
                 }
 

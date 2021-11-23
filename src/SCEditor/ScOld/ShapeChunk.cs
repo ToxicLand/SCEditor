@@ -163,8 +163,8 @@ namespace SCEditor.ScOld
 
         public override Bitmap Render(RenderingOptions options)
         {
-
-            Console.WriteLine("Rendering Chunk " + _chunkId + " from shape " + _shapeId + " | Texture ID: " + _textureId + " | Chunk Type: " + _chunkType);
+            if (options.InternalRendering == false)
+                Console.WriteLine("Rendering Chunk " + _chunkId + " from shape " + _shapeId + " | Texture ID: " + _textureId + " | Chunk Type: " + _chunkType);
 
             Bitmap result = null;
             var texture = (Texture) _scFile.GetTextures()[_textureId];
@@ -173,10 +173,13 @@ namespace SCEditor.ScOld
             {
                 Bitmap bitmap = texture.Bitmap;
 
-                Console.WriteLine("Rendering polygon image of " + _uv.Length + " points");
-                foreach (PointF uv in _uv)
+                if (options.InternalRendering == false)
                 {
-                    Console.WriteLine("u: " + uv.X + ", v: " + uv.Y);
+                    Console.WriteLine("Rendering polygon image of " + _uv.Length + " points");
+                    foreach (PointF uv in _uv)
+                    {
+                        Console.WriteLine("u: " + uv.X + ", v: " + uv.Y);
+                    }
                 }
 
                 using (var gpuv = new GraphicsPath())
@@ -187,12 +190,13 @@ namespace SCEditor.ScOld
 
                     var gpuvWidth = (int) uvBounds.Width;
                     gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
-                    Console.WriteLine("gpuvWidth: " + gpuvWidth);
+                    if (options.InternalRendering == false)
+                        Console.WriteLine("gpuvWidth: " + gpuvWidth);
 
                     var gpuvHeight = (int) uvBounds.Height;
                     gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
-
-                    Console.WriteLine("gpuvHeight: " + gpuvHeight);
+                    if (options.InternalRendering == false)
+                        Console.WriteLine("gpuvHeight: " + gpuvHeight);
 
                     var x = uvBounds.X;
                     var y = uvBounds.Y;

@@ -51,21 +51,7 @@ namespace SCEditor.Features
                 DirectoryInfo di = Directory.CreateDirectory(System.IO.Path.GetTempPath() + "sceditor\\chunks");
                 tempFolder = di.FullName;
 
-                if (di.GetFiles().Length != 0)
-                {
-                    foreach (FileInfo file in di.GetFiles())
-                    {
-                        file.Delete();
-                    }
-                }
-
-                if (di.GetDirectories().Length != 0)
-                {
-                    foreach (DirectoryInfo dir in di.GetDirectories())
-                    {
-                        dir.Delete(true);
-                    }
-                }
+                clearTempFolder();
             }
             catch (Exception ex)
             {
@@ -156,11 +142,42 @@ namespace SCEditor.Features
 
                 ushort maxId = _scFile.getMaxId();
 
+                List<ScObject> exportsToImport = new List<ScObject>();
+
                 foreach (scMergeSelection.exportItemClass item in selectImportExportsForm.checkedExports)
                 {
                     Export exportToAdd = (Export)((ScObject)item.exportData);
+                    bool crChangeName = true;
+
+                    if (crChangeName/** && !exportToAdd.GetName().ToLower().Contains("goku")**/)
+                    {
+                        switch (exportToAdd.GetName()[exportToAdd.GetName().Length - 1])
+                        {
+                            case '3':
+                                exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 1, 1) + "1");
+                                break;
+
+                            case '5':
+                                exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 1, 1) + "2");
+                                break;
+
+                            case '7':
+                                exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 1, 1) + "3");
+                                break;
+
+                            default:
+                                break;
+                        }
+                    }
+
+                    exportsToImport.Add(exportToAdd);
+                }
+
+                exportsToImport = exportsToImport.OrderBy(ex => ex.GetName()).ToList();
+
+                foreach (Export exportToAdd in exportsToImport)
+                {
                     MovieClip movieClipToAdd = (MovieClip)exportToAdd.GetDataObject();
-                    List<ScObject> shapesToAdd = movieClipToAdd.getChildrens();
 
                     // SET EXPORT DATA
                     Export newExport = new Export(_scFile);
@@ -182,6 +199,16 @@ namespace SCEditor.Features
                     if (_movieClipsAlreadyAdded.ContainsKey(movieClipToAdd.Id))
                     {
                         newMovieClip = (MovieClip)_scFile.GetMovieClips().Find(mv => mv.Id == _movieClipsAlreadyAdded[movieClipToAdd.Id]);
+
+                        int checkExportID = _scFile.GetExports().FindIndex(ex => ex.Id == newMovieClip.Id);
+                        if (checkExportID != -1)
+                        {
+                            throw new Exception($"newMovieClip exists for export {newExportName} but there is an export already with that id {checkExportID} | {((Export)_scFile.GetExports()[checkExportID]).GetName()}");
+                        }
+                        else
+                        {
+                            newExport.SetId(newMovieClip.Id);
+                        }
                     }
                     else
                     {
@@ -465,7 +492,7 @@ namespace SCEditor.Features
 
         public void exportChunksBitmap(ShapeChunk shapeChunkToAdd, int shapeChunkIndex, ushort maxId, float scaleFactor)
         {
-            RenderingOptions renderOptions = new RenderingOptions() { ViewPolygons = false };
+            RenderingOptions renderOptions = new RenderingOptions() { ViewPolygons = false, InternalRendering = true };
             Bitmap shapeChunkBitmap = shapeChunkToAdd.Render(renderOptions);
 
             if (scaleFactor != 1)
@@ -519,7 +546,48 @@ namespace SCEditor.Features
                 texturePackerEXEPath = texturePackerPathDialog.FileName;
             }
 
-            string arguements = "--scale 1 --extrude 0 --texture-format png --pack-mode Best --algorithm Polygon --trim-mode Polygon --png-opt-level 0 --trim-threshold 20 --opt RGBA8888 --disable-rotation --max-width 4096 --max-height 3200 --format json-array --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
+            bool isGeneratedTextureRGBA4444 = false;
+
+            if (_createNewTexture)
+            {
+                inputDataDialog textureTypeDialog = new inputDataDialog(1);
+                textureTypeDialog.setLabelText("Texture Type (0=RGBA8888, 1=RGBA4444):");
+
+                while (true)
+                {
+                    if (textureTypeDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        if (textureTypeDialog.inputTextBoxInt != 0 || textureTypeDialog.inputTextBoxInt != 1)
+                        {
+                            if (textureTypeDialog.inputTextBoxInt == 1)
+                                isGeneratedTextureRGBA4444 = true;
+
+                            break;
+                        }
+                        else
+                        {
+                            MessageBox.Show("Please Type 0 for RGBA8888 or 1 for RGBA4444","Invalid Texture Type");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                string textureTypeName = ((Texture)_scFile.GetTextures()[_textureToImportToID])._image.GetImageTypeName();
+                isGeneratedTextureRGBA4444 = textureTypeName == "RGB4444" ? true : (textureTypeName == "RGB8888" ? false : throw new Exception("Not added"));
+            }
+
+            int generatedTextureScale = 1;
+            int generatedSpritesExtrude = 0;
+            int generatedSpritesPadding = 2;
+            int generatedTextureMaxWidth = 4096;
+            int generatedTextureMaxHeight = 4096;
+            int generatedTexturePolygonTolerance = 200;
+            string generatedTexturePixelFormat = isGeneratedTextureRGBA4444 ? "RGBA4444 --dither-type Linear" : "RGBA8888";
+            string generatedSpritesPackMode = "Best";
+            string generatedSpritesAlphaHandling = "ClearTransparentPixels";
+
+            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm Polygon --alpha-handling {generatedSpritesAlphaHandling} --padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
 
             texturePackerProcess = new Process();
             launchProcess(texturePackerEXEPath, arguements);
@@ -594,6 +662,7 @@ namespace SCEditor.Features
             }
 
             texturePackerProcess = null;
+            clearTempFolder();
         }
 
         public PointF[] findUVXYDifference(PointF[] XYArray, ushort shapeId, int chunkIndex)
@@ -799,6 +868,27 @@ namespace SCEditor.Features
             texturePackerProcess.StartInfo.UseShellExecute = false;
             texturePackerProcess.StartInfo.RedirectStandardError = true;
             texturePackerProcess.StartInfo.RedirectStandardOutput = true;
+        }
+
+        private void clearTempFolder()
+        {
+            DirectoryInfo di = Directory.CreateDirectory(System.IO.Path.GetTempPath() + "sceditor\\chunks");
+
+            if (di.GetFiles().Length != 0)
+            {
+                foreach (FileInfo file in di.GetFiles())
+                {
+                    file.Delete();
+                }
+            }
+
+            if (di.GetDirectories().Length != 0)
+            {
+                foreach (DirectoryInfo dir in di.GetDirectories())
+                {
+                    dir.Delete(true);
+                }
+            }
         }
 
         void process_Exited(object sender, EventArgs e)

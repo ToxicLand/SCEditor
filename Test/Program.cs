@@ -22,9 +22,28 @@ namespace Test
             //Console.WriteLine(BitConverter.ToInt32(test));
             //Console.WriteLine(BitConverter.ToInt32(test2));
 
-            //Create32X32Blocks();
+            int width = 100;
+            int height = 100;
+            int[,] inputArray = new int[height, width];
+            int i, j;
+            int value = 1;
+            for (i = 0; i < height; i++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    inputArray[i, x] = value;
+                    value++;
+                }
+            }
 
-            //Console.WriteLine("Done!");
+            int[,] createdArray = Create32x32Blocks(width, height, inputArray);
+            int[,] solvedArray = Solve32X32Blocks(width, height, createdArray);
+
+            if (solvedArray.Equals(inputArray))
+            {
+                Console.WriteLine("WORKS!");
+            }
+            Console.WriteLine("Done!");
         }
 
 
@@ -78,31 +97,60 @@ namespace Test
             Console.WriteLine("Done");
         }
 
-        public static void Create32X32Blocks()
+        public static int[,] Create32x32Blocks(int width, int height, int[,] arrayOld)
         {
-            int width = 100;
-            int height = 100;
-            int[,] input = new int[height, width];
+            int[,] arrayNew = new int[height, width];
 
-            int value = 1;
-            for (int i = 0; i < height; i++)
+            for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    input[i, x] = value;
-                    value++;
+                    int totIdx = x + y * width;
+
+                    int yBlockId = totIdx / (32 * width);
+                    totIdx -= yBlockId * (32 * width);
+                    int xBlockId;
+                    if (yBlockId == (height - 1) / 32)
+                    {
+                        xBlockId = totIdx / (32 * (height % 32 > 0 ? height % 32 : 32));
+                        totIdx -= xBlockId * (32 * (height % 32 > 0 ? height % 32 : 32));
+                    }
+                    else
+                    {
+                        xBlockId = totIdx / (32 * 32);
+                        totIdx -= xBlockId * (32 * 32);
+                    }
+
+                    int xOffset, yOffset;
+                    if (xBlockId == (width - 1) / 32)
+                    {
+                        yOffset = totIdx / (width % 32 > 0 ? width % 32 : 32);
+                        xOffset = totIdx % (width % 32 > 0 ? width % 32 : 32);
+                    }
+                    else
+                    {
+                        yOffset = totIdx / 32;
+                        xOffset = totIdx % 32;
+                    }
+
+                    int mapPosX = xBlockId * 32 + xOffset;
+                    int mapPosY = yBlockId * 32 + yOffset;
+                    arrayNew[y, x] = arrayOld[mapPosY, mapPosX];
                 }
             }
 
-            // START
+            return arrayNew;
+        }
 
+        public static int[,] Solve32X32Blocks(int width, int height, int[,] arrayOld)
+        {
             var modWidth = width % 32;
             var timeWidth = (width - modWidth) / 32;
 
             var modHeight = height % 32;
             var timeHeight = (height - modHeight) / 32;
 
-            int[,] output = new int[height, width];
+            int[,] arrayNew = new int[height, width];
 
             for (var timeH = 0; timeH < timeHeight + 1; timeH++)
             {
@@ -120,7 +168,7 @@ namespace Test
                         {
                             offsetX = time * 32;
                             offsetY = timeH * 32;
-                            output[positionY + offsetY, positionX + offsetX] = GetColorFromPxArray(input, width);
+                            arrayNew[positionY + offsetY, positionX + offsetX] = GetColorFromPxArray(arrayOld, width);
                         }
 
                 for (var positionY = 0; positionY < lineH; positionY++)
@@ -128,83 +176,11 @@ namespace Test
                     {
                         offsetX = timeWidth * 32;
                         offsetY = timeH * 32;
-                        output[positionY + offsetY, positionX + offsetX] = GetColorFromPxArray(input, width);
+                        arrayNew[positionY + offsetY, positionX + offsetX] = GetColorFromPxArray(arrayOld, width);
                     }
             }
-            _countGcfpxaH = 0;
-            _countGcfpxa = 0;
 
-            //for (int i = 0; i < height; i++)
-            //{
-            //    Console.WriteLine($"Array {i}:");
-            //    for (int x = 0; x < width; x++)
-            //    {
-            //        if (x == 0 || x + 1 == width)
-            //        {
-            //            if (x !< width && x != 0)
-            //            {
-            //                Console.Write(", ");
-            //            }
-            //            Console.Write(output[i, x]);
-            //        }
-            //    }
-
-            //    Console.WriteLine("\n");
-            //}
-
-            int[,] outputRev = new int[height, width];
-
-            int totalRemainder = height % 32; // 4
-            int totalBlocks = (height - totalRemainder) / 32; // 3
-
-
-            //int originalH = 0;
-
-            //for (int heightIndex = 0; heightIndex < height; heightIndex++)
-            //{
-            //    int originalW = 0;
-
-            //    for (int blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
-            //    {
-            //        int selectedBlock = blockIndex * 32;
-
-
-            //        for (int widthPosition = 0; widthPosition < 32; widthPosition++)
-            //        {
-            //            outputRev[selectedBlock, widthPosition + ] = output[originalH, originalW];
-            //            originalW++;
-            //        }
-
-            //    }
-
-            //    originalH++;
-            //}
-
-
-            int originalH = 0;
-
-            for (int heightIndex = 0; heightIndex < height; heightIndex++)
-            {
-                int originalW = 0;
-
-                for (int blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
-                {
-                    int selectedBlock = blockIndex * 32;
-
-
-                    for (int widthPosition = 0; widthPosition < 32; widthPosition++)
-                    {
-                        //outputRev[selectedBlock, widthPosition + ] = output[originalH, originalW];
-                        originalW++;
-                    }
-
-                }
-
-                originalH++;
-            }
-
-
-            Console.WriteLine("Done");
+            return arrayNew;
         }
 
         private static int _countGcfpxa;
