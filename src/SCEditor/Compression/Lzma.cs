@@ -100,6 +100,9 @@
                     var version = new byte[4];
                     input.Read(version, 0, 4);
 
+                    var unknown = new byte[4];
+                    input.Read(unknown, 0, 4);
+
                     var md5Length = new byte[4];
                     input.Read(md5Length, 0, 4);
 

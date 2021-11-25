@@ -51,6 +51,17 @@ namespace SCEditor.ScOld
             _offset = -1;
         }
 
+        public Texture(ScFile scs, Bitmap bitmap, byte imageType)
+        {
+            _scFile = scs;
+            _textureId = (ushort)_scFile.GetTextures().Count();
+            _imageType = imageType;
+            _image = (ScImage)Activator.CreateInstance(s_imageTypes[_imageType]);
+            _image.SetBitmap(bitmap);
+            _textureId = (ushort)_scFile.GetTextures().Count();
+            _offset = -1;
+        }
+
         public Texture(byte imageType, int width, int height, ScFile scfile)
         {
             _imageType = imageType;

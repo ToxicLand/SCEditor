@@ -22,7 +22,7 @@ namespace SCEditor.Prompts
         public scMergeSelection(List<ScObject> exportsList)
         {
             InitializeComponent();
-            exportsToList = exportsList;
+            exportsToList = exportsList.OrderBy(ex => ex.GetName()).ToList();
             allChecked = false;
             newTextureChecked = false;
             populateListBox();

@@ -460,7 +460,7 @@ namespace SCEditor.ScOld
                             byte[] hashLength = texReader.ReadBytes(4);
                             var hash = texReader.ReadBytes(hashLength[3]);
 
-                            if (version[3] == 1 || version[3] == 3 || version[3] == 0)
+                            if (version[3] == 1 || version[3] == 3 || version[3] == 0 || version[3] == 4)
                             {
                                 string scCompressionType = BitConverter.ToString(texReader.ReadBytes(4));
                                 texReader.Close();
@@ -536,7 +536,7 @@ namespace SCEditor.ScOld
                             byte[] hashLength = reader.ReadBytes(4);
                             var hash = reader.ReadBytes(hashLength[3]);
 
-                            if (version[3] == 1 || version[3] == 3 || version[3] == 0)
+                            if (version[3] == 1 || version[3] == 3 || version[3] == 0 || version[3] == 4)
                             {
                                 string scCompressionType = BitConverter.ToString(reader.ReadBytes(4));
                                 reader.Close();
@@ -629,6 +629,7 @@ namespace SCEditor.ScOld
                     int movieClipModifierIndex = 0;
                     int textFieldIndex = 0;
                     int matrixIndex = 0;
+                    int colorIndex = 0;
                     int textureIndex = 0;
 
                     //bool canLoadTex = true;
@@ -653,18 +654,14 @@ namespace SCEditor.ScOld
                             case "00": //0
                                 if (_shapeCount != shapeIndex ||
                                 _movieClipCount != movieClipIndex ||
-                                _matrixCount != matrixIndex)
+                                _matrixCount != matrixIndex ||
+                                _textFieldCount != textFieldIndex ||
+                                _colorsCount != colorIndex)
                                 {
                                     throw new Exception("Didn't load whole .sc properly.");
                                 }
 
                                 _eofOffset = offset;
-                                foreach (ScObject t in _exports)
-                                {
-                                    int index = _movieClips.FindIndex(movie => movie.Id == t.Id);
-                                    if (index != -1)
-                                        ((Export)t).SetDataObject((MovieClip)_movieClips[index]);
-                                }
                                 break;
 
                             case "01":
@@ -778,6 +775,7 @@ namespace SCEditor.ScOld
                                 this._colors.Add(new Tuple<Color, byte, Color>(Color.FromArgb(ra, ga, ba), am, Color.FromArgb(rm, gm, bm)));
 
                                 _eofColorsOffset = reader.BaseStream.Position;
+                                colorIndex += 1;
                                 break;
 
                             case "0D": // 13 
@@ -854,16 +852,27 @@ namespace SCEditor.ScOld
                         if ((offset + tagSize + 5) != reader.BaseStream.Position)
                             Console.WriteLine($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
                     }
-
-                    if (_movieClips.Count < _movieClipCount)
-                        Console.WriteLine($"Loaded less MovieClips than expected.\nSCCount: {_movieClipCount} | LoadCount: {_movieClips.Count}, IndexCount {movieClipIndex}");
-
-                    if (_shapes.Count < _shapeCount)
-                        Console.WriteLine($"Loaded less shapes than expected.\nSCCount: {_shapeCount} | LoadCount: {_shapes.Count}, IndexCount {shapeIndex}");
                 }
 
+                List<(string, int)> childrenNamesPresent = new List<(string, int)>();
                 foreach (MovieClip mv in this._movieClips)
                 {
+                    foreach (string cName in mv.timelineChildrenNames)
+                    {
+                        if (!string.IsNullOrEmpty(cName))
+                        {
+                            int idxName = childrenNamesPresent.FindIndex(n => n.Item1 == cName);
+                            if (idxName != -1)
+                            {
+                                childrenNamesPresent[idxName] = (cName, childrenNamesPresent[idxName].Item2 + 1);
+                            }
+                            else
+                            {
+                                childrenNamesPresent.Add((cName, 1));
+                            }
+                        }
+                    }
+
                     foreach (ushort tcId in mv.timelineChildrenId)
                     {
                         if (mv.getChildrens().FindIndex(obj => obj.Id == tcId) != -1)
@@ -895,6 +904,18 @@ namespace SCEditor.ScOld
                             }
                         }
                     }
+
+                    foreach (Export ex in _exports)
+                    {
+                        MovieClip data = (MovieClip)_movieClips.Find(mv => mv.Id == ex.Id);
+
+                        ex.SetDataObject(data);
+                    }
+                }
+
+                for (int i = 0; i < childrenNamesPresent.Count; i++)
+                {
+                    Console.WriteLine($"{childrenNamesPresent[i].Item1} childrenName with count {childrenNamesPresent[i].Item2}");
                 }
 
                 break;

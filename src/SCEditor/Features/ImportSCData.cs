@@ -29,11 +29,13 @@ namespace SCEditor.Features
         private List<ushort> _matricesToAdd;
         private List<ushort> _colorTransformToAdd;
         private bool _createNewTexture;
+        private bool _newTextureImport;
         private ushort _textureToImportToID;
         private float _scaleFactor;
         private string tempFolder;
         private Process texturePackerProcess;
         private List<(ushort, List<Matrix>)> shapeChunksTMatrix;
+        private List<(byte, int)> textureToAdd;
 
         public ImportSCData(ScFile scFile)
         {
@@ -45,6 +47,7 @@ namespace SCEditor.Features
             _matricesToAdd = new List<ushort>();
             _colorTransformToAdd = new List<ushort>();
             shapeChunksTMatrix = new List<(ushort, List<Matrix>)>();
+            textureToAdd = new List<(byte, int)>();
 
             try
             {
@@ -132,12 +135,26 @@ namespace SCEditor.Features
 
                 if (_createNewTexture == true)
                 {
-                    Texture newTex = new Texture(0, 1, 1, _scFile);
+                    while (true)
+                    {
+                        DialogResult askImportTextureNew = MessageBox.Show("Would you like to import the full texture?", "Import Full Texture", MessageBoxButtons.YesNo);
 
-                    _textureToImportToID = newTex.Id;
-
-                    _scFile.AddTexture(newTex);
-                    _scFile.AddChange(newTex);
+                        if (askImportTextureNew == DialogResult.Yes)
+                        {
+                            _newTextureImport = true;
+                            break;
+                        }
+                        else if (askImportTextureNew == DialogResult.No)
+                        {
+                            _newTextureImport = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!_newTextureImport)
+                    {
+                        _textureToImportToID = (byte)_scFile.GetTextures().Count;
+                    }
                 }
 
                 ushort maxId = _scFile.getMaxId();
@@ -147,7 +164,7 @@ namespace SCEditor.Features
                 foreach (scMergeSelection.exportItemClass item in selectImportExportsForm.checkedExports)
                 {
                     Export exportToAdd = (Export)((ScObject)item.exportData);
-                    bool crChangeName = true;
+                    bool crChangeName = false;
 
                     if (crChangeName/** && !exportToAdd.GetName().ToLower().Contains("goku")**/)
                     {
@@ -203,7 +220,8 @@ namespace SCEditor.Features
                         int checkExportID = _scFile.GetExports().FindIndex(ex => ex.Id == newMovieClip.Id);
                         if (checkExportID != -1)
                         {
-                            throw new Exception($"newMovieClip exists for export {newExportName} but there is an export already with that id {checkExportID} | {((Export)_scFile.GetExports()[checkExportID]).GetName()}");
+                            newExport.SetId(newMovieClip.Id);
+                            maxId--;
                         }
                         else
                         {
@@ -248,8 +266,11 @@ namespace SCEditor.Features
                     _scFile.addPendingColor(scToImportFrom.getColors()[id]);
                 }
 
-                generateChunksTexture();
+                if (_createNewTexture)
+                    if (_newTextureImport)
+                        return true;
 
+                generateChunksTexture();
                 return true;
             }
 
@@ -470,16 +491,47 @@ namespace SCEditor.Features
             int shapeChunkIndex = 0;
             foreach (ShapeChunk shapeChunkToAdd in shapeToAdd.GetChunks())
             {
+                int texId = _textureToImportToID;
+
+                if (_createNewTexture)
+                {
+                    if (!_newTextureImport)
+                    {
+                        exportChunksBitmap(shapeChunkToAdd, shapeChunkIndex, maxId, _scaleFactor);
+                    }
+                    else
+                    {
+                        int texIndex = textureToAdd.FindIndex(tx => tx.Item1 == shapeChunkToAdd.GetTextureId());
+                        if (texIndex == -1)
+                        {
+                            Texture texToAdd = (Texture)scToImportFrom.GetTextures()[(int)shapeChunkToAdd.GetTextureId()];
+                            Texture newTexToAdd = new Texture(_scFile, texToAdd.Bitmap, texToAdd._imageType);
+                            textureToAdd.Add((shapeChunkToAdd.GetTextureId(), newTexToAdd.Id));
+
+                            _scFile.AddTexture(newTexToAdd);
+                            _scFile.AddChange(newTexToAdd);
+
+                            texId = newTexToAdd.Id;
+                        }
+                        else
+                        {
+                            texId = textureToAdd[texIndex].Item2;
+                        }
+                    }
+                }
+                else
+                {
+                    exportChunksBitmap(shapeChunkToAdd, shapeChunkIndex, maxId, _scaleFactor);
+                }
+
                 ShapeChunk newShapeChunk = new ShapeChunk(_scFile);
                 newShapeChunk.SetChunkId(shapeChunkToAdd.Id);
                 newShapeChunk.SetShapeId(maxId);
-                newShapeChunk.SetTextureId((byte)(_textureToImportToID));
+                newShapeChunk.SetTextureId((byte)texId);
                 newShapeChunk.SetChunkType(shapeChunkToAdd.GetChunkType());
                 newShapeChunk.SetUV(shapeChunkToAdd.UV);
                 newShapeChunk.SetXY(shapeChunkToAdd.XY);
                 newShapeChunk.SetVertexCount(0);
-
-                exportChunksBitmap(shapeChunkToAdd, shapeChunkIndex, maxId, _scaleFactor);
 
                 newShapeChunks.Add(newShapeChunk);
                 shapeChunkIndex++;
@@ -566,20 +618,24 @@ namespace SCEditor.Features
                         }
                         else
                         {
-                            MessageBox.Show("Please Type 0 for RGBA8888 or 1 for RGBA4444","Invalid Texture Type");
+                            MessageBox.Show("Please Type 0 for RGBA8888 or 1 for RGBA4444", "Invalid Texture Type");
                         }
                     }
                 }
+
+                Texture newTex = new Texture((byte)(isGeneratedTextureRGBA4444 == false ? 0 : 2), 1, 1, _scFile);
+                _scFile.AddTexture(newTex);
+                _scFile.AddChange(newTex);
             }
             else
             {
                 string textureTypeName = ((Texture)_scFile.GetTextures()[_textureToImportToID])._image.GetImageTypeName();
                 isGeneratedTextureRGBA4444 = textureTypeName == "RGB4444" ? true : (textureTypeName == "RGB8888" ? false : throw new Exception("Not added"));
-            }
+            } 
 
             int generatedTextureScale = 1;
             int generatedSpritesExtrude = 0;
-            int generatedSpritesPadding = 2;
+            int generatedSpritesPadding = 6;
             int generatedTextureMaxWidth = 4096;
             int generatedTextureMaxHeight = 4096;
             int generatedTexturePolygonTolerance = 200;
@@ -587,7 +643,7 @@ namespace SCEditor.Features
             string generatedSpritesPackMode = "Best";
             string generatedSpritesAlphaHandling = "ClearTransparentPixels";
 
-            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm Polygon --alpha-handling {generatedSpritesAlphaHandling} --padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
+            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm Polygon --alpha-handling {generatedSpritesAlphaHandling} --shape-padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
 
             texturePackerProcess = new Process();
             launchProcess(texturePackerEXEPath, arguements);
