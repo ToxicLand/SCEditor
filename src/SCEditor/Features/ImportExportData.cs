@@ -294,6 +294,8 @@ namespace SCEditor.Features
                                     movieClipData.setCustomAdded(true);
                                     movieClipData.SetFramePerSecond(24);
                                     movieClipData.setExportType(_exportType);
+                                    movieClipData.setTimelineChildrenId(new ushort[0]);
+                                    movieClipData.setTimelineChildrenNames(new string[0]);
                                 }
 
                                 movieClipData.SetFrameCount((short)(movieClipData.GetFrames().Count + 1));
@@ -316,6 +318,8 @@ namespace SCEditor.Features
                                                 if (shapeIndex != -1)
                                                 {
                                                     movieClipData.addChildren(_scFile.GetShapes()[shapeIndex]);
+                                                    movieClipData.addChildrenId(_scFile.GetShapes()[shapeIndex].Id);
+                                                    movieClipData.addChildrenName(null);
                                                     movieClipData.setHasShadow(true);
                                                     break;
                                                 }
@@ -334,6 +338,8 @@ namespace SCEditor.Features
                                 }
 
                                 movieClipData.addChildren(shapeData);
+                                movieClipData.addChildrenId(shapeData.Id);
+                                movieClipData.addChildrenName(null);
 
                                 ushort[] timelineOffset = new ushort[] { 0, 65535, 65535 };
 

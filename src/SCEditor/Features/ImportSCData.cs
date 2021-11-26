@@ -29,13 +29,15 @@ namespace SCEditor.Features
         private List<ushort> _matricesToAdd;
         private List<ushort> _colorTransformToAdd;
         private bool _createNewTexture;
-        private bool _newTextureImport;
+        private bool _newTextureImport = false;
         private ushort _textureToImportToID;
         private float _scaleFactor;
         private string tempFolder;
         private Process texturePackerProcess;
         private List<(ushort, List<Matrix>)> shapeChunksTMatrix;
         private List<(byte, int)> textureToAdd;
+        private string _currentExportName;
+        private Dictionary<string, Dictionary<string, Dictionary<string , float>>> _queriesToPerform; // Type, (keyword, ()) -> example = contains, (barbarian, (scale, value))
 
         public ImportSCData(ScFile scFile)
         {
@@ -48,6 +50,7 @@ namespace SCEditor.Features
             _colorTransformToAdd = new List<ushort>();
             shapeChunksTMatrix = new List<(ushort, List<Matrix>)>();
             textureToAdd = new List<(byte, int)>();
+            _queriesToPerform = new Dictionary<string, Dictionary<string, Dictionary<string, float>>>();
 
             try
             {
@@ -190,8 +193,9 @@ namespace SCEditor.Features
                     exportsToImport.Add(exportToAdd);
                 }
 
-                exportsToImport = exportsToImport.OrderBy(ex => ex.GetName()).ToList();
+                performQueries();
 
+                exportsToImport = exportsToImport.OrderBy(ex => ex.GetName()).ToList();
                 foreach (Export exportToAdd in exportsToImport)
                 {
                     MovieClip movieClipToAdd = (MovieClip)exportToAdd.GetDataObject();
@@ -209,6 +213,7 @@ namespace SCEditor.Features
                         Console.WriteLine($"Duplicate new name: {newExportName}");
                     }
 
+                    _currentExportName = newExportName;
                     newExport.SetExportName(newExportName);
 
                     MovieClip newMovieClip = null;
@@ -366,9 +371,6 @@ namespace SCEditor.Features
                 }
             }
 
-            newMovieClip.setTimelineChildrenNames(newTimelineChildrenNames);
-            newMovieClip.setTimelineOffsetCount(movieClipToAdd.timelineOffsetCount);
-
             ushort[] newTimelineChildrenId = (ushort[])movieClipToAdd.timelineChildrenId.Clone();
 
             // SHAPES DATA
@@ -468,6 +470,8 @@ namespace SCEditor.Features
                 idx++;
             }
 
+            newMovieClip.setTimelineChildrenNames(newTimelineChildrenNames);
+            newMovieClip.setTimelineOffsetCount(movieClipToAdd.timelineOffsetCount);
             newMovieClip.setTimelineChildrenId(newTimelineChildrenId);
             newMovieClip.setChildrens(newShapes);
 
@@ -547,6 +551,17 @@ namespace SCEditor.Features
             RenderingOptions renderOptions = new RenderingOptions() { ViewPolygons = false, InternalRendering = true };
             Bitmap shapeChunkBitmap = shapeChunkToAdd.Render(renderOptions);
 
+            foreach (var (key, value) in _queriesToPerform["contains"])
+            {
+                if (_currentExportName.Contains(key))
+                {
+                    if (value.ContainsKey("scale"))
+                        scaleFactor = value["scale"];
+
+                    break;
+                }
+            }
+
             if (scaleFactor != 1)
             {
                 int scaleWidth = (int)(shapeChunkBitmap.Width * scaleFactor);
@@ -564,8 +579,7 @@ namespace SCEditor.Features
 
                 shapeChunkBitmap = scaledShapeChunkBitmap;
             }
-
-            
+ 
             int shapeChunkTMatrixIndex = shapeChunksTMatrix.FindIndex(X => X.Item1 == maxId);
             if (shapeChunkTMatrixIndex != -1)
             {
@@ -650,6 +664,7 @@ namespace SCEditor.Features
 
             try
             {
+                Console.WriteLine("Generating new texture!");
                 texturePackerProcess.Start();
                 texturePackerProcess.BeginErrorReadLine();
                 texturePackerProcess.BeginOutputReadLine();
@@ -806,6 +821,105 @@ namespace SCEditor.Features
             var transformMatrix = matrixXY * inverseMatrixUV;
 
             return new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+        }
+
+        public void performQueries()
+        {
+            if (_scaleFactor != 1)
+            {
+                throw new Exception("Scalefactor should be 1 to perform queries!");
+            }
+
+            if (!_newTextureImport)
+            {
+                DialogResult inputQuery = MessageBox.Show("Would you like to perform custom query?", "Perform Extra", MessageBoxButtons.YesNo);
+
+                if (inputQuery == DialogResult.Yes)
+                {
+                    // Query Template
+                    _queriesToPerform.Add("contains", new Dictionary<string, Dictionary<string, float>>());
+
+                    inputDataDialog queryDialog = new inputDataDialog(0);
+                    queryDialog.setLabelText("Query");
+                    while (true)
+                    {
+                        string error = "Unknown";
+
+                        if (queryDialog.ShowDialog() == DialogResult.OK)
+                        {
+                            string queryData = queryDialog.inputTextBoxString;
+
+                            if (!string.IsNullOrEmpty(queryData))
+                            {
+                                bool isWorking = false;
+                                string[] eachQuery = queryData.Split(';');
+                                foreach (string eachQueryItem in eachQuery)
+                                {
+                                    string[] queryItemData = eachQueryItem.Split(' ');
+
+                                    if (queryItemData.Length < 4)
+                                        error = $"Invalid query type in: {eachQueryItem}";
+
+                                    switch (queryItemData[0].ToLower())
+                                    {
+                                        case "contains":
+                                            string keyword = queryItemData[1];
+
+                                            if (queryItemData[2].ToLower() == "scale")
+                                            {
+                                                if (float.TryParse(queryItemData[3], out float _))
+                                                {
+                                                    float scaleValue = float.Parse(queryItemData[3]);
+
+                                                    Dictionary<string, float> itemTypeDict = new Dictionary<string, float>();
+                                                    itemTypeDict.Add("scale", scaleValue);
+
+                                                    try
+                                                    {
+                                                        _queriesToPerform["contains"].Add(keyword, itemTypeDict);
+                                                        isWorking = true;
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        error = ex.Message;
+                                                        isWorking = false;
+                                                    }
+
+                                                }
+                                                else
+                                                {
+                                                    error = $"Invalid query scale value in (only float allowed): {eachQueryItem}";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                goto default;
+                                            }
+                                            break;
+
+                                        default:
+                                            error = $"Invalid query type in: {eachQueryItem}";
+                                            break;
+                                    }
+
+                                    if (!isWorking)
+                                        break;
+                                }
+
+                                if (isWorking)
+                                    break;
+                            }
+                            else
+                            {
+                                error = "Query input can not be empty!";
+                            }
+                        }
+
+                        if (MessageBox.Show($"{error}\n Press cancel to skip query input.", "Error Query", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                            break;
+                    }
+                }
+            }
         }
 
         public void addChunksBitmapToTexture(ref List<ScObject> shapeChunksInput, Texture textureAppendTo, float scaleFactor)

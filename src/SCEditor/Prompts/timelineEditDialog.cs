@@ -33,9 +33,9 @@ namespace SCEditor.Prompts
 
         public void addItemsToBox()
         {
-            for (int i = 0; i < _timelineArray.Length / 6; i++)
+            for (int i = 0; i < _timelineArray.Length / 3; i++)
             {
-                timelineArrayBox.Items.Add(i + " | Shape " + _timelineArray[i * 6] + "," + _timelineArray[(i * 6) + 3]);
+                timelineArrayBox.Items.Add(i + " | Shape " + _timelineArray[i * 3]);
             }
 
         }
@@ -45,12 +45,12 @@ namespace SCEditor.Prompts
             string[] dataType = new string[3] { "Shape ID: ", "Matrix ID: ", "ColorT ID: " };
 
             int index = 0;
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 3; i++)
             {
                 if (index == 3)
                     index = 0;
 
-                timelineDataBox.Items.Add(dataType[index] + _timelineArray[(timelineArrayBox.SelectedIndex * 6) + i]);
+                timelineDataBox.Items.Add(dataType[index] + _timelineArray[(timelineArrayBox.SelectedIndex * 3) + i]);
                 index++;
             }
         }
@@ -92,7 +92,7 @@ namespace SCEditor.Prompts
             dataTypeTextBox.Enabled = true;
             dataTypeEditSubmitButton.Enabled = true;
 
-            dataTypeTextBox.Text = _timelineArray[(timelineArrayBox.SelectedIndex * 6) + timelineDataBox.SelectedIndex].ToString();
+            dataTypeTextBox.Text = _timelineArray[(timelineArrayBox.SelectedIndex * 3) + timelineDataBox.SelectedIndex].ToString();
         }
 
         private void dataTypeTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -136,9 +136,16 @@ namespace SCEditor.Prompts
                     }
                     else
                     {
-                        for (int i = 0; i < (_timelineArray.Length / 6); i++)
+                        int currentChildrenIndex = timelineArrayBox.SelectedIndex * 3;
+                        DialogResult askChangeAll = MessageBox.Show($"Change matrix foronly with specified children index {currentChildrenIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
+
+                        for (int i = 0; i < (_timelineArray.Length / 3); i++)
                         {
-                            _timelineArray[(i * 6) + 1] = (ushort)newValue;
+                            if (askChangeAll == DialogResult.Yes)
+                                if (timelineArray[i * 3] != currentChildrenIndex)
+                                    continue;
+
+                            _timelineArray[(i * 3) + 1] = (ushort)newValue;
                         }
                     }
                 }
@@ -172,7 +179,7 @@ namespace SCEditor.Prompts
                     }
                     else
                     {
-                        _timelineArray[(timelineArrayBox.SelectedIndex * 6) + timelineDataBox.SelectedIndex] = (ushort)newValue;
+                        _timelineArray[(timelineArrayBox.SelectedIndex * 3) + timelineDataBox.SelectedIndex] = (ushort)newValue;
                     }
                 }
                 else if (timelineDataBox.SelectedIndex == 1 || timelineDataBox.SelectedIndex == 4)
@@ -184,7 +191,7 @@ namespace SCEditor.Prompts
                     }
                     else
                     {
-                        _timelineArray[(timelineArrayBox.SelectedIndex * 6) + timelineDataBox.SelectedIndex] = (ushort)newValue;
+                        _timelineArray[(timelineArrayBox.SelectedIndex * 3) + timelineDataBox.SelectedIndex] = (ushort)newValue;
                     }
                 }
                 else if (timelineDataBox.SelectedIndex == 2 || timelineDataBox.SelectedIndex == 5)
@@ -232,11 +239,11 @@ namespace SCEditor.Prompts
 
             List<ushort> newList = new List<ushort>(_timelineArray.ToList());
 
-            ushort[] data = new ushort[6] { 0, 65535, 65535, 0, 65535, 65535 };
+            ushort[] data = new ushort[3] { 0, 65535, 65535 };
 
             for (int i = 0; i < 6; i++)
             {
-                newList.Insert(((index * 6) + i), data[i]);
+                newList.Insert(((index * 3) + i), data[i]);
             }
 
             _timelineArray = newList.ToArray();
@@ -251,11 +258,11 @@ namespace SCEditor.Prompts
 
             List<ushort> newList = new List<ushort>(_timelineArray.ToList());
 
-            ushort[] data = new ushort[6] { 0, 65535, 65535, 0, 65535, 65535 };
+            ushort[] data = new ushort[3] { 0, 65535, 65535 };
 
             for (int i = 0; i < 6; i++)
             {
-                newList.Insert((((index + 1) * 6) + i), data[i]);
+                newList.Insert((((index + 1) * 3) + i), data[i]);
             }
 
             _timelineArray = newList.ToArray();
@@ -266,11 +273,11 @@ namespace SCEditor.Prompts
 
         private void addFrame()
         {
-            if (_timelineArray.Length / 6 != (_frames.Length + 1))
+            if (_timelineArray.Length / 3 != (_frames.Length + 1))
                 throw new Exception("unexpected");
 
             MovieClipFrame data = new MovieClipFrame(_scfile);
-            data.SetId(2);
+            data.SetId(1);
             data.setCustomAdded(true);
 
             List<ScObject> newFramesList = new List<ScObject>(_frames.ToList());
@@ -284,14 +291,14 @@ namespace SCEditor.Prompts
             int index = timelineArrayBox.SelectedIndex;
             List<ushort> newList = new List<ushort>(_timelineArray.ToList());
 
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 3; i++)
             {
-                newList.RemoveAt((index * 6));
+                newList.RemoveAt((index * 3));
             }
 
             _timelineArray = newList.ToArray();
 
-            if (_timelineArray.Length / 6 != (_frames.Length - 1))
+            if (_timelineArray.Length / 3 != (_frames.Length - 1))
                 throw new Exception("unexpected");
 
             List<ScObject> newFramesList = new List<ScObject>(_frames.ToList());

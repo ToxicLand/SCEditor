@@ -13,6 +13,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Drawing.Drawing2D;
 using SCEditor.Features;
+using System.Text;
 
 namespace SCEditor
 {
@@ -765,13 +766,10 @@ namespace SCEditor
             if (data.GetDataType() != 7 && data.GetDataType() != 1)
                 return;
 
-            foreach (ScObject check in _scFile.GetPendingChanges())
+            if (_scFile.GetPendingChanges().FindIndex(s => s.Id == data.Id) != -1)
             {
-                if (check.Id == data.Id)
-                {
-                    MessageBox.Show("Data you are trying to edit is already in pending changes. Please save before trying to use this function", "Save before proceeding");
-                    return;
-                }
+                MessageBox.Show("Data you are trying to edit is already in pending changes. Please save before trying to use this function", "Save before proceeding");
+                return;
             }
 
             if (data.GetDataType() == 7)
@@ -783,10 +781,33 @@ namespace SCEditor
 
                 if (form.ShowDialog() == DialogResult.OK)
                 {
+                    uint dataLength = ((MovieClip)data)._length;
+
+                    uint frameLength = 0;
+                    foreach (MovieClipFrame frame in ((MovieClip)data).Frames)
+                    {
+                        frameLength += 8;
+
+                        if (frame.Name != null)
+                            frameLength += (uint)Encoding.ASCII.GetBytes(frame.Name).Length;
+                    }
+
+                    dataLength = dataLength - (uint)((((MovieClip)data).timelineArray.Length * 2) + frameLength);
+
                     if (form.timelineArray.Length != ((MovieClip)data).timelineArray.Length)
                         ((MovieClip)data).SetFrames(form.frames.ToList());
 
                     ((MovieClip)data).setTimelineOffsetArray(form.timelineArray);
+
+                    frameLength = 0;
+                    foreach (MovieClipFrame frame in ((MovieClip)data).Frames)
+                    {
+                        frameLength += 8;
+
+                        if (frame.Name != null)
+                            frameLength += (uint)Encoding.ASCII.GetBytes(frame.Name).Length;
+                    }
+                    ((MovieClip)data)._length = (uint)(dataLength + (((MovieClip)data).timelineArray.Length * 2) + frameLength);
 
                     _scFile.AddChange(data);
 

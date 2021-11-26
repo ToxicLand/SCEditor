@@ -107,7 +107,7 @@ namespace SCEditor.ScOld
         private exportType _exportType;
         private iconType _iconType;
         private animationType _animationType;
-        private uint _length;
+        public uint _length { get; set; }
         private bool _hasShadow;
         private List<PointF> _pointFList;
         public override ushort Id => _clipId;
@@ -118,6 +118,7 @@ namespace SCEditor.ScOld
         public byte FPS => _framePerSeconds;
         public int _lastPlayedFrame { get; set; }
         public override SCObjectType objectType => SCObjectType.MovieClip;
+        private string _packetId;
 
         #endregion
 
@@ -176,6 +177,7 @@ namespace SCEditor.ScOld
             _framePerSeconds = br.ReadByte();
             _frameCount = br.ReadInt16();
             _length = length;
+            _packetId = packetId;
 
             if (packetId == "0E")
             {
@@ -470,15 +472,16 @@ namespace SCEditor.ScOld
                             if (string.IsNullOrEmpty(movieClipFrameData.Name))
                             {
                                 input.WriteByte(0xFF);
-                                frameLength += 1;
                             }
                             else
                             {
-                                input.Write(BitConverter.GetBytes(movieClipFrameData.Name.Length), 0, 1);
-                                input.Write(Encoding.ASCII.GetBytes(movieClipFrameData.Name), 0, movieClipFrameData.Name.Length);
+                                byte[] stringData = Encoding.ASCII.GetBytes(movieClipFrameData.Name);
+                                input.WriteByte((byte)stringData.Length);
+                                input.Write(stringData, 0, stringData.Length);
 
-                                frameLength += (1 + movieClipFrameData.Name.Length);
+                                frameLength += stringData.Length;
                             }
+                            frameLength += 1;
 
                             dataLength += frameLength;
 
@@ -521,6 +524,7 @@ namespace SCEditor.ScOld
 
                         input.WriteByte((byte)readInput.ReadByte());
                         readInput.Seek(2, SeekOrigin.Current);
+
                         input.Write(BitConverter.GetBytes(_frameCount), 0, 2);
 
                         //int cnt1 = br.ReadInt32();
@@ -639,30 +643,112 @@ namespace SCEditor.ScOld
                 {
                     input.Seek(0, SeekOrigin.Begin);
 
-                    _length = (uint)((_length - ((_frameCount * 6) * 2)) + _timelineOffsetArray.Length);
-
                     using (MemoryStream finalData = new MemoryStream())
                     {
-                        byte[] beforeData = new byte[_offset + 8];
+                        byte[] beforeData = new byte[_offset + 1];
                         input.Read(beforeData, 0, beforeData.Length);
                         finalData.Write(beforeData, 0, beforeData.Length);
 
-                        finalData.Seek(-7, SeekOrigin.Current);
+                        // OLD LENGTH
+                        byte[] beforeByte = new byte[4];
+                        input.Read(beforeByte, 0, 4);
+                        uint beforeLength = BitConverter.ToUInt32(beforeByte);
+
+                        // Data Length
                         finalData.Write(BitConverter.GetBytes(_length), 0, 4);
-                        finalData.Seek(3, SeekOrigin.Current);
+                        finalData.Write(BitConverter.GetBytes(_clipId), 0, 2);
+                        finalData.Write(BitConverter.GetBytes(FPS), 0, 1);
+                        finalData.Write(BitConverter.GetBytes((ushort)_frames.Count),0,2);
+                        input.Seek(5, SeekOrigin.Current);
 
-                        finalData.Write(BitConverter.GetBytes((short)_frames.Count),0,2);
+                        // OLD Timeline Length
+                        beforeByte = new byte[4];
+                        input.Read(beforeByte, 0, 4);
+                        uint beforeTimelineLength = BitConverter.ToUInt32(beforeByte);
+                        input.Seek((beforeTimelineLength * 3) * 2, SeekOrigin.Current);
+
                         finalData.Write(BitConverter.GetBytes(_timelineOffsetArray.Length / 3), 0, 4);
-
                         for (int i = 0; i < _timelineOffsetArray.Length; i++)
                         {
-                            finalData.Write(BitConverter.GetBytes(_timelineOffsetArray[i]),0,2);
+                            finalData.Write(BitConverter.GetBytes(_timelineOffsetArray[i]), 0, 2);
                         }
 
-                        input.Seek((((_frameCount * 6) * 2) + 6), SeekOrigin.Current);
+                        // Old Children Count
+                        beforeByte = new byte[2];
+                        input.Read(beforeByte, 0, 2);
+                        ushort beforeChildrenLength = BitConverter.ToUInt16(beforeByte);
+                        finalData.Write(beforeByte, 0, 2); // Children Count
+
+                        // Children Ids
+                        beforeByte = new byte[beforeChildrenLength * 2];
+                        input.Read(beforeByte, 0, beforeChildrenLength * 2);
+                        finalData.Write(beforeByte, 0, beforeChildrenLength * 2); // Children Ids
+
+                        // flags
+                        if (_packetId == "0C" || _packetId == "23")
+                        {
+                            beforeByte = new byte[beforeChildrenLength];
+                            input.Read(beforeByte, 0, beforeChildrenLength);
+                            finalData.Write(beforeByte, 0, beforeChildrenLength);
+                        }
+
+                        // children names
+                        for (int i = 0; i < beforeChildrenLength; i++)
+                        {
+                            byte stringLength = (byte)input.ReadByte();
+                            finalData.WriteByte(stringLength);
+
+                            if (stringLength < 255)
+                            {
+                                beforeByte = new byte[stringLength];
+                                input.Read(beforeByte, 0, stringLength);
+                                finalData.Write(beforeByte, 0, stringLength);
+                            }
+                        }
+
+                        // frames Data
+                        if (_frames != null)
+                        {
+                            if (_frames.Count > 0)
+                            {
+                                for (int i = 0; i < _frames.Count; i++)
+                                {
+                                    finalData.Write(BitConverter.GetBytes(11), 0, 1);
+                                    finalData.Write(BitConverter.GetBytes(0), 0, 4);
+                                    int frameLength = 0;
+
+                                    MovieClipFrame movieClipFrameData = (MovieClipFrame)_frames[i];
+
+                                    finalData.Write(BitConverter.GetBytes(movieClipFrameData.Id), 0, 2);
+                                    frameLength += 2;
+
+                                    if (string.IsNullOrEmpty(movieClipFrameData.Name))
+                                    {
+                                        finalData.WriteByte(0xFF);
+                                    }
+                                    else
+                                    {
+                                        byte[] stringData = Encoding.ASCII.GetBytes(movieClipFrameData.Name);
+                                        finalData.WriteByte((byte)stringData.Length);
+                                        finalData.Write(stringData, 0, stringData.Length);
+
+                                        frameLength += stringData.Length;
+                                    }
+                                    frameLength += 1;
+
+                                    // Write FrameLength
+                                    finalData.Seek(-(frameLength + 4), SeekOrigin.Current);
+                                    finalData.Write(BitConverter.GetBytes(frameLength), 0, 4);
+                                    finalData.Seek(frameLength, SeekOrigin.Current);
+                                }
+                            }
+                        }
+
+                        input.Seek(offset, SeekOrigin.Begin);
+                        input.Seek(beforeLength + 5, SeekOrigin.Current);
 
                         _frameCount = (short)_frames.Count;
-                        _timelineOffsetCount = _frameCount * 2;
+                        _timelineOffsetCount = _timelineOffsetArray.Length;
 
                         byte[] afterData = new byte[input.Length - input.Position];
                         input.Read(afterData, 0, afterData.Length);
@@ -1058,6 +1144,22 @@ namespace SCEditor.ScOld
         public void addChildren(ScObject data)
         {
             _childrens.Add(data);
+        }
+
+        public void addChildrenId(ushort id)
+        {
+            List<ushort> temp = _timelineChildrenId.ToList();
+            temp.Add(id);
+
+            _timelineChildrenId = temp.ToArray();
+        }
+
+        public void addChildrenName(string name)
+        {
+            List<string> temp = _timelineChildrenNames.ToList();
+            temp.Add(name);
+
+            _timelineChildrenNames = temp.ToArray();
         }
 
         public void generatePointFList(Matrix matrixIn)
