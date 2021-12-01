@@ -13,13 +13,17 @@ namespace SCEditor.Prompts
 {
     public partial class frameEditDialog : Form
     {
-        private ushort[] _timelineArray;
         private ScFile _scfile;
+
         private ScObject _data;
+        private ushort[] _timelineArray;
         private ScObject[] _frames;
+
         private bool _isEdited;
+
         public ushort[] timelineArray => _timelineArray;
         public ScObject[] frames => _frames;
+
         public frameEditDialog(ScFile file, ScObject data)
         {
             InitializeComponent();
@@ -28,8 +32,9 @@ namespace SCEditor.Prompts
             _data = data;
             _timelineArray = (ushort[])((MovieClip)_data).timelineArray.Clone();
             _frames = (ScObject[])((MovieClip)_data).Frames.ToArray().Clone();
+
             _isEdited = false;
-        } 
+        }
 
         private void dataTypeTextBox_KeyDown(object sender, KeyEventArgs e)
         {

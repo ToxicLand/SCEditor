@@ -32,6 +32,7 @@ namespace SCEditor.ScOld
             _pendingColors = new List<Tuple<Color, byte, Color>>();
             _fontNames = new List<string>();
             _textFields = new List<ScObject>();
+            _currentRenderingMovieClips = new List<ScObject>();
         }
 
         #endregion
@@ -57,6 +58,7 @@ namespace SCEditor.ScOld
         private List<Tuple<Color, byte, Color>> _pendingColors;
         private List<string> _fontNames;
         private List<ScObject> _textFields;
+        private List<ScObject> _currentRenderingMovieClips;
 
         private readonly string _infoFile;
         private readonly string _textureFile;
@@ -1049,6 +1051,23 @@ namespace SCEditor.ScOld
         public void addColor(Tuple<Color, byte, Color> color)
         {
             _colors.Add(color);
+        }
+
+        public void addRenderingItem(ScObject item)
+        {
+            _currentRenderingMovieClips.Add(item);
+        }
+
+        public List<ScObject> CurrentRenderingMovieClips => _currentRenderingMovieClips;
+
+        public void removeRenderingItem(int index)
+        {
+            _currentRenderingMovieClips.RemoveAt(index);
+        }
+
+        public void setRenderingItems(List<ScObject> data)
+        {
+            _currentRenderingMovieClips = data;
         }
 
         public void addPendingColor(Tuple<Color, byte, Color> color)

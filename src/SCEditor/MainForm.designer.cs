@@ -65,6 +65,7 @@
             this.toolStripMenuItemEditCharacter = new System.Windows.Forms.ToolStripMenuItem();
             this.editTimelineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addEditMatrixtoolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.editChildrenDataToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.shapeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportToolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
@@ -378,7 +379,8 @@
             this.exportShapeToolStripMenuItem,
             this.toolStripMenuItemEditCharacter,
             this.editTimelineToolStripMenuItem,
-            this.addEditMatrixtoolStripMenuItem});
+            this.addEditMatrixtoolStripMenuItem,
+            this.editChildrenDataToolStripMenuItem});
             this.objectToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.objectToolStripMenuItem.Name = "objectToolStripMenuItem";
             this.objectToolStripMenuItem.Size = new System.Drawing.Size(58, 21);
@@ -458,6 +460,15 @@
             this.addEditMatrixtoolStripMenuItem.Text = "Matrixes";
             this.addEditMatrixtoolStripMenuItem.Click += new System.EventHandler(this.addEditMatrixtoolStripMenuItem_Click);
             // 
+            // editChildrenDataToolStripMenuItem
+            // 
+            this.editChildrenDataToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
+            this.editChildrenDataToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.editChildrenDataToolStripMenuItem.Name = "editChildrenDataToolStripMenuItem";
+            this.editChildrenDataToolStripMenuItem.Size = new System.Drawing.Size(191, 22);
+            this.editChildrenDataToolStripMenuItem.Text = "Edit Children Data";
+            this.editChildrenDataToolStripMenuItem.Click += new System.EventHandler(this.editChildrenDataToolStripMenuItem_Click);
+            // 
             // shapeToolStripMenuItem
             // 
             this.shapeToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
@@ -474,7 +485,7 @@
             this.exportToolStripMenuItem3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
             this.exportToolStripMenuItem3.ForeColor = System.Drawing.Color.White;
             this.exportToolStripMenuItem3.Name = "exportToolStripMenuItem3";
-            this.exportToolStripMenuItem3.Size = new System.Drawing.Size(123, 22);
+            this.exportToolStripMenuItem3.Size = new System.Drawing.Size(180, 22);
             this.exportToolStripMenuItem3.Text = "Export...";
             this.exportToolStripMenuItem3.Click += new System.EventHandler(this.exportToolStripMenuItem3_Click);
             // 
@@ -624,6 +635,7 @@
         private System.Windows.Forms.ToolStripMenuItem editTimelineToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addEditMatrixtoolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem scImportToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editChildrenDataToolStripMenuItem;
     }
 }
 

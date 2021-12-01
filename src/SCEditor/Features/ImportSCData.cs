@@ -274,6 +274,24 @@ namespace SCEditor.Features
                         {
                             throw new Exception("WOT");
                         }
+
+                        if (int.TryParse(exportToAdd.GetName().Substring(exportToAdd.GetName().Length - 2, 2),out int _))
+                        {
+                            int value = int.Parse(exportToAdd.GetName().Substring(exportToAdd.GetName().Length - 2, 2));
+
+                            string newValue = $"{(14 - value)}";
+
+                            exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 2, 2) + newValue);
+                        } 
+                        else if (int.TryParse(exportToAdd.GetName().Substring(exportToAdd.GetName().Length - 1, 1), out int _))
+                        {
+                            int value = int.Parse(exportToAdd.GetName().Substring(exportToAdd.GetName().Length - 1, 1));
+
+                            string newValue = $"{(14 - value)}";
+
+                            exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 1, 1) + newValue);
+                        }
+                            
                     }
 
                     exportsToImport.Add(exportToAdd);
@@ -738,7 +756,7 @@ namespace SCEditor.Features
             int generatedSpritesPadding = 6;
             int generatedTextureMaxWidth = 4096;
             int generatedTextureMaxHeight = 4096;
-            int generatedTexturePolygonTolerance = 200;
+            int generatedTexturePolygonTolerance = 150;
             string generatedTexturePixelFormat = isGeneratedTextureRGBA4444 ? "RGBA4444 --dither-type Linear" : "RGBA8888";
             string generatedSpritesPackMode = "Best";
             string generatedSpritesAlphaHandling = "ClearTransparentPixels";

@@ -39,7 +39,7 @@ namespace SCEditor
         {
             ScObject node = (ScObject)treeView1.SelectedNode.Tag;
 
-            if (node == null || (node.Bitmap == null && node.Children != null ))
+            if (node == null || (node.Bitmap == null && node.Children != null))
                 return;
 
             if (zoomed != true)
@@ -110,7 +110,7 @@ namespace SCEditor
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            killAnimationTimer();
+            killAnimationTimer(true);
 
             pictureBox1.Image = null;
             label1.Text = null;
@@ -191,7 +191,7 @@ namespace SCEditor
 
         private void Render()
         {
-            killAnimationTimer();
+            killAnimationTimer(true);
 
             RenderingOptions options = new RenderingOptions()
             {
@@ -311,7 +311,7 @@ namespace SCEditor
 
                 if (data == null || data.GetDataType() != 1 && data.GetDataType() != 7)
                 {
-                    killAnimationTimer();
+                    killAnimationTimer(true);
                     return;
                 }
 
@@ -321,12 +321,12 @@ namespace SCEditor
                 _animationTimer.Interval = 1000 / ((MovieClip)data).FPS;
                 animationState = MovieClipState.Playing;
 
-                if (frameCounter + 1 != ((MovieClip)data).Frames.Count)
+                if (frameCounter + 1 < ((MovieClip)data).Frames.Count)
                 {
                     Bitmap image = ((MovieClip)data).renderAnimation(new RenderingOptions() { ViewPolygons = viewPolygonsToolStripMenuItem.Checked }, frameCounter);
 
                     if (image == null)
-                        killAnimationTimer();
+                        killAnimationTimer(false);
 
                     pictureBox1.Image = image;
                     pictureBox1.Refresh();
@@ -338,22 +338,40 @@ namespace SCEditor
                 {
                     frameCounter = 0;
                     _animationTimer.Enabled = true;
+                    resetPreviousRendering(false);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString(), "Exception MainForm:animationTimer_Tick()");
+                MessageBox.Show(ex.Message, "Exception MainForm:animationTimer_Tick()");
 
-                killAnimationTimer();
+                killAnimationTimer(true);
             }
         }
 
-        private void killAnimationTimer()
+        private void killAnimationTimer(bool isEnd)
         {
             _animationTimer.Dispose();
             _animationTimer = new System.Windows.Forms.Timer();
             _animationTimer.Enabled = false;
             animationState = MovieClipState.Stopped;
+            resetPreviousRendering(isEnd);
+        }
+
+        private void resetPreviousRendering(bool isEnd)
+        {
+            if (this._scFile.CurrentRenderingMovieClips.Count > 0)
+            {
+                foreach (MovieClip mv in this._scFile.CurrentRenderingMovieClips)
+                {
+                    mv._lastPlayedFrame = 0;
+
+                    if (isEnd)
+                        mv.destroyPointFList();
+                }
+
+                this._scFile.setRenderingItems(new List<ScObject>());
+            }
         }
 
         private void treeView1_BeforeSelect(object sender, TreeViewCancelEventArgs e)
@@ -504,7 +522,7 @@ namespace SCEditor
             {
                 try
                 {
-                    Bitmap textureImage = (Bitmap) Image.FromFile(dialog.FileName);
+                    Bitmap textureImage = (Bitmap)Image.FromFile(dialog.FileName);
                     Texture data = new Texture(_scFile, textureImage);
 
                     _scFile.AddTexture(data);
@@ -635,6 +653,85 @@ namespace SCEditor
 
         }
 
+        private void editChildrenDataToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ScObject scData = (ScObject)treeView1.SelectedNode?.Tag;
+
+            if (scData == null)
+                return;
+
+            if (scData.GetDataType() != 7 && scData.GetDataType() != 1)
+                return;
+
+            if (scData.GetDataType() == 7)
+                scData = scData.GetDataObject();
+
+            editChildrenData editChildrenDialog = new editChildrenData(_scFile, scData);
+
+            if (editChildrenDialog.ShowDialog() == DialogResult.OK)
+            {
+                ushort[] newChildrenId = editChildrenDialog.ChildrenIds;
+                string[] newChildrenNames = editChildrenDialog.ChildrenNames;
+
+                if (newChildrenId.Length != newChildrenNames.Length)
+                    throw new Exception($"new children id and name arrays length dont match up.");
+
+                int frameIndex = 0;
+                foreach (MovieClipFrame mvFrame in ((MovieClip)scData).GetFrames())
+                {
+                    for (int i = 0; i < mvFrame.Id; i++)
+                    {
+                        ushort childrenIndex = ((MovieClip)scData).timelineArray[frameIndex + (i * 3)];
+
+                        if (newChildrenId.Length > childrenIndex)
+                            throw new Exception($"Timeline array has a children index {childrenIndex} at {frameIndex}");
+                    }
+
+                    frameIndex += mvFrame.Id * 3;
+                }
+
+                ((MovieClip)scData).setTimelineChildrenId(newChildrenId);
+                ((MovieClip)scData).setTimelineChildrenNames(newChildrenNames);
+
+                List<ScObject> childrenItem = new List<ScObject>();
+
+                foreach (ushort childId in newChildrenId)
+                {
+                    int shapeIndex = _scFile.GetShapes().FindIndex(sco => sco.Id == childId);
+                    if (shapeIndex != -1)
+                    {
+                        childrenItem.Add(_scFile.GetShapes()[shapeIndex]);
+                    }
+                    else
+                    {
+                        int movieClipIndex = _scFile.GetMovieClips().FindIndex(sco => sco.Id == childId);
+                        if (movieClipIndex != -1)
+                        {
+                            childrenItem.Add(_scFile.GetMovieClips()[movieClipIndex]);
+                        }
+                        else
+                        {
+                            int textFieldIdnex = _scFile.getTextFields().FindIndex(sco => sco.Id == childId);
+                            if (textFieldIdnex != -1)
+                            {
+                                childrenItem.Add(_scFile.getTextFields()[textFieldIdnex]);
+                            }
+                            else
+                            {
+                                throw new Exception();
+                            }
+                        }
+                    }
+                }
+
+                ((MovieClip)scData).setChildrens(childrenItem);
+                _scFile.AddChange(scData);
+            }
+
+            Console.WriteLine("Editing Children Data Done!");
+            RefreshMenu();
+        }
+
         private void toolStripMenuItemEditCharacter_Click(object sender, EventArgs e)
         {
             ScObject scData = (ScObject)treeView1.SelectedNode?.Tag;
@@ -693,7 +790,7 @@ namespace SCEditor
                                         if (matrixReplace == DialogResult.Cancel)
                                             matrixReplaceAll = DialogResult.Cancel;
 
-                                        replaceCurrent = matrixReplace == DialogResult.Yes ? true : false;    
+                                        replaceCurrent = matrixReplace == DialogResult.Yes ? true : false;
                                     }
 
                                     bool replaceForAll = matrixReplaceAll == DialogResult.Yes ? true : false;
@@ -717,14 +814,14 @@ namespace SCEditor
                                             }
 
                                             matrixEdit = true;
-                                        }   
+                                        }
                                     }
-                                } 
+                                }
                             }
 
                             if (matrixEdit == true)
                                 _scFile.AddChange(eachData);
-                        }                     
+                        }
 
                         Render();
                     }
@@ -784,12 +881,6 @@ namespace SCEditor
             if (data.GetDataType() != 7 && data.GetDataType() != 1)
                 return;
 
-            if (_scFile.GetPendingChanges().FindIndex(s => s.Id == data.Id) != -1)
-            {
-                MessageBox.Show("Data you are trying to edit is already in pending changes. Please save before trying to use this function", "Save before proceeding");
-                return;
-            }
-
             if (data.GetDataType() == 7)
                 data = data.GetDataObject();
 
@@ -829,7 +920,7 @@ namespace SCEditor
 
                     _scFile.AddChange(data);
 
-                    Render();
+                    RefreshMenu();
                 }
             }
 
@@ -842,7 +933,7 @@ namespace SCEditor
 
             ImportExportData importExportData = new ImportExportData(_scFile);
 
-            if(importExportData.initiateImporting() == true)
+            if (importExportData.initiateImporting() == true)
             {
                 reloadMenu();
             }
@@ -923,7 +1014,7 @@ namespace SCEditor
                     try
                     {
                         Image texture = Image.FromFile(dialog.FileName);
-                        Texture data = (Texture)treeView1.SelectedNode.Tag;  
+                        Texture data = (Texture)treeView1.SelectedNode.Tag;
 
                         data._image.SetBitmap((Bitmap)texture);
                         _scFile.AddChange(data);
@@ -1054,7 +1145,7 @@ namespace SCEditor
         {
         }
 
-        
+
 
         private void exportToolStripMenuItem_Click_1(object sender, EventArgs e)
         {
