@@ -431,7 +431,25 @@ namespace SCEditor
                 {
                     if (File.Exists(dlg.FileName))
                         File.Delete(dlg.FileName);
-                    pictureBox1.Image.Save(dlg.FileName, System.Drawing.Imaging.ImageFormat.Png);
+
+                    ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
+
+                    if (data != null)
+                    {
+                        if (data.GetDataType() == 2)
+                        {
+                            ((Texture)data).GetImage().GetBitmap().Save(dlg.FileName, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        else if (data.GetDataType() == 99 || data.GetDataType() == 0)
+                        {
+                            RenderingOptions options = new RenderingOptions() { InternalRendering = true };
+                            data.Render(options).Save(dlg.FileName, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Data type {data.GetDataType()} not supported for export.");
+                        }
+                    }
                 }
 
             }
@@ -775,7 +793,7 @@ namespace SCEditor
             if (data.GetDataType() == 7)
                 data = data.GetDataObject();
 
-            using (timelineEditDialog form = new timelineEditDialog(_scFile, data))
+            using (frameEditDialog form = new frameEditDialog(_scFile, data))
             {
                 form.addItemsToBox();
 
@@ -904,16 +922,10 @@ namespace SCEditor
                 {
                     try
                     {
-                        Bitmap texture = (Bitmap)Image.FromFile(dialog.FileName);
-                        Texture data = (Texture)treeView1.SelectedNode.Tag;
-                        
-                        if (texture.Width != data.Bitmap.Width || texture.Height != data.Bitmap.Height)
-                        {
-                            //data.GetImage().SetHeight((ushort)texture.Height);
-                            //data.GetImage().SetWidth((ushort)texture.Width);
-                        }
+                        Image texture = Image.FromFile(dialog.FileName);
+                        Texture data = (Texture)treeView1.SelectedNode.Tag;  
 
-                        data._image.SetBitmap(texture);
+                        data._image.SetBitmap((Bitmap)texture);
                         _scFile.AddChange(data);
                         Render();
                     }

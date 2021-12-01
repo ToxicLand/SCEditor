@@ -46,10 +46,10 @@ namespace SCEditor.ScOld
                 {
                     ushort color = br.ReadUInt16();
                     //Debug.Write(color+"|");
-                    int red = (int) ((color >> 12) & 0xF) << 4;
-                    int green = (int) ((color >> 8) & 0xF) << 4;
-                    int blue = (int) ((color >> 4) & 0xF) << 4;
-                    int alpha = (int) (color & 0xF) << 4;
+                    int alpha = DecodeXBits(color, 0, 4);
+                    int red = DecodeXBits(color, 12, 4);
+                    int green = DecodeXBits(color, 8, 4);
+                    int blue = DecodeXBits(color, 4, 4);
                     pixelArray[row, col] = Color.FromArgb(alpha, red, green, blue);
 
                 }
@@ -89,19 +89,17 @@ namespace SCEditor.ScOld
                     var g = c.G;
                     var b = c.B;
                     var a = c.A;
-
                     if (a == 0)
                     {
                         r = 0;
                         g = 0;
                         b = 0;
                     }
-
                     int val = 0;
-                    val += (a / 0x11);
-                    val += ((b / 0x11) << 4);
-                    val += ((g / 0x11) << 8);
-                    val += ((r / 0x11) << 12);
+                    val += (a / 0x10);
+                    val += ((b / 0x10) << 4);
+                    val += ((g / 0x10) << 8);
+                    val += ((r / 0x10) << 12);
                     UInt16 cc4444 = (ushort)val;
 
                     input.Write(BitConverter.GetBytes(cc4444), 0, 2);

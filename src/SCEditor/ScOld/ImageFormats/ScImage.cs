@@ -86,6 +86,13 @@ namespace SCEditor.ScOld
             Dispose(true);
         }
 
+        internal static byte DecodeXBits(int value, int startBit, int bitCount)
+        {
+            int bitRange = 1 << bitCount;
+            int rawValue = (value >> startBit) & (bitRange - 1);
+            return (byte)((rawValue * 255 + ((bitRange >> 1) - 1)) / (bitRange - 1));
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed)

@@ -26,11 +26,11 @@ namespace SCEditor.ScOld
                 {0, typeof(ImageRgba8888)},
                 {1, typeof(ImageRgba8888)},
                 {2, typeof(ImageRgba4444)},
-                {3, typeof(ImageRgba5551 )},//
-                {4, typeof(ImageRgb565)}, //
-                {6, typeof(ImageLuminance8Alpha8)}, //
-                {9, typeof(ImageRgba4444)}, //
-                {10, typeof(ImageLuminance8)} //
+                {3, typeof(ImageRgba5551 )},
+                {4, typeof(ImageRgb565)},
+                {6, typeof(ImageLuminance8Alpha8)},
+                {9, typeof(ImageRgba4444)},
+                {10, typeof(ImageLuminance8)}
             };
         }
 
@@ -245,17 +245,14 @@ namespace SCEditor.ScOld
                     {
                         for (int i = 0; i < _scFile.GetTextures().Count; i++)
                         {
-                            bool isDone = false;
                             Texture tex = (Texture) _scFile.GetTextures()[i];
 
                             if (tex.Id == this.Id)
                             {
-                                newTexData.WriteByte(1);
+                                newTexData.WriteByte(this.PacketId);
                                 newTexData.Write(BitConverter.GetBytes(packetSize), 0, 4);
                                 newTexData.WriteByte(_imageType);
                                 _image.WriteImage(newTexData);
-
-                                isDone = true;
                             }
                             else
                             {
@@ -270,9 +267,9 @@ namespace SCEditor.ScOld
                             if (i + 1 == _scFile.GetTextures().Count)
                                 _scFile.SetEofTexOffset(newTexData.Length);
 
-                            if (isDone == true && this.Id != tex.Id)
+                            if (this.Id != tex.Id && tex.offset > this._offset)
                             {
-                                uint offsetDifference = packetSize > this._packetSize ? packetSize - this._packetSize : this._packetSize - packetSize;
+                                uint offsetDifference = packetSize - this._packetSize;
 
                                 tex.SetOffset(tex._offset + (offsetDifference));
                             }
@@ -293,12 +290,40 @@ namespace SCEditor.ScOld
                 }
                 else
                 {
+                    /**
                     input.Seek(_offset, SeekOrigin.Current);
-
                     input.WriteByte(Convert.ToByte(1));
                     input.Write(BitConverter.GetBytes(packetSize), 0, 4);
                     input.WriteByte(_imageType);
                     _image.WriteImage(input);
+                    **/
+                    
+                    using (MemoryStream newTexData = new MemoryStream())
+                    {
+                        input.Seek(0, SeekOrigin.Begin);
+                        byte[] newData = new byte[_offset];
+                        input.Read(newData, 0, newData.Length);
+                        newTexData.Write(newData, 0, newData.Length);
+
+                        newTexData.WriteByte(Convert.ToByte(this.PacketId));
+                        newTexData.Write(BitConverter.GetBytes(packetSize), 0, 4);
+                        newTexData.WriteByte(_imageType);
+                        _image.WriteImage(newTexData);
+
+                        input.Seek(packetSize + 5, SeekOrigin.Current);
+                        newData = new byte[input.Length - input.Position];
+
+                        input.Read(newData, 0, newData.Length);
+                        newTexData.Write(newData, 0, newData.Length);
+
+                        if (newTexData.Length != input.Length)
+                            throw new Exception($"Texture newData length is not equal\nnewData: {newTexData.Length} | Calculated Size: {input.Length}");
+
+                        input.Seek(0, SeekOrigin.Begin);
+                        newTexData.Seek(0, SeekOrigin.Begin);
+                        newTexData.CopyTo(input);
+                    }
+                    
                 }
             }
         }

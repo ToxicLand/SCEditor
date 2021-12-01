@@ -164,12 +164,18 @@ namespace SCEditor.Features
 
                 List<ScObject> exportsToImport = new List<ScObject>();
 
+                string crTroops = "bandit_;chr_musketeer_;electro_wizard_;elixir_blob_;elixir_golem_;elixir_golemite_;GoldenKnight_;magic_archer_;mega_knight_;princess_;rascal_;skeletondragon_;SkeletonKing_";
+                string bbTroops = "tank_";
+                List<string> crTroopsList = crTroops.Split(';').ToList();
+                List<string> bbTroopsList = bbTroops.Split(';').ToList();
+
                 foreach (scMergeSelection.exportItemClass item in selectImportExportsForm.checkedExports)
                 {
                     Export exportToAdd = (Export)((ScObject)item.exportData);
-                    bool crChangeName = false;
+                    bool crChangeName = true;
+                    bool bbChangeName = true;
 
-                    if (crChangeName/** && !exportToAdd.GetName().ToLower().Contains("goku")**/)
+                    if (crChangeName && crTroopsList.FindIndex(name => exportToAdd.GetName().Contains(name)) != -1)
                     {
                         switch (exportToAdd.GetName()[exportToAdd.GetName().Length - 1])
                         {
@@ -187,6 +193,86 @@ namespace SCEditor.Features
 
                             default:
                                 break;
+                        }
+                    }
+
+                    if (bbChangeName && bbTroopsList.FindIndex(name => exportToAdd.GetName().Contains(name)) != -1)
+                    {
+                        if (float.TryParse(exportToAdd.GetName().Substring((exportToAdd.GetName().Length - 3), 3), out float _))
+                        {
+                            float val = float.Parse(exportToAdd.GetName().Substring((exportToAdd.GetName().Length - 3), 3));
+                            int newVal = 0;
+
+                            switch (val)
+                            {
+                                case 0.3F:
+                                    newVal = 2;
+                                    break;
+
+                                case 0.6F:
+                                    newVal = 3;
+                                    break;
+
+                                case 1.3F:
+                                    newVal = 5;
+                                    break;
+
+                                case 1.6F:
+                                    newVal = 6;
+                                    break;
+
+                                case 2.3F:
+                                    newVal = 8;
+                                    break;
+
+                                case 2.6F:
+                                    newVal = 9;
+                                    break;
+
+                                case 3.3F:
+                                    newVal = 11;
+                                    break;
+
+                                case 3.6F:
+                                    newVal = 12;
+                                    break;
+                            }
+
+                            exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 3, 3) + newVal.ToString());
+                        }
+                        else if (int.TryParse(exportToAdd.GetName().Substring((exportToAdd.GetName().Length - 1), 1), out int _))
+                        {
+                            int val = int.Parse(exportToAdd.GetName().Substring((exportToAdd.GetName().Length - 1), 1));
+                            int newVal = 0;
+
+                            switch (val)
+                            {
+                                case 0:
+                                    newVal = 1;
+                                    break;
+
+                                case 1:
+                                    newVal = 4;
+                                    break;
+
+                                case 2:
+                                    newVal = 7;
+                                    break;
+
+                                case 3:
+                                    newVal = 10;
+                                    break;
+
+                                case 4:
+                                    newVal = 13;
+                                    break;
+                            }
+
+                            exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 1, 1) + newVal.ToString());
+                        }
+                        else
+                        {
+                            throw new Exception("WOT");
                         }
                     }
 
@@ -366,7 +452,7 @@ namespace SCEditor.Features
                     Console.WriteLine($"{newExportName} children name {newTimelineChildrenNames[tcnIdx]}");
                     if (newTimelineChildrenNames[tcnIdx].Contains("pivot"))
                     {
-                        newTimelineChildrenNames[tcnIdx] = "pivot";
+                        newTimelineChildrenNames[tcnIdx] = "attack_pivot";
                     }
                 }
             }
