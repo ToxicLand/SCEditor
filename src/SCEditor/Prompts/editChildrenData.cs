@@ -18,9 +18,10 @@ namespace SCEditor.Prompts
         private ScObject _data;
         private List<ushort> _childrenIds;
         private List<string> _childrenNames;
-
+        private List<byte> _flags;
         public ushort[] ChildrenIds => _childrenIds.ToArray();
         public string[] ChildrenNames => _childrenNames.ToArray();
+        public byte[] Flags => _flags.ToArray();
 
         private bool _isEdited;
         public editChildrenData(ScFile scs, ScObject scData)
@@ -32,6 +33,7 @@ namespace SCEditor.Prompts
 
             _childrenIds = ((ushort[])((MovieClip)_data).timelineChildrenId.Clone()).ToList();
             _childrenNames = ((string[])((MovieClip)_data).timelineChildrenNames.Clone()).ToList();
+            _flags = ((byte[])((MovieClip)_data).flags.Clone()).ToList();
 
             addDataToItems();
 
@@ -79,7 +81,34 @@ namespace SCEditor.Prompts
 
             _childrenIds.Insert(newIndex, newChildId);
             _childrenNames.Insert(newIndex, newChildName);
+            _flags.Insert(newIndex, 0);
 
+            _isEdited = true;
+            refreshMenu();
+        }
+
+        private void changeDataButton_Click(object sender, EventArgs e)
+        {
+            int currentIndex = childrenIdListBox.SelectedIndex;
+
+            ushort newChildId = ushort.Parse(childrenIdTextBox.Text);
+            string newChildName = childrenNameTextBox.Text;
+
+            if (string.IsNullOrEmpty(newChildName))
+                newChildName = null;
+
+            if (_scFile.GetShapes().FindIndex(sco => sco.Id == newChildId) == -1
+                && _scFile.GetMovieClips().FindIndex(sco => sco.Id == newChildId) == -1
+                && _scFile.getTextFields().FindIndex(sco => sco.Id == newChildId) == -1)
+            {
+                MessageBox.Show($"Children ID {newChildId} you are trying to edit does not exist.");
+                return;
+            }
+
+            _childrenIds[currentIndex] = newChildId;
+            _childrenNames[currentIndex] = newChildName;
+
+            _isEdited = true;
             refreshMenu();
         }
 
@@ -89,7 +118,9 @@ namespace SCEditor.Prompts
 
             _childrenIds.RemoveAt(currentIndex);
             _childrenNames.RemoveAt(currentIndex);
+            _flags.RemoveAt(currentIndex);
 
+            _isEdited = true;
             refreshMenu();
         }
 
@@ -136,14 +167,23 @@ namespace SCEditor.Prompts
 
         private void refreshMenu()
         {
+            if (_isEdited == true)
+                saveButton.Enabled = true;
+
             childrenIdTextBox.Enabled = false;
             childrenNameTextBox.Enabled = false;
             addChildrenBefore.Enabled = false;
             addChildrenAfter.Enabled = false;
             deleteChildrenButtom.Enabled = false;
+            changeDataButton.Enabled = false;
 
             childrenIdTextBox.Text = "";
             childrenNameTextBox.Text = "";
+
+            childrenIdListBox.Items.Clear();
+            childrenNameListBox.Items.Clear();
+
+            addDataToItems();
 
             childrenNameListBox.Refresh();
             childrenIdListBox.Refresh();
@@ -179,6 +219,16 @@ namespace SCEditor.Prompts
                     e.Cancel = true;
                 }
             }
+        }
+
+        private void childrenNameTextBox_TextChanged(object sender, EventArgs e)
+        {
+            changeDataButton.Enabled = true;
+        }
+
+        private void childrenIdTextBox_TextChanged(object sender, EventArgs e)
+        {
+            changeDataButton.Enabled = true;
         }
     }
 }

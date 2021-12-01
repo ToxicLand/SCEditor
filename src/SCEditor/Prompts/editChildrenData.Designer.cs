@@ -38,6 +38,7 @@
             this.saveButton = new System.Windows.Forms.Button();
             this.addChildrenBefore = new System.Windows.Forms.Button();
             this.deleteChildrenButtom = new System.Windows.Forms.Button();
+            this.changeDataButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // childrenIdListBox
@@ -85,6 +86,7 @@
             this.childrenNameTextBox.Name = "childrenNameTextBox";
             this.childrenNameTextBox.Size = new System.Drawing.Size(152, 23);
             this.childrenNameTextBox.TabIndex = 4;
+            this.childrenNameTextBox.TextChanged += new System.EventHandler(this.childrenNameTextBox_TextChanged);
             // 
             // childrenIdTextBox
             // 
@@ -93,6 +95,7 @@
             this.childrenIdTextBox.Name = "childrenIdTextBox";
             this.childrenIdTextBox.Size = new System.Drawing.Size(152, 23);
             this.childrenIdTextBox.TabIndex = 5;
+            this.childrenIdTextBox.TextChanged += new System.EventHandler(this.childrenIdTextBox_TextChanged);
             this.childrenIdTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.childrenIdTextBox_KeyDown);
             // 
             // addChildrenAfter
@@ -110,14 +113,16 @@
             // 
             // saveButton
             // 
-            this.saveButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(74)))), ((int)(((byte)(74)))), ((int)(((byte)(74)))));
+            this.saveButton.BackColor = System.Drawing.Color.LightGreen;
             this.saveButton.Enabled = false;
             this.saveButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveButton.Location = new System.Drawing.Point(259, 225);
+            this.saveButton.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.saveButton.ForeColor = System.Drawing.Color.Black;
+            this.saveButton.Location = new System.Drawing.Point(259, 284);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(97, 36);
             this.saveButton.TabIndex = 7;
-            this.saveButton.Text = "Save";
+            this.saveButton.Text = "SAVE";
             this.saveButton.UseVisualStyleBackColor = false;
             this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
             // 
@@ -149,12 +154,25 @@
             this.deleteChildrenButtom.UseVisualStyleBackColor = false;
             this.deleteChildrenButtom.Click += new System.EventHandler(this.deleteChildrenButtom_Click);
             // 
+            // changeDataButton
+            // 
+            this.changeDataButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(58)))), ((int)(((byte)(58)))), ((int)(((byte)(58)))));
+            this.changeDataButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.changeDataButton.Location = new System.Drawing.Point(250, 225);
+            this.changeDataButton.Name = "changeDataButton";
+            this.changeDataButton.Size = new System.Drawing.Size(106, 36);
+            this.changeDataButton.TabIndex = 10;
+            this.changeDataButton.Text = "Change";
+            this.changeDataButton.UseVisualStyleBackColor = false;
+            this.changeDataButton.Click += new System.EventHandler(this.changeDataButton_Click);
+            // 
             // editChildrenData
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
-            this.ClientSize = new System.Drawing.Size(379, 291);
+            this.ClientSize = new System.Drawing.Size(379, 332);
+            this.Controls.Add(this.changeDataButton);
             this.Controls.Add(this.deleteChildrenButtom);
             this.Controls.Add(this.addChildrenBefore);
             this.Controls.Add(this.saveButton);
@@ -187,5 +205,6 @@
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.Button addChildrenBefore;
         private System.Windows.Forms.Button deleteChildrenButtom;
+        private System.Windows.Forms.Button changeDataButton;
     }
 }

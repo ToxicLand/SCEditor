@@ -672,6 +672,7 @@ namespace SCEditor
             {
                 ushort[] newChildrenId = editChildrenDialog.ChildrenIds;
                 string[] newChildrenNames = editChildrenDialog.ChildrenNames;
+                byte[] newFlags = editChildrenDialog.Flags;
 
                 if (newChildrenId.Length != newChildrenNames.Length)
                     throw new Exception($"new children id and name arrays length dont match up.");
@@ -683,7 +684,7 @@ namespace SCEditor
                     {
                         ushort childrenIndex = ((MovieClip)scData).timelineArray[frameIndex + (i * 3)];
 
-                        if (newChildrenId.Length > childrenIndex)
+                        if (newChildrenId.Length <= childrenIndex)
                             throw new Exception($"Timeline array has a children index {childrenIndex} at {frameIndex}");
                     }
 
@@ -692,6 +693,7 @@ namespace SCEditor
 
                 ((MovieClip)scData).setTimelineChildrenId(newChildrenId);
                 ((MovieClip)scData).setTimelineChildrenNames(newChildrenNames);
+                ((MovieClip)scData).setFlags(newFlags);
 
                 List<ScObject> childrenItem = new List<ScObject>();
 
@@ -726,10 +728,11 @@ namespace SCEditor
 
                 ((MovieClip)scData).setChildrens(childrenItem);
                 _scFile.AddChange(scData);
+
+                reloadMenu();
             }
 
             Console.WriteLine("Editing Children Data Done!");
-            RefreshMenu();
         }
 
         private void toolStripMenuItemEditCharacter_Click(object sender, EventArgs e)

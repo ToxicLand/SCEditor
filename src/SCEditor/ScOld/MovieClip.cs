@@ -351,7 +351,12 @@ namespace SCEditor.ScOld
                 input.Write(BitConverter.GetBytes(12), 0, 1);
                 input.Write(BitConverter.GetBytes(0), 0, 4);
 
-                writeData(input);
+                int dataLength = writeData(input);
+
+                // Write DataLength
+                input.Seek(-(dataLength + 4), SeekOrigin.Current);
+                input.Write(BitConverter.GetBytes(dataLength + 5), 0, 4);
+                input.Seek(dataLength, SeekOrigin.Current);
             }
             else // DUPLICATE ITEMS
             {
@@ -366,7 +371,7 @@ namespace SCEditor.ScOld
                     using (MemoryStream finalData = new MemoryStream())
                     {
                         // Data Before Copy
-                        byte[] beforeData = new byte[_offset + 5];
+                        byte[] beforeData = new byte[_offset + 1];
                         input.Read(beforeData, 0, beforeData.Length);
                         finalData.Write(beforeData, 0, beforeData.Length);
 
@@ -375,18 +380,33 @@ namespace SCEditor.ScOld
                         input.Read(beforeByte, 0, 4);
                         uint beforeLength = BitConverter.ToUInt32(beforeByte);
 
-                        // DataLength
-                        finalData.Write(BitConverter.GetBytes(0), 0, 4);
+                        // TEMP Length
+                        finalData.Write(BitConverter.GetBytes(beforeLength), 0, 4);
 
                         // All Data
-                        writeData(input);
+                        int dataLength = writeData(finalData);
+
+                        // Write DataLength
+                        finalData.Seek(_offset + 1, SeekOrigin.Begin);
+                        finalData.Write(BitConverter.GetBytes(dataLength + 5), 0, 4);
+                        finalData.Seek(dataLength, SeekOrigin.Current);
+
+                        // End of Data
+                        finalData.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
 
                         // Copy Rest of Data
-                        byte[] afterData = new byte[input.Length - input.Position];
+                        long newLength = _offset + 5 + beforeLength;
+                        input.Seek(newLength, SeekOrigin.Begin);
+                        byte[] afterData = new byte[input.Length - newLength];
                         input.Read(afterData, 0, afterData.Length);
                         finalData.Write(afterData, 0, afterData.Length);
 
+                        if ((input.Length - beforeLength) != (finalData.Length - (dataLength + 5)))
+                            throw new Exception("Data abnormal");
+
                         // Copy To Input
+                        input.Flush();
+                        input.SetLength(input.Length - (beforeLength - (dataLength + 5)));
                         input.Seek(0, SeekOrigin.Begin);
                         finalData.Seek(0, SeekOrigin.Begin);
                         finalData.CopyTo(input);
@@ -403,7 +423,7 @@ namespace SCEditor.ScOld
             }
         }
 
-        private int writeData(FileStream input)
+        private int writeData(Stream input)
         {
             int dataLength = 0;
 
@@ -443,15 +463,6 @@ namespace SCEditor.ScOld
                 dataLength += 2;
             }
 
-            if (_exportType == exportType.Icon)
-            {
-                if (_iconType == iconType.Hero)
-                {
-                    input.Write(BitConverter.GetBytes((ushort)5975), 0, 2); // CHANGE AFTER EVERY UPDATE
-                    dataLength += 2;
-                }
-            }
-
             // Childrens Flags - CHECK
             for (int i = 0; i < timelineChildrenId.Length; i++)
             {
@@ -465,16 +476,6 @@ namespace SCEditor.ScOld
                 }
 
                 dataLength += 1;
-            }
-
-            // CHECK CHANGE
-            if (_exportType == exportType.Icon)
-            {
-                if (_iconType == iconType.Hero)
-                {
-                    input.WriteByte(0);
-                    dataLength += 1;
-                }
             }
 
             // Childrens Names
@@ -493,18 +494,6 @@ namespace SCEditor.ScOld
                     dataLength += stringData.Length;
                 }
                 dataLength += 1;
-            }
-
-            // CHECK CHANGE
-            if (_exportType == exportType.Icon)
-            {
-                if (_iconType == iconType.Hero)
-                {
-                    string shapeNameHeroBounds = "bounds";
-                    input.Write(BitConverter.GetBytes(shapeNameHeroBounds.Length), 0, 1);
-                    input.Write(Encoding.ASCII.GetBytes(shapeNameHeroBounds), 0, shapeNameHeroBounds.Length);
-                    dataLength += (1 + shapeNameHeroBounds.Length);
-                }
             }
 
             // Frames
@@ -548,11 +537,6 @@ namespace SCEditor.ScOld
                     }
                 }
             }
-
-            // Write DataLength
-            input.Seek(-(dataLength + 4), SeekOrigin.Current);
-            input.Write(BitConverter.GetBytes(dataLength + 5), 0, 4);
-            input.Seek(dataLength, SeekOrigin.Current);
 
             return dataLength;
         }
