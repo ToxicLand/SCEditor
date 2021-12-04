@@ -339,6 +339,12 @@ namespace SCEditor.ScOld
                     case 2: // Texture
                         data.Write(texinput);
                         textureAdd += 1;
+                        if (data.customAdded == true)
+                        {
+                            input.Seek(4, SeekOrigin.Begin);
+                            input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2);
+                        }
+
                         break;
 
                     case 5: // TextFields
@@ -352,26 +358,30 @@ namespace SCEditor.ScOld
                             input.Write(BitConverter.GetBytes(this._textFieldCount), 0, 2);
                             goto case -256;
                         }
+                        else
+                        {
+                            resetOffsets(data);
+                        }
+
                         break;
 
                     case 1: // MovieClip
                         data.Write(input);
-                        movieClipAdd += 1;
-
+                        
                         if (data.customAdded == true)
                         {
+                            movieClipAdd += 1;
                             this._movieClipCount += 1;
                             input.Seek(2, SeekOrigin.Begin);
                             input.Write(BitConverter.GetBytes(this._movieClipCount), 0, 2);
                             goto case -256;
                         }
+                        else
+                        {
+                            resetOffsets(data);
+                            movieClipEdits += 1;
+                        }
 
-                        _pendingChanges.RemoveAt(i);
-                        
-                        input.Close();
-                        reloadInfoFile();
-                        input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-                        movieClipEdits += 1;
                         break;
 
                     case 0: // Shape
@@ -385,12 +395,18 @@ namespace SCEditor.ScOld
                             input.Write(BitConverter.GetBytes(this._shapeCount), 0, 2);
                             goto case -256;
                         }
+                        else
+                        {
+                            resetOffsets(data);
+                        }
+                        
                         break;
 
                     case 99: // ShapeChunk
-                        data.Write(input);
-                        shapeChunkAdd += 1;
-                        break;
+                        throw new Exception("check");
+                        //data.Write(input);
+                        //shapeChunkAdd += 1;
+                        //break;
 
                     case -256:
                         if (data.GetDataType() == -256)
@@ -420,13 +436,109 @@ namespace SCEditor.ScOld
                     data.Write(input);
                 }
             }
-
-            // Saving metadata/header.
-            input.Seek(4, SeekOrigin.Begin);
-            input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2);
             input.Close();
 
-            Console.WriteLine($"SaveSC: Done saving Exports: {exportAdd} | MovieClips: {movieClipAdd + movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd} | TextFields {textFieldsAdd}");
+            reloadInfoFile();
+
+            Console.WriteLine($"SaveSC: Done saving (Add/Edit) Exports: {exportAdd} | MovieClips: {movieClipAdd}/{movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd} | TextFields {textFieldsAdd}");
+        }
+
+        private void resetOffsets(ScObject data)
+        {
+            List<ushort> idsGreater = new List<ushort>();
+
+            long currentOffset = data._offset;
+            long nextOffset = long.MaxValue;
+
+            foreach (ScObject shape in this.GetShapes())
+            {
+                if (shape.Id == data.Id)
+                    continue;
+
+                if (shape.offset > currentOffset)
+                {
+                    idsGreater.Add(shape.Id);
+                }
+
+                if (shape.offset < nextOffset && shape.offset > currentOffset)
+                {
+                    nextOffset = shape.offset;
+                }
+            }
+
+            foreach (ScObject mv in this.GetMovieClips())
+            {
+                if (mv.Id == data.Id)
+                    continue;
+
+                if (mv.offset > currentOffset)
+                {
+                    idsGreater.Add(mv.Id);
+                }
+
+                if (mv.offset < nextOffset && mv.offset > currentOffset)
+                {
+                    nextOffset = mv.offset;
+                }
+            }
+
+            foreach (ScObject tf in this.getTextFields())
+            {
+                if (tf.Id == data.Id)
+                    continue;
+
+                if (tf.offset > currentOffset)
+                {
+                    idsGreater.Add(tf.Id);
+                }
+
+                if (tf.offset < nextOffset && tf.offset > currentOffset)
+                {
+                    nextOffset = tf.offset;
+                }
+            }
+
+            long dataEndOffset = currentOffset + data.length + 5;
+
+            if (dataEndOffset == nextOffset)
+                return;
+
+            long dataDifference = dataEndOffset - nextOffset;
+
+            foreach (ushort id in idsGreater)
+            {
+                int shapeIndex = this.GetShapes().FindIndex(s => s.Id == id);
+                if (shapeIndex != -1)
+                {
+                    ScObject item = this.GetShapes()[shapeIndex];
+                    long newOffset = item.offset + dataDifference;
+                    item.SetOffset(newOffset);
+                }
+                else
+                {
+                    int mvIndex = this.GetMovieClips().FindIndex(mv => mv.Id == id);
+                    if (mvIndex != -1)
+                    {
+                        ScObject item = this.GetMovieClips()[mvIndex];
+                        long newOffset = item.offset + dataDifference;
+                        item.SetOffset(newOffset);
+                    }
+                    else
+                    {
+                        int tfIndex = this.getTextFields().FindIndex(tf => tf.Id == id);
+                        if (tfIndex != -1)
+                        {
+                            ScObject item = this.getTextFields()[tfIndex];
+                            long newOffset = item.offset + dataDifference;
+                            item.SetOffset(newOffset);
+                        }
+                        else
+                        {
+                            throw new Exception("Invalid Type");
+                        }
+                    }
+                }
+            }
         }
 
         public void Load()
@@ -521,6 +633,8 @@ namespace SCEditor.ScOld
 
         public void loadInfoFile()
         {
+            var sw = Stopwatch.StartNew();
+
             while (true)
             {
                 using (var reader = new BinaryReader(File.OpenRead(_infoFile)))
@@ -658,7 +772,8 @@ namespace SCEditor.ScOld
                                 _movieClipCount != movieClipIndex ||
                                 _matrixCount != matrixIndex ||
                                 _textFieldCount != textFieldIndex ||
-                                _colorsCount != colorIndex)
+                                _colorsCount != colorIndex ||
+                                _textureCount != _textures.Count)
                                 {
                                     throw new Exception("Didn't load whole .sc properly.");
                                 }
@@ -680,6 +795,7 @@ namespace SCEditor.ScOld
                                 {
                                     var texture = new Texture(this);
                                     texture.SetOffset(offset);
+                                    texture.setLength(tagSize);
                                     texture.Read(datatag, tagSize, reader);
                                     _eofTexOffset = reader.BaseStream.Position;
                                     this._textures.Add(texture);
@@ -705,6 +821,7 @@ namespace SCEditor.ScOld
 
                                 var shape = new Shape(this);
                                 shape.SetOffset(offset);
+                                shape.setLength(tagSize);
                                 shape.Read(reader, tag);
                                 _shapes[shapeIndex] = shape;
 
@@ -723,6 +840,7 @@ namespace SCEditor.ScOld
 
                                 var movieClip = new MovieClip(this, datatag);
                                 movieClip.SetOffset(offset);
+                                movieClip.setLength(tagSize);
                                 ushort clipId = movieClip.ReadMV(reader, tag, tagSize);
                                 _movieClips[movieClipIndex] = movieClip;
 
@@ -744,6 +862,7 @@ namespace SCEditor.ScOld
 
                                 TextField textField = new TextField(this, datatag);
                                 textField.Read(reader, tag);
+                                textField.setLength(tagSize);
                                 _textFields[textFieldIndex] = textField;
 
                                 _eofTextFieldOffset = reader.BaseStream.Position;
@@ -840,6 +959,8 @@ namespace SCEditor.ScOld
                             case "27": //39
                             case "28": //40
                                 MovieClipModifier mcmo = new MovieClipModifier(this);
+                                mcmo.setLength(tagSize);
+                                mcmo._offset = reader.BaseStream.Position;
                                 mcmo.Read(reader, tag);
 
                                 this._movieClipsModifier[movieClipModifierIndex++] = mcmo;
@@ -856,9 +977,13 @@ namespace SCEditor.ScOld
                     }
                 }
 
+                sw.Stop();
+                Console.WriteLine(@"Info File Loaded in {0}ms", sw.Elapsed.TotalSeconds);
+
                 List<(string, int)> childrenNamesPresent = new List<(string, int)>();
                 foreach (MovieClip mv in this._movieClips)
                 {
+                    /**
                     foreach (string cName in mv.timelineChildrenNames)
                     {
                         if (!string.IsNullOrEmpty(cName))
@@ -874,6 +999,7 @@ namespace SCEditor.ScOld
                             }
                         }
                     }
+                    **/
 
                     foreach (ushort tcId in mv.timelineChildrenId)
                     {
@@ -909,9 +1035,10 @@ namespace SCEditor.ScOld
 
                     foreach (Export ex in _exports)
                     {
-                        MovieClip data = (MovieClip)_movieClips.Find(mv => mv.Id == ex.Id);
-
-                        ex.SetDataObject(data);
+                        if (mv.Id == ex.Id)
+                        {
+                            ex.SetDataObject(mv);
+                        }
                     }
                 }
 

@@ -729,7 +729,9 @@ namespace SCEditor
                 ((MovieClip)scData).setChildrens(childrenItem);
                 _scFile.AddChange(scData);
 
-                reloadMenu();
+                // RESET Treeview node
+                treeView1.SelectedNode.Nodes.Clear();
+                treeView1.SelectedNode.PopulateChildren(scData);
             }
 
             Console.WriteLine("Editing Children Data Done!");

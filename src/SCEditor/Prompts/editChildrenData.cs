@@ -152,6 +152,12 @@ namespace SCEditor.Prompts
         {
             int newIndex = listBoxType == 0 ? childrenIdListBox.SelectedIndex : childrenNameListBox.SelectedIndex;
 
+            if (newIndex == -1)
+            {
+                refreshMenu();
+                return;
+            }
+
             childrenIdListBox.SelectedIndex = newIndex;
             childrenNameListBox.SelectedIndex = newIndex;
 

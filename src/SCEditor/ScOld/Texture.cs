@@ -328,11 +328,6 @@ namespace SCEditor.ScOld
             }
         }
 
-        public void SetOffset(long position)
-        {
-            _offset = position;
-        }
-
         #endregion
     }
 }

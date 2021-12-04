@@ -116,48 +116,7 @@ namespace SCEditor.ScOld
                 cursor++;
             }
 
-            //Refresh All Offsets
-            foreach (Texture t in _scFile.GetTextures())
-            {
-                long offset = t.GetOffset();
-                if (offset > 0)
-                    offset += 2 + 1 + _exportName.Length;
-                else
-                    offset = offset - 2 - 1 - _exportName.Length;
-                t.SetOffset(offset);
-            }
-
-            foreach (Shape s in _scFile.GetShapes())
-            {
-                long offset = s.GetOffset();
-                if (offset > 0)
-                    offset += 2 + 1 + _exportName.Length;
-                else
-                    offset = offset - 2 - 1 - _exportName.Length;
-                s.SetOffset(offset);
-                foreach (ShapeChunk sc in s.GetChunks())
-                {
-                    long chunkOffset = sc.GetOffset();
-                    if (chunkOffset > 0)
-                        chunkOffset += 2 + 1 + _exportName.Length;
-                    else
-                        chunkOffset = chunkOffset - 2 - 1 - _exportName.Length;
-                    sc.SetOffset(chunkOffset);
-                }
-            }
-
-            foreach (MovieClip mc in _scFile.GetMovieClips())
-            {
-                long offset = mc.GetOffset();
-                if (offset > 0)
-                    offset += 2 + 1 + _exportName.Length;
-                else
-                    offset = offset - 2 - 1 - _exportName.Length;
-                mc.SetOffset(offset);
-            }
-
             _scFile.SetSofTagsOffset(_scFile.GetSofTagsOffset() + cursor);
-
             _scFile.SetEofOffset(_scFile.GetEofOffset() + 2 + 1 + _exportName.Length);
         }
 

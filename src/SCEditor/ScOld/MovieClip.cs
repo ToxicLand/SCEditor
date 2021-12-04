@@ -33,12 +33,12 @@ namespace SCEditor.ScOld
             _childrens = mv.getChildrens();
             _frames = mv.GetFrames();
 
-            this.SetOffset(-System.Math.Abs(mv.GetOffset()));
+            this.SetOffset(-System.Math.Abs(mv.offset));
 
             //Duplicate MovieClip
             using (FileStream input = new FileStream(_scFile.GetInfoFileName(), FileMode.Open))
             {
-                input.Seek(System.Math.Abs(mv.GetOffset()), SeekOrigin.Begin);
+                input.Seek(System.Math.Abs(mv.offset), SeekOrigin.Begin);
                 using (var br = new BinaryReader(input))
                 {
 
@@ -107,7 +107,6 @@ namespace SCEditor.ScOld
         private exportType _exportType;
         private iconType _iconType;
         private animationType _animationType;
-        public uint _length { get; set; }
         private bool _hasShadow;
         private List<PointF> _pointFList;
         public override ushort Id => _clipId;
@@ -137,11 +136,6 @@ namespace SCEditor.ScOld
         public short GetMovieClipDataType()
         {
             return _dataType;
-        }
-
-        public long GetOffset()
-        {
-            return _offset;
         }
 
         public List<ScObject> getChildrens()
@@ -410,8 +404,11 @@ namespace SCEditor.ScOld
                         input.Seek(0, SeekOrigin.Begin);
                         finalData.Seek(0, SeekOrigin.Begin);
                         finalData.CopyTo(input);
+
+                        this.setLength((uint)(dataLength + 5));
                     }
 
+                    
                     _scFile.SetEofOffset(input.Length - 5);
                 }
             }
@@ -901,13 +898,6 @@ namespace SCEditor.ScOld
             _clipId = id;
         }
 
-        public void setLength(uint data)
-        {
-            _length = data;
-        }
-
-        public uint length => _length;
-
         public void SetFrameCount(short count)
         {
             _frameCount = count;
@@ -1004,10 +994,6 @@ namespace SCEditor.ScOld
         public void SetFrames(List<ScObject> frames)
         {
             _frames = frames;
-        }
-        public void SetOffset(long position)
-        {
-            _offset = position;
         }
 
         public void setExportType(exportType type)

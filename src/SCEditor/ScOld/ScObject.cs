@@ -19,6 +19,8 @@ namespace SCEditor.ScOld
         public virtual ushort Id { get; protected set; }
         public virtual bool customAdded { get; set; }
         public virtual Bitmap Bitmap => null;
+        public virtual uint _length { get; set; }
+        public virtual uint length => _length;
         public virtual long _offset { get; set; }
         public virtual long offset => _offset;
         public virtual List<ScObject> Children => new List<ScObject>();
@@ -90,6 +92,16 @@ namespace SCEditor.ScOld
         public virtual void Write(FileStream input, int inOffset, out int offset)
         {
             offset = inOffset;
+        }
+
+        public void setLength(uint data)
+        {
+            _length = data;
+        }
+
+        public void SetOffset(long position)
+        {
+            _offset = position;
         }
 
         public enum SCObjectType

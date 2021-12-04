@@ -362,11 +362,6 @@ namespace SCEditor.ScOld
             _chunkType = type;
         }
 
-        public void SetOffset(long offset)
-        {
-            _offset = offset;
-        }
-
         public void SetVertexCount(int count)
         {
             _vertexCount = count;

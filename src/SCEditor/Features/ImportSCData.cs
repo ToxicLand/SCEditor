@@ -166,14 +166,18 @@ namespace SCEditor.Features
 
                 string crTroops = "bandit_;chr_musketeer_;electro_wizard_;elixir_blob_;elixir_golem_;elixir_golemite_;GoldenKnight_;magic_archer_;mega_knight_;princess_;rascal_;skeletondragon_;SkeletonKing_";
                 string bbTroops = "tank_";
+                string bbBuildings = "tower_turret_lvl1;tower_turret_lvl2;tower_turret_lvl3;tower_turret_lvl4;tower_turret_lvl5;tower_turret_lvl6;tower_turret_lvl7;tower_turret_lvl8;tower_turret_lvl10;tower_turret_lvl11;tower_turret_lvl12;tower_turret_lvl13;tower_turret_lvl14;tower_turret_lvl15;tower_turret_lvl16;tower_turret_lvl17;tower_turret_lvl18;tower_turret_lvl19;tower_turret_lvl21;tower_turret_lvl22;mortar_lvl1;mortar_lvl2;mortar_lvl3;mortar_lvl4;mortar_lvl5;mortar_lvl6;mortar_lvl7;mortar_lvl8;mortar_lvl9;mortar_lvl11;mortar_lvl12;mortar_lvl13;mortar_lvl14;mortar_lvl16;mortar_lvl21;mortar_lvl22;mortar_lvl23;machinegun_turret_lvl1;machinegun_turret_lvl2;machinegun_turret_lvl3;machinegun_turret_lvl4;machinegun_turret_lvl5;machinegun_turret_lvl6;machinegun_turret_lvl8;machinegun_turret_lvl9;machinegun_turret_lvl11;machinegun_turret_lvl12;machinegun_turret_lvl21;machinegun_turret_lvl22;missile_launcher_lvl1;missile_launcher_lvl2;missile_launcher_lvl3;missile_launcher_lvl5;missile_launcher_lvl6;missile_launcher_lvl7;missile_launcher_lvl9;missile_launcher_lvl10;flame_thrower_lvl1;flame_thrower_lvl2;flame_thrower_lvl5;flame_thrower_lvl6;flame_thrower_lvl7;flame_thrower_lvl9;flame_thrower_lvl10;flame_thrower_lvl11;flame_thrower_lvl12;flame_thrower_lvl14;flame_thrower_lvl15;flame_thrower_lvl18;flame_thrower_lvl19;flame_thrower_lvl20;basic_cannon_lvl1;basic_cannon_lvl2;basic_cannon_lvl3;basic_cannon_lvl4;basic_cannon_lvl5;basic_cannon_lvl6;basic_cannon_lvl10;basic_cannon_lvl11;basic_cannon_lvl12;basic_cannon_lvl13;basic_cannon_lvl14;basic_cannon_lvl15;basic_cannon_lvl16;basic_cannon_lvl19;basic_cannon_lvl21;basic_cannon_lvl22;boom_cannon_lvl1;boom_cannon_lvl2;boom_cannon_lvl3;boom_cannon_lvl4;boom_cannon_lvl5;boom_cannon_lvl6;boom_cannon_lvl7;boom_cannon_lvl8;boom_cannon_lvl9;boom_cannon_lvl10;boom_cannon_lvl11;boom_cannon_lvl12;boom_cannon_lvl13;boom_cannon_lvl15;boom_cannon_lvl16;shock_launcher_lvl1;shock_launcher_lvl2;shock_launcher_lvl3;shock_launcher_lvl4;shock_launcher_lvl5;shock_launcher_lvl6;shock_launcher_lvl7;shock_launcher_lvl8;shock_minigun_lvl1;shock_minigun_lvl2;shock_minigun_lvl3;lazer_lvl1;lazer_lvl2;lazer_lvl3;attack_booster_lvl1;attack_booster_lvl2;attack_booster_lvl3;doom_cannon_lvl1;doom_cannon_lvl2;doom_cannon_lvl3;shieldgenerator_lvl1;shieldgenerator_lvl2;shieldgenerator_lvl3;harpoon_lvl1;harpoon_lvl2;harpoon_lvl3;flame_surprise_lvl1;flame_surprise_lvl1_appear;flame_surprise_lvl1_hide;flame_surprise_lvl1_hatch;flame_surprise_lvl2;flame_surprise_lvl2_appear;flame_surprise_lvl2_hide;flame_surprise_lvl2_hatch;flame_surprise_lvl3;flame_surprise_lvl3_appear;flame_surprise_lvl3_hide;flame_surprise_lvl3_hatch;super_sniper_lvl1;super_sniper_lvl2;super_sniper_lvl3;microwave_tower_lvl1;microwave_tower_lvl2;microwave_tower_lvl3;bubble_generator_lvl1;bubble_generator_lvl2;bubble_generator_lvl3;cannon_surprise_lvl1_appear;cannon_surprise_lvl1_hide;cannon_surprise_lvl1_hatch;cannon_surprise_lvl2_appear;cannon_surprise_lvl2_hide;cannon_surprise_lvl2_hatch;cannon_surprise_lvl3_appear;cannon_surprise_lvl3_hide;cannon_surprise_lvl3_hatch;bomb_tower_lvl1;bomb_tower_lvl2;bomb_tower_lvl3;bomb_tower_triggered;bomb_tower_triggered_2;bomb_tower_triggered_3;hidden_cannon_lvl1;hidden_cannon_lvl2;hidden_cannon_lvl3;freezeray_beam;laser_beam_glow";
+
                 List<string> crTroopsList = crTroops.Split(';').ToList();
                 List<string> bbTroopsList = bbTroops.Split(';').ToList();
+                List<string> bbBuildingsList = bbBuildings.Split(';').ToList();
 
                 foreach (scMergeSelection.exportItemClass item in selectImportExportsForm.checkedExports)
                 {
                     Export exportToAdd = (Export)((ScObject)item.exportData);
-                    bool crChangeName = true;
-                    bool bbChangeName = true;
+                    bool crChangeName = false;
+                    bool bbChangeName = false;
+                    bool bbBuildingChangeName = true;
 
                     if (crChangeName && crTroopsList.FindIndex(name => exportToAdd.GetName().Contains(name)) != -1)
                     {
@@ -275,6 +279,7 @@ namespace SCEditor.Features
                             throw new Exception("WOT");
                         }
 
+                        /**
                         if (int.TryParse(exportToAdd.GetName().Substring(exportToAdd.GetName().Length - 2, 2),out int _))
                         {
                             int value = int.Parse(exportToAdd.GetName().Substring(exportToAdd.GetName().Length - 2, 2));
@@ -291,7 +296,12 @@ namespace SCEditor.Features
 
                             exportToAdd.SetExportName(exportToAdd.GetName().Remove(exportToAdd.GetName().Length - 1, 1) + newValue);
                         }
-                            
+                        **/
+                    }
+
+                    if (bbBuildingChangeName)
+                    {
+                        exportToAdd.SetExportName("bb_" + exportToAdd.GetName());
                     }
 
                     exportsToImport.Add(exportToAdd);
@@ -591,7 +601,7 @@ namespace SCEditor.Features
             newShape.setCustomAdded(true);
             newShape.SetOffset(-1);
             maxId++; newShape.SetId(maxId);
-            newShape.SetLength(shapeToAdd.length);
+            newShape.setLength(shapeToAdd.length);
 
             // SHAPE CHUNK DATA
             List<ScObject> newShapeChunks = new List<ScObject>();
@@ -614,6 +624,7 @@ namespace SCEditor.Features
                         {
                             Texture texToAdd = (Texture)scToImportFrom.GetTextures()[(int)shapeChunkToAdd.GetTextureId()];
                             Texture newTexToAdd = new Texture(_scFile, texToAdd.Bitmap, texToAdd._imageType);
+                            newTexToAdd.setCustomAdded(true);
                             textureToAdd.Add((shapeChunkToAdd.GetTextureId(), newTexToAdd.Id));
 
                             _scFile.AddTexture(newTexToAdd);
@@ -655,19 +666,31 @@ namespace SCEditor.Features
             RenderingOptions renderOptions = new RenderingOptions() { ViewPolygons = false, InternalRendering = true };
             Bitmap shapeChunkBitmap = shapeChunkToAdd.Render(renderOptions);
 
-            foreach (var (key, value) in _queriesToPerform["contains"])
+            if (_queriesToPerform.ContainsKey("contains"))
             {
-                if (_currentExportName.Contains(key))
+                foreach (var (key, value) in _queriesToPerform["contains"])
                 {
-                    if (value.ContainsKey("scale"))
-                        scaleFactor = value["scale"];
+                    if (_currentExportName.Contains(key))
+                    {
+                        if (value.ContainsKey("scale"))
+                            scaleFactor = value["scale"];
 
-                    break;
+                        break;
+                    }
                 }
             }
 
+            bool useScaleFactor = false;
             if (scaleFactor != 1)
             {
+                useScaleFactor = true;
+
+                if (shapeChunkBitmap.Width <= 1 || shapeChunkBitmap.Height <= 1)
+                {
+                    scaleFactor = 1;
+                    useScaleFactor = false;
+                }
+
                 int scaleWidth = (int)(shapeChunkBitmap.Width * scaleFactor);
                 int scaleHeight = (int)(shapeChunkBitmap.Height * scaleFactor);
 
@@ -687,12 +710,12 @@ namespace SCEditor.Features
             int shapeChunkTMatrixIndex = shapeChunksTMatrix.FindIndex(X => X.Item1 == maxId);
             if (shapeChunkTMatrixIndex != -1)
             {
-                shapeChunksTMatrix[shapeChunkTMatrixIndex].Item2.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd));
+                shapeChunksTMatrix[shapeChunkTMatrixIndex].Item2.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
             }
             else
             {
                 List<Matrix> newList = new List<Matrix>();
-                newList.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd));
+                newList.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
                 shapeChunksTMatrix.Add((maxId, ((Matrix[])newList.ToArray().Clone()).ToList()));
             }
 
@@ -717,6 +740,7 @@ namespace SCEditor.Features
             }
 
             bool isGeneratedTextureRGBA4444 = false;
+            bool isGeneratedTextureMaxRects = true;
 
             if (_createNewTexture)
             {
@@ -727,23 +751,19 @@ namespace SCEditor.Features
                 {
                     if (textureTypeDialog.ShowDialog() == DialogResult.OK)
                     {
-                        if (textureTypeDialog.inputTextBoxInt != 0 || textureTypeDialog.inputTextBoxInt != 1)
+                        if (textureTypeDialog.inputTextBoxInt != 0 && textureTypeDialog.inputTextBoxInt != 1)
+                        {
+                            MessageBox.Show("Please Type 0 for RGBA8888 or 1 for RGBA4444", "Invalid Texture Type");
+                        }
+                        else
                         {
                             if (textureTypeDialog.inputTextBoxInt == 1)
                                 isGeneratedTextureRGBA4444 = true;
 
                             break;
                         }
-                        else
-                        {
-                            MessageBox.Show("Please Type 0 for RGBA8888 or 1 for RGBA4444", "Invalid Texture Type");
-                        }
                     }
                 }
-
-                Texture newTex = new Texture((byte)(isGeneratedTextureRGBA4444 == false ? 0 : 2), 1, 1, _scFile);
-                _scFile.AddTexture(newTex);
-                _scFile.AddChange(newTex);
             }
             else
             {
@@ -753,15 +773,16 @@ namespace SCEditor.Features
 
             int generatedTextureScale = 1;
             int generatedSpritesExtrude = 0;
-            int generatedSpritesPadding = 6;
+            int generatedSpritesPadding = 3;
             int generatedTextureMaxWidth = 4096;
             int generatedTextureMaxHeight = 4096;
-            int generatedTexturePolygonTolerance = 150;
+            int generatedTexturePolygonTolerance = 190;
             string generatedTexturePixelFormat = isGeneratedTextureRGBA4444 ? "RGBA4444 --dither-type Linear" : "RGBA8888";
             string generatedSpritesPackMode = "Best";
-            string generatedSpritesAlphaHandling = "ClearTransparentPixels";
+            string generatedSpritesAlphaHandling = "KeepTransparentPixels"; //"ClearTransparentPixels";
+            string generatedTextureAlgorithim = isGeneratedTextureMaxRects ? "MaxRects --maxrects-heuristics Best" : "Polygon";
 
-            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm Polygon --alpha-handling {generatedSpritesAlphaHandling} --shape-padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data.json\" \"" + tempFolder + "\"";
+            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm {generatedTextureAlgorithim} --alpha-handling {generatedSpritesAlphaHandling} --shape-padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --multipack --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data{n1}.json\" \"" + tempFolder + "\"";
 
             texturePackerProcess = new Process();
             launchProcess(texturePackerEXEPath, arguements);
@@ -781,19 +802,65 @@ namespace SCEditor.Features
 
             if (texturePackerProcess.ExitCode == 0)
             {
-                if (!File.Exists(tempFolder + "\\output\\data.png"))
-                    throw new Exception("data.png not found. generatesChunksTexture()");
+                if (!File.Exists(tempFolder + "\\output\\data-1.json"))
+                    throw new Exception("data file not found.");
 
-                using (FileStream stream = new FileStream(tempFolder + "\\output\\data.png", FileMode.Open, FileAccess.Read))
-                {
-                    Bitmap newTexture = (Bitmap)Image.FromStream(stream);
-                    ((Texture)_scFile.GetTextures()[_textureToImportToID]).GetImage().SetBitmap(newTexture);
-                }
-
-                string jsonFileData = File.ReadAllText(tempFolder + "\\output\\data.json");
+                string jsonFileData = File.ReadAllText(tempFolder + "\\output\\data-1.json");
                 JObject jsonParsedData = JObject.Parse(jsonFileData);
 
-                JArray framesData = (JArray)jsonParsedData["frames"];
+                int texturesCount = 1;
+                if ((JArray)jsonParsedData["related_multi_packs"] != null)
+                {
+                    texturesCount = ((JArray)jsonParsedData["related_multi_packs"]).Count();
+                    for (int i = 0; i < texturesCount; i++)
+                    {
+                        if (!File.Exists(tempFolder + "\\output\\data-" + (i + 1) + ".json"))
+                            throw new Exception("data file not found.");
+
+                        if (!File.Exists(tempFolder + "\\output\\data-" + (i + 1) + ".png"))
+                            throw new Exception("data texture file not found.");
+                    }
+                }
+
+                // Create New Texture
+                if (_createNewTexture)
+                {
+                    for (int i = 0; i < texturesCount; i++)
+                    {
+                        Texture newTex = new Texture((byte)(isGeneratedTextureRGBA4444 == false ? 0 : 2), 1, 1, _scFile);
+                        newTex.setCustomAdded(true);
+                        _scFile.AddTexture(newTex);
+                        _scFile.AddChange(newTex);
+
+                        using (FileStream stream = new FileStream(tempFolder + ("\\output\\data-" + (i + 1) + ".png"), FileMode.Open, FileAccess.Read))
+                        {
+                            Bitmap newTexture = (Bitmap)Image.FromStream(stream);
+                            ((Texture)_scFile.GetTextures()[(_textureToImportToID + 1)]).GetImage().SetBitmap(newTexture);
+                        }
+                    }
+                }
+
+                JArray framesData = new JArray();
+                if (texturesCount > 1)
+                {
+                    for (int i = 0; i < texturesCount; i++)
+                    {
+                        string jsonFileDataX = File.ReadAllText(tempFolder + "\\output\\data-" + (i + 1) + ".json");
+                        JObject jsonParsedDataX = JObject.Parse(jsonFileData);
+
+                        for (int fi = 0; fi < jsonParsedDataX["frames"].Count(); fi++)
+                        {
+                            JObject item = ((JObject)((JArray)jsonParsedDataX["frames"])[fi]);
+                            item.Add("textureCount", i);
+
+                            framesData.Add(item);
+                        }
+                    }
+                }
+                else
+                {
+                    framesData = (JArray)jsonParsedData["frames"];
+                }
 
                 foreach (JObject data in framesData)
                 {
@@ -829,6 +896,12 @@ namespace SCEditor.Features
                     shapeChunkToEdit.SetUV(frameUV);
                     shapeChunkToEdit.SetXY(findUVXYDifference(frameXY, shapeID, chunkIndex));
                     shapeChunkToEdit.SetVertexCount(frameUV.Length);
+
+                    int chunkTextureId = _textureToImportToID;
+                    if (texturesCount > 1)
+                        chunkTextureId += int.Parse((string)data["textureCount"]);
+
+                    shapeChunkToEdit.SetTextureId((byte)chunkTextureId);
                 }
             }
             else
@@ -850,12 +923,16 @@ namespace SCEditor.Features
             return newPointF;
         }
 
-        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN)
+        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN, bool useScaleFactor)
         {
             PointF[] shapeChunkUVData = (PointF[])shapeChunkIN.UV.Clone();
             PointF[] shapeChunkXYData = (PointF[])shapeChunkIN.XY.Clone();
             float leftWidth = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Width;
             float topHeight = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Height;
+            float scaleFactor = _scaleFactor;
+
+            if (!useScaleFactor)
+                scaleFactor = 1;
 
             for (int i = 0; i < shapeChunkUVData.Length; i++)
             {
@@ -875,20 +952,20 @@ namespace SCEditor.Features
                 shapeChunkUVData[i].X -= leftWidth;
                 shapeChunkUVData[i].Y -= topHeight;
 
-                if (_scaleFactor != 1)
+                if (scaleFactor != 1)
                 {
-                    shapeChunkUVData[i].X *= _scaleFactor;
-                    shapeChunkUVData[i].Y *= _scaleFactor;
+                    shapeChunkUVData[i].X *= scaleFactor;
+                    shapeChunkUVData[i].Y *= scaleFactor;
                 }
             }
 
-            if (_scaleFactor != 1)
+            if (scaleFactor != 1)
             {
                 for (int i = 0; i < shapeChunkXYData.Length; i++)
                 {
 
-                    shapeChunkXYData[i].X *= _scaleFactor;
-                    shapeChunkXYData[i].Y *= _scaleFactor;
+                    shapeChunkXYData[i].X *= scaleFactor;
+                    shapeChunkXYData[i].Y *= scaleFactor;
                 }
             }
 
@@ -931,7 +1008,7 @@ namespace SCEditor.Features
         {
             if (_scaleFactor != 1)
             {
-                throw new Exception("Scalefactor should be 1 to perform queries!");
+                return;
             }
 
             if (!_newTextureImport)

@@ -26,7 +26,7 @@ namespace SCEditor.ScOld
         {
             this.SetId(shape._shapeId);
             this.SetOffset(shape._offset);
-            this.SetLength(shape._length);
+            this.setLength(shape._length);
             this._scFile = shape._scFile;
             this._chunks = new List<ScObject>();
 
@@ -71,7 +71,6 @@ namespace SCEditor.ScOld
 
         private bool _disposed;
         private ushort _shapeId;
-        private int _length;
         private List<ScObject> _chunks;
         private ScFile _scFile;
         private int _shapeChunkCount;
@@ -165,7 +164,7 @@ namespace SCEditor.ScOld
                 while (true)
                 {
                     chunkType = br.ReadByte();
-                    _length = br.ReadInt32();
+                    _length = (uint)br.ReadInt32();
 
                     if (_length < 0)
                         throw new Exception("Negative tag length in Shape.");
@@ -194,7 +193,7 @@ namespace SCEditor.ScOld
                     break;
 
                 Console.WriteLine("Unmanaged chunk type " + chunkType);
-                br.ReadBytes(_length);
+                br.ReadBytes((int)_length);
             }
         }
 
@@ -517,18 +516,6 @@ namespace SCEditor.ScOld
         public void SetId(ushort id)
         {
             _shapeId = id;
-        }
-
-        public void SetLength(int length)
-        {
-            _length = length;
-        }
-
-        public int length => _length;
-
-        public void SetOffset(long offset)
-        {
-            _offset = offset;
         }
 
         public void setMatrix(Matrix data)
