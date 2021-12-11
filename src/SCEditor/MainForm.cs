@@ -269,6 +269,25 @@ namespace SCEditor
             }
         }
 
+        public void fixPoints()
+        {
+            ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
+            
+            if (data == null)
+                return;
+
+            if (data.GetDataType() != 99)
+                return;
+
+            fixChunksPoints fixP = new fixChunksPoints();
+            PointF[] newArray = null;
+
+            if (newArray == null)
+                return;
+
+            ((ShapeChunk)data).SetUV(newArray);
+            Render();
+        }
 
         public void renderAnimation(RenderingOptions options, ScObject data)
         {
@@ -460,7 +479,7 @@ namespace SCEditor
                         }
                         else if (data.GetDataType() == 99 || data.GetDataType() == 0)
                         {
-                            RenderingOptions options = new RenderingOptions() { InternalRendering = true };
+                            RenderingOptions options = new RenderingOptions() { InternalRendering = true, ViewPolygons = viewPolygonsToolStripMenuItem.Checked };
                             data.Render(options).Save(dlg.FileName, System.Drawing.Imaging.ImageFormat.Png);
                         }
                         else
@@ -1281,6 +1300,11 @@ namespace SCEditor
             Stopped,
             Playing,
             None
+        }
+
+        private void fixPointsChunkToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            fixPoints();
         }
     }
 }

@@ -2,3 +2,50 @@
 
 # CS0219: Variable is assigned but its value is never used
 dotnet_diagnostic.CS0219.severity = warning
+
+# CA1416: Validate platform compatibility
+dotnet_diagnostic.CA1416.severity = warning
+
+# Default severity for analyzer diagnostics with category 'Interoperability'
+dotnet_analyzer_diagnostic.category-Interoperability.severity = warning
+
+# Default severity for all analyzer diagnostics
+dotnet_analyzer_diagnostic.severity = warning
+
+dotnet_diagnostic.CA1416.severity = none
+dotnet_diagnostic.IDE0032.severity = none
+dotnet_diagnostic.IDE0011.severity = none
+dotnet_diagnostic.IDE0055.severity = none
+
+# CA2201: Do not raise reserved exception types
+dotnet_diagnostic.CA2201.severity = suggestion
+
+# IDE0027: Use expression body for accessors
+dotnet_diagnostic.IDE0027.severity = suggestion
+
+# IDE0005: Using directive is unnecessary.
+dotnet_diagnostic.IDE0005.severity = suggestion
+
+# IDE0044: Add readonly modifier
+dotnet_diagnostic.IDE0044.severity = suggestion
+
+# IDE1006: Naming Styles
+dotnet_diagnostic.IDE1006.severity = suggestion
+
+# IDE0058: Expression value is never used
+dotnet_diagnostic.IDE0058.severity = suggestion
+
+# IDE0028: Simplify collection initialization
+dotnet_diagnostic.IDE0028.severity = suggestion
+
+# CA1846: Prefer 'AsSpan' over 'Substring'
+dotnet_diagnostic.CA1846.severity = suggestion
+
+# Default severity for analyzer diagnostics with category 'Globalization'
+dotnet_analyzer_diagnostic.category-Globalization.severity = suggestion
+
+# IDE0047: Remove unnecessary parentheses
+dotnet_diagnostic.IDE0047.severity = suggestion
+
+# Default severity for analyzer diagnostics with category 'Style'
+dotnet_analyzer_diagnostic.category-Style.severity = suggestion

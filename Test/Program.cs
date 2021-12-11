@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace Test
     {
         static void Main(string[] args)
         {
+            jsontest();
+
             //decompress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc");
             //compress(@"C:\Users\darks\Downloads\zstd-1.5.0\build\VS2010\bin\Win32_Debug\test.sc.clone");
             //byte[] test = new byte[] {0xE2, 0x12, 0x00, 0x00 };
@@ -22,28 +25,47 @@ namespace Test
             //Console.WriteLine(BitConverter.ToInt32(test));
             //Console.WriteLine(BitConverter.ToInt32(test2));
 
-            int width = 100;
-            int height = 100;
-            int[,] inputArray = new int[height, width];
-            int i, j;
-            int value = 1;
-            for (i = 0; i < height; i++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    inputArray[i, x] = value;
-                    value++;
-                }
-            }
+            //int width = 100;
+            //int height = 100;
+            //int[,] inputArray = new int[height, width];
+            //int i, j;
+            //int value = 1;
+            //for (i = 0; i < height; i++)
+            //{
+            //    for (int x = 0; x < width; x++)
+            //    {
+            //        inputArray[i, x] = value;
+            //        value++;
+            //    }
+            //}
 
-            int[,] createdArray = Create32x32Blocks(width, height, inputArray);
-            int[,] solvedArray = Solve32X32Blocks(width, height, createdArray);
+            //int[,] createdArray = Create32x32Blocks(width, height, inputArray);
+            //int[,] solvedArray = Solve32X32Blocks(width, height, createdArray);
 
-            if (solvedArray.Equals(inputArray))
-            {
-                Console.WriteLine("WORKS!");
-            }
-            Console.WriteLine("Done!");
+            //if (solvedArray.Equals(inputArray))
+            //{
+            //    Console.WriteLine("WORKS!");
+            //}
+            //Console.WriteLine("Done!");
+        }
+
+        static void jsontest()
+        {
+            string jsonFileData = File.ReadAllText(@"C:\Users\darks\AppData\Local\Temp\sceditor\chunks\output\data-1.json");
+            JObject jsonParsedData = JObject.Parse(jsonFileData);
+
+            JArray test = (JArray)((JToken)jsonParsedData["meta"])["related_multi_packs"];
+
+            JArray framesData = new JArray();
+
+            JObject item = ((JObject)((JArray)jsonParsedData["frames"])[0]);
+            item.Add("textureCount", 1);
+
+            framesData.Add(item);
+
+            int chunkTextureId = int.Parse((string)item["textureCount"]);
+
+            Console.Write("x");
         }
 
 

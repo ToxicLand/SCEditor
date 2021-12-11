@@ -73,6 +73,7 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.fixPointsChunkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -334,7 +335,8 @@
             this.chunkToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.exportToolStripMenuItem2,
             this.importToolStripMenuItem,
-            this.changeTextureToolStripMenuItem});
+            this.changeTextureToolStripMenuItem,
+            this.fixPointsChunkToolStripMenuItem});
             this.chunkToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.chunkToolStripMenuItem.Name = "chunkToolStripMenuItem";
             this.chunkToolStripMenuItem.Size = new System.Drawing.Size(55, 21);
@@ -346,7 +348,7 @@
             this.exportToolStripMenuItem2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
             this.exportToolStripMenuItem2.ForeColor = System.Drawing.Color.White;
             this.exportToolStripMenuItem2.Name = "exportToolStripMenuItem2";
-            this.exportToolStripMenuItem2.Size = new System.Drawing.Size(177, 22);
+            this.exportToolStripMenuItem2.Size = new System.Drawing.Size(180, 22);
             this.exportToolStripMenuItem2.Text = "Export...";
             this.exportToolStripMenuItem2.Click += new System.EventHandler(this.exportToolStripMenuItem2_Click);
             // 
@@ -355,7 +357,7 @@
             this.importToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
             this.importToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.importToolStripMenuItem.Name = "importToolStripMenuItem";
-            this.importToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
+            this.importToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.importToolStripMenuItem.Text = "Import...";
             this.importToolStripMenuItem.Click += new System.EventHandler(this.importToolStripMenuItem_Click);
             // 
@@ -364,7 +366,7 @@
             this.changeTextureToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
             this.changeTextureToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.changeTextureToolStripMenuItem.Name = "changeTextureToolStripMenuItem";
-            this.changeTextureToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
+            this.changeTextureToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.changeTextureToolStripMenuItem.Text = "Replace Texture...";
             this.changeTextureToolStripMenuItem.Click += new System.EventHandler(this.changeTextureToolStripMenuItem_Click);
             // 
@@ -485,7 +487,7 @@
             this.exportToolStripMenuItem3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
             this.exportToolStripMenuItem3.ForeColor = System.Drawing.Color.White;
             this.exportToolStripMenuItem3.Name = "exportToolStripMenuItem3";
-            this.exportToolStripMenuItem3.Size = new System.Drawing.Size(180, 22);
+            this.exportToolStripMenuItem3.Size = new System.Drawing.Size(123, 22);
             this.exportToolStripMenuItem3.Text = "Export...";
             this.exportToolStripMenuItem3.Click += new System.EventHandler(this.exportToolStripMenuItem3_Click);
             // 
@@ -559,6 +561,15 @@
             this.pictureBox1.Size = new System.Drawing.Size(100, 100);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
+            // 
+            // fixPointsChunkToolStripMenuItem
+            // 
+            this.fixPointsChunkToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
+            this.fixPointsChunkToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.fixPointsChunkToolStripMenuItem.Name = "fixPointsChunkToolStripMenuItem";
+            this.fixPointsChunkToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fixPointsChunkToolStripMenuItem.Text = "Fix Points";
+            this.fixPointsChunkToolStripMenuItem.Click += new System.EventHandler(this.fixPointsChunkToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -636,6 +647,7 @@
         private System.Windows.Forms.ToolStripMenuItem addEditMatrixtoolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem scImportToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem editChildrenDataToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fixPointsChunkToolStripMenuItem;
     }
 }
 

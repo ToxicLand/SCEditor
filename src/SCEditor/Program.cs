@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Windows.Forms;
 using SCEditor.Helpers;
 
@@ -8,6 +9,7 @@ namespace SCEditor
 {
     internal static class Program
     {
+        [SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", EntryPoint = "GetStdHandle", SetLastError = true, CharSet = CharSet.Auto,
             CallingConvention = CallingConvention.StdCall)]
         public static extern IntPtr GetStdHandle(int nStdHandle);

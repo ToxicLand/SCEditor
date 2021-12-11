@@ -74,6 +74,8 @@ namespace SCEditor.ScOld
             _bitmap = b;
             _width = (ushort)b.Width;
             _height = (ushort)b.Height;
+
+            _bitmap.SetResolution(96, 96);
         }
         
         public virtual void Print()

@@ -22,7 +22,6 @@ namespace SCEditor.Features
     {
         private ScFile _scFile;
         private ScFile scToImportFrom;
-        private List<PointF> _pointsAdded;
         private Dictionary<ushort, ushort> _shapesAlreadyAdded;
         private Dictionary<ushort, ushort> _movieClipsAlreadyAdded;
         private Dictionary<ushort, ushort> _textFieldsAlreadyAdded;
@@ -34,23 +33,24 @@ namespace SCEditor.Features
         private float _scaleFactor;
         private string tempFolder;
         private Process texturePackerProcess;
-        private List<(ushort, List<Matrix>)> shapeChunksTMatrix;
-        private List<(byte, int)> textureToAdd;
+        private List<(ushort, List<Matrix>)> _shapeChunksTMatrix;
+        private List<(byte, int)> _texturesToAdd;
         private string _currentExportName;
         private Dictionary<string, Dictionary<string, Dictionary<string , float>>> _queriesToPerform; // Type, (keyword, ()) -> example = contains, (barbarian, (scale, value))
+        private Dictionary<int, List<int>> _shapeChunksMultipleBlobs;
 
         public ImportSCData(ScFile scFile)
         {
             _scFile = scFile;
-            _pointsAdded = new List<PointF>();
             _shapesAlreadyAdded = new Dictionary<ushort, ushort>();
             _movieClipsAlreadyAdded = new Dictionary<ushort, ushort>();
             _textFieldsAlreadyAdded = new Dictionary<ushort, ushort>();
             _matricesToAdd = new List<ushort>();
             _colorTransformToAdd = new List<ushort>();
-            shapeChunksTMatrix = new List<(ushort, List<Matrix>)>();
-            textureToAdd = new List<(byte, int)>();
+            _shapeChunksTMatrix = new List<(ushort, List<Matrix>)>();
+            _texturesToAdd = new List<(byte, int)>();
             _queriesToPerform = new Dictionary<string, Dictionary<string, Dictionary<string, float>>>();
+            _shapeChunksMultipleBlobs = new Dictionary<int, List<int>>();
 
             try
             {
@@ -166,7 +166,7 @@ namespace SCEditor.Features
 
                 string crTroops = "bandit_;chr_musketeer_;electro_wizard_;elixir_blob_;elixir_golem_;elixir_golemite_;GoldenKnight_;magic_archer_;mega_knight_;princess_;rascal_;skeletondragon_;SkeletonKing_";
                 string bbTroops = "tank_";
-                string bbBuildings = "tower_turret_lvl1;tower_turret_lvl2;tower_turret_lvl3;tower_turret_lvl4;tower_turret_lvl5;tower_turret_lvl6;tower_turret_lvl7;tower_turret_lvl8;tower_turret_lvl10;tower_turret_lvl11;tower_turret_lvl12;tower_turret_lvl13;tower_turret_lvl14;tower_turret_lvl15;tower_turret_lvl16;tower_turret_lvl17;tower_turret_lvl18;tower_turret_lvl19;tower_turret_lvl21;tower_turret_lvl22;mortar_lvl1;mortar_lvl2;mortar_lvl3;mortar_lvl4;mortar_lvl5;mortar_lvl6;mortar_lvl7;mortar_lvl8;mortar_lvl9;mortar_lvl11;mortar_lvl12;mortar_lvl13;mortar_lvl14;mortar_lvl16;mortar_lvl21;mortar_lvl22;mortar_lvl23;machinegun_turret_lvl1;machinegun_turret_lvl2;machinegun_turret_lvl3;machinegun_turret_lvl4;machinegun_turret_lvl5;machinegun_turret_lvl6;machinegun_turret_lvl8;machinegun_turret_lvl9;machinegun_turret_lvl11;machinegun_turret_lvl12;machinegun_turret_lvl21;machinegun_turret_lvl22;missile_launcher_lvl1;missile_launcher_lvl2;missile_launcher_lvl3;missile_launcher_lvl5;missile_launcher_lvl6;missile_launcher_lvl7;missile_launcher_lvl9;missile_launcher_lvl10;flame_thrower_lvl1;flame_thrower_lvl2;flame_thrower_lvl5;flame_thrower_lvl6;flame_thrower_lvl7;flame_thrower_lvl9;flame_thrower_lvl10;flame_thrower_lvl11;flame_thrower_lvl12;flame_thrower_lvl14;flame_thrower_lvl15;flame_thrower_lvl18;flame_thrower_lvl19;flame_thrower_lvl20;basic_cannon_lvl1;basic_cannon_lvl2;basic_cannon_lvl3;basic_cannon_lvl4;basic_cannon_lvl5;basic_cannon_lvl6;basic_cannon_lvl10;basic_cannon_lvl11;basic_cannon_lvl12;basic_cannon_lvl13;basic_cannon_lvl14;basic_cannon_lvl15;basic_cannon_lvl16;basic_cannon_lvl19;basic_cannon_lvl21;basic_cannon_lvl22;boom_cannon_lvl1;boom_cannon_lvl2;boom_cannon_lvl3;boom_cannon_lvl4;boom_cannon_lvl5;boom_cannon_lvl6;boom_cannon_lvl7;boom_cannon_lvl8;boom_cannon_lvl9;boom_cannon_lvl10;boom_cannon_lvl11;boom_cannon_lvl12;boom_cannon_lvl13;boom_cannon_lvl15;boom_cannon_lvl16;shock_launcher_lvl1;shock_launcher_lvl2;shock_launcher_lvl3;shock_launcher_lvl4;shock_launcher_lvl5;shock_launcher_lvl6;shock_launcher_lvl7;shock_launcher_lvl8;shock_minigun_lvl1;shock_minigun_lvl2;shock_minigun_lvl3;lazer_lvl1;lazer_lvl2;lazer_lvl3;attack_booster_lvl1;attack_booster_lvl2;attack_booster_lvl3;doom_cannon_lvl1;doom_cannon_lvl2;doom_cannon_lvl3;shieldgenerator_lvl1;shieldgenerator_lvl2;shieldgenerator_lvl3;harpoon_lvl1;harpoon_lvl2;harpoon_lvl3;flame_surprise_lvl1;flame_surprise_lvl1_appear;flame_surprise_lvl1_hide;flame_surprise_lvl1_hatch;flame_surprise_lvl2;flame_surprise_lvl2_appear;flame_surprise_lvl2_hide;flame_surprise_lvl2_hatch;flame_surprise_lvl3;flame_surprise_lvl3_appear;flame_surprise_lvl3_hide;flame_surprise_lvl3_hatch;super_sniper_lvl1;super_sniper_lvl2;super_sniper_lvl3;microwave_tower_lvl1;microwave_tower_lvl2;microwave_tower_lvl3;bubble_generator_lvl1;bubble_generator_lvl2;bubble_generator_lvl3;cannon_surprise_lvl1_appear;cannon_surprise_lvl1_hide;cannon_surprise_lvl1_hatch;cannon_surprise_lvl2_appear;cannon_surprise_lvl2_hide;cannon_surprise_lvl2_hatch;cannon_surprise_lvl3_appear;cannon_surprise_lvl3_hide;cannon_surprise_lvl3_hatch;bomb_tower_lvl1;bomb_tower_lvl2;bomb_tower_lvl3;bomb_tower_triggered;bomb_tower_triggered_2;bomb_tower_triggered_3;hidden_cannon_lvl1;hidden_cannon_lvl2;hidden_cannon_lvl3;freezeray_beam;laser_beam_glow";
+                string bbBuildings = "barb_wire;barbwire_lvl1_0;barbwire_lvl1_1_a;barbwire_lvl1_1_b;barbwire_lvl1_2_a;barbwire_lvl1_2_b;barbwire_lvl1_3;boom_destroyed_1;boom_destroyed_2;boom_destroyed_3;cannon_destroyed_1;cannon_destroyed_2;cannon_destroyed_3;cannon_destroyed_4;cannon_destroyed_5;flamethrower_destroyed_1;flamethrower_destroyed_2;flamethrower_destroyed_3;gen_build_2;gen_build_3;gen_build_4;gen_build_5;gen_construction_2;gen_construction_3;gen_construction_4;gen_construction_5;gen_destroyed_2;gen_destroyed_2_native;gen_destroyed_3;gen_destroyed_3_C;gen_destroyed_3_M;gen_destroyed_3_native;gen_destroyed_3_sabotage;gen_destroyed_4;gen_destroyed_4_C;gen_destroyed_4_M;gen_destroyed_5;gen_destroyed_5_C;gen_destroyed_5_M;gen_destroyed_cell;hatch_destroyed_01;machinegun_destroyed_1;machinegun_destroyed_2;machinegun_destroyed_3;machinegun_destroyed_4;shock_destroyed_1;shock_destroyed_2;taunt_tower_destroyed;mortar_destroyed_1;mortar_destroyed_2;mortar_destroyed_3;mortar_destroyed_4;sniper_destroyed_1;sniper_destroyed_2;sniper_destroyed_3;sniper_destroyed_4;cryobomb_destroyed_1;tower_turret_lvl1;tower_turret_lvl2;tower_turret_lvl3;tower_turret_lvl4;tower_turret_lvl5;tower_turret_lvl6;tower_turret_lvl7;tower_turret_lvl8;tower_turret_lvl10;tower_turret_lvl11;tower_turret_lvl12;tower_turret_lvl13;tower_turret_lvl14;tower_turret_lvl15;tower_turret_lvl16;tower_turret_lvl17;tower_turret_lvl18;tower_turret_lvl19;tower_turret_lvl21;tower_turret_lvl22;mortar_lvl1;mortar_lvl2;mortar_lvl3;mortar_lvl4;mortar_lvl5;mortar_lvl6;mortar_lvl7;mortar_lvl8;mortar_lvl9;mortar_lvl11;mortar_lvl12;mortar_lvl13;mortar_lvl14;mortar_lvl16;mortar_lvl21;mortar_lvl22;mortar_lvl23;machinegun_turret_lvl1;machinegun_turret_lvl2;machinegun_turret_lvl3;machinegun_turret_lvl4;machinegun_turret_lvl5;machinegun_turret_lvl6;machinegun_turret_lvl8;machinegun_turret_lvl9;machinegun_turret_lvl11;machinegun_turret_lvl12;machinegun_turret_lvl21;machinegun_turret_lvl22;missile_launcher_lvl1;missile_launcher_lvl2;missile_launcher_lvl3;missile_launcher_lvl5;missile_launcher_lvl6;missile_launcher_lvl7;missile_launcher_lvl9;missile_launcher_lvl10;flame_thrower_lvl1;flame_thrower_lvl2;flame_thrower_lvl5;flame_thrower_lvl6;flame_thrower_lvl7;flame_thrower_lvl9;flame_thrower_lvl10;flame_thrower_lvl11;flame_thrower_lvl12;flame_thrower_lvl14;flame_thrower_lvl15;flame_thrower_lvl18;flame_thrower_lvl19;flame_thrower_lvl20;basic_cannon_lvl1;basic_cannon_lvl2;basic_cannon_lvl3;basic_cannon_lvl4;basic_cannon_lvl5;basic_cannon_lvl6;basic_cannon_lvl10;basic_cannon_lvl11;basic_cannon_lvl12;basic_cannon_lvl13;basic_cannon_lvl14;basic_cannon_lvl15;basic_cannon_lvl16;basic_cannon_lvl19;basic_cannon_lvl21;basic_cannon_lvl22;boom_cannon_lvl1;boom_cannon_lvl2;boom_cannon_lvl3;boom_cannon_lvl4;boom_cannon_lvl5;boom_cannon_lvl6;boom_cannon_lvl7;boom_cannon_lvl8;boom_cannon_lvl9;boom_cannon_lvl10;boom_cannon_lvl11;boom_cannon_lvl12;boom_cannon_lvl13;boom_cannon_lvl15;boom_cannon_lvl16;shock_launcher_lvl1;shock_launcher_lvl2;shock_launcher_lvl3;shock_launcher_lvl4;shock_launcher_lvl5;shock_launcher_lvl6;shock_launcher_lvl7;shock_launcher_lvl8;shock_minigun_lvl1;shock_minigun_lvl2;shock_minigun_lvl3;lazer_lvl1;lazer_lvl2;lazer_lvl3;attack_booster_lvl1;attack_booster_lvl2;attack_booster_lvl3;doom_cannon_lvl1;doom_cannon_lvl2;doom_cannon_lvl3;shieldgenerator_lvl1;shieldgenerator_lvl2;shieldgenerator_lvl3;harpoon_lvl1;harpoon_lvl2;harpoon_lvl3;flame_surprise_lvl1;flame_surprise_lvl1_appear;flame_surprise_lvl1_hide;flame_surprise_lvl1_hatch;flame_surprise_lvl2;flame_surprise_lvl2_appear;flame_surprise_lvl2_hide;flame_surprise_lvl2_hatch;flame_surprise_lvl3;flame_surprise_lvl3_appear;flame_surprise_lvl3_hide;flame_surprise_lvl3_hatch;super_sniper_lvl1;super_sniper_lvl2;super_sniper_lvl3;microwave_tower_lvl1;microwave_tower_lvl2;microwave_tower_lvl3;bubble_generator_lvl1;bubble_generator_lvl2;bubble_generator_lvl3;cannon_surprise_lvl1_appear;cannon_surprise_lvl1_hide;cannon_surprise_lvl1_hatch;cannon_surprise_lvl2_appear;cannon_surprise_lvl2_hide;cannon_surprise_lvl2_hatch;cannon_surprise_lvl3_appear;cannon_surprise_lvl3_hide;cannon_surprise_lvl3_hatch;bomb_tower_lvl1;bomb_tower_lvl2;bomb_tower_lvl3;bomb_tower_triggered;bomb_tower_triggered_2;bomb_tower_triggered_3;hidden_cannon_lvl1;hidden_cannon_lvl2;hidden_cannon_lvl3;freezeray_beam;laser_beam_glow";
 
                 List<string> crTroopsList = crTroops.Split(';').ToList();
                 List<string> bbTroopsList = bbTroops.Split(';').ToList();
@@ -619,13 +619,13 @@ namespace SCEditor.Features
                     }
                     else
                     {
-                        int texIndex = textureToAdd.FindIndex(tx => tx.Item1 == shapeChunkToAdd.GetTextureId());
+                        int texIndex = _texturesToAdd.FindIndex(tx => tx.Item1 == shapeChunkToAdd.GetTextureId());
                         if (texIndex == -1)
                         {
                             Texture texToAdd = (Texture)scToImportFrom.GetTextures()[(int)shapeChunkToAdd.GetTextureId()];
                             Texture newTexToAdd = new Texture(_scFile, texToAdd.Bitmap, texToAdd._imageType);
                             newTexToAdd.setCustomAdded(true);
-                            textureToAdd.Add((shapeChunkToAdd.GetTextureId(), newTexToAdd.Id));
+                            _texturesToAdd.Add((shapeChunkToAdd.GetTextureId(), newTexToAdd.Id));
 
                             _scFile.AddTexture(newTexToAdd);
                             _scFile.AddChange(newTexToAdd);
@@ -634,7 +634,7 @@ namespace SCEditor.Features
                         }
                         else
                         {
-                            texId = textureToAdd[texIndex].Item2;
+                            texId = _texturesToAdd[texIndex].Item2;
                         }
                     }
                 }
@@ -666,6 +666,47 @@ namespace SCEditor.Features
             RenderingOptions renderOptions = new RenderingOptions() { ViewPolygons = false, InternalRendering = true };
             Bitmap shapeChunkBitmap = shapeChunkToAdd.Render(renderOptions);
 
+            blobCounter Bcounter = new blobCounter();
+            int bCount = Bcounter.getBlobCount(shapeChunkBitmap);
+
+            if (bCount > 1)
+            {
+                shapeChunkBitmap = Bcounter.createBlobImage();
+                
+                if (_shapeChunksMultipleBlobs.ContainsKey(maxId))
+                {
+                    List<int> chunkIndexes = _shapeChunksMultipleBlobs[maxId];
+                    chunkIndexes.Add(shapeChunkIndex);
+                    _shapeChunksMultipleBlobs[maxId] = chunkIndexes;
+                }
+                else
+                {
+                    List<int> chunkIndexes = new List<int>();
+                    chunkIndexes.Add(shapeChunkIndex);
+                    _shapeChunksMultipleBlobs.Add(maxId, chunkIndexes);
+                }
+            }
+            
+            bool useScaleFactor = false;
+            shapeChunkBitmap = generateScaledBitmap(shapeChunkBitmap, scaleFactor, ref useScaleFactor);
+
+            int shapeChunkTMatrixIndex = _shapeChunksTMatrix.FindIndex(X => X.Item1 == maxId);
+            if (shapeChunkTMatrixIndex != -1)
+            {
+                _shapeChunksTMatrix[shapeChunkTMatrixIndex].Item2.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
+            }
+            else
+            {
+                List<Matrix> newList = new List<Matrix>();
+                newList.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
+                _shapeChunksTMatrix.Add((maxId, ((Matrix[])newList.ToArray().Clone()).ToList()));
+            }
+
+            shapeChunkBitmap.Save(tempFolder + "\\" + maxId + "_" + shapeChunkIndex + ".png", ImageFormat.Png);
+        }
+
+        private Bitmap generateScaledBitmap(Bitmap shapeChunkBitmap, float scaleFactor, ref bool useScaleFactor)
+        {
             if (_queriesToPerform.ContainsKey("contains"))
             {
                 foreach (var (key, value) in _queriesToPerform["contains"])
@@ -680,7 +721,6 @@ namespace SCEditor.Features
                 }
             }
 
-            bool useScaleFactor = false;
             if (scaleFactor != 1)
             {
                 useScaleFactor = true;
@@ -706,20 +746,8 @@ namespace SCEditor.Features
 
                 shapeChunkBitmap = scaledShapeChunkBitmap;
             }
- 
-            int shapeChunkTMatrixIndex = shapeChunksTMatrix.FindIndex(X => X.Item1 == maxId);
-            if (shapeChunkTMatrixIndex != -1)
-            {
-                shapeChunksTMatrix[shapeChunkTMatrixIndex].Item2.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
-            }
-            else
-            {
-                List<Matrix> newList = new List<Matrix>();
-                newList.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
-                shapeChunksTMatrix.Add((maxId, ((Matrix[])newList.ToArray().Clone()).ToList()));
-            }
 
-            shapeChunkBitmap.Save(tempFolder + "\\" + maxId + "_" + shapeChunkIndex + ".png", ImageFormat.Png);
+            return shapeChunkBitmap;
         }
 
         private void generateChunksTexture()
@@ -740,7 +768,7 @@ namespace SCEditor.Features
             }
 
             bool isGeneratedTextureRGBA4444 = false;
-            bool isGeneratedTextureMaxRects = true;
+            bool isGeneratedTextureMaxRects = false;
 
             if (_createNewTexture)
             {
@@ -776,13 +804,13 @@ namespace SCEditor.Features
             int generatedSpritesPadding = 3;
             int generatedTextureMaxWidth = 4096;
             int generatedTextureMaxHeight = 4096;
-            int generatedTexturePolygonTolerance = 190;
+            int generatedTexturePolygonTolerance = 120;
             string generatedTexturePixelFormat = isGeneratedTextureRGBA4444 ? "RGBA4444 --dither-type Linear" : "RGBA8888";
             string generatedSpritesPackMode = "Best";
             string generatedSpritesAlphaHandling = "KeepTransparentPixels"; //"ClearTransparentPixels";
             string generatedTextureAlgorithim = isGeneratedTextureMaxRects ? "MaxRects --maxrects-heuristics Best" : "Polygon";
 
-            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm {generatedTextureAlgorithim} --alpha-handling {generatedSpritesAlphaHandling} --shape-padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --multipack --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data{n1}.json\" \"" + tempFolder + "\"";
+            string arguements = $"--scale {generatedTextureScale} --extrude {generatedSpritesExtrude} --trim-margin 5 --texture-format png --pack-mode {generatedSpritesPackMode} --algorithm {generatedTextureAlgorithim} --alpha-handling {generatedSpritesAlphaHandling} --shape-padding {generatedSpritesPadding} --trim-mode Polygon --png-opt-level 0 --opt RGBA8888 --tracer-tolerance {generatedTexturePolygonTolerance} --multipack --disable-rotation --max-width {generatedTextureMaxWidth} --max-height {generatedTextureMaxHeight} --format json-array" + " --data \"" + tempFolder + "\\output\\data-{n1}.json\" \"" + tempFolder + "\"";
 
             texturePackerProcess = new Process();
             launchProcess(texturePackerEXEPath, arguements);
@@ -809,9 +837,9 @@ namespace SCEditor.Features
                 JObject jsonParsedData = JObject.Parse(jsonFileData);
 
                 int texturesCount = 1;
-                if ((JArray)jsonParsedData["related_multi_packs"] != null)
+                if (((JArray)((JToken)jsonParsedData["meta"])["related_multi_packs"]) != null)
                 {
-                    texturesCount = ((JArray)jsonParsedData["related_multi_packs"]).Count();
+                    texturesCount = ((JArray)((JToken)jsonParsedData["meta"])["related_multi_packs"]).Count() + 1;
                     for (int i = 0; i < texturesCount; i++)
                     {
                         if (!File.Exists(tempFolder + "\\output\\data-" + (i + 1) + ".json"))
@@ -835,7 +863,7 @@ namespace SCEditor.Features
                         using (FileStream stream = new FileStream(tempFolder + ("\\output\\data-" + (i + 1) + ".png"), FileMode.Open, FileAccess.Read))
                         {
                             Bitmap newTexture = (Bitmap)Image.FromStream(stream);
-                            ((Texture)_scFile.GetTextures()[(_textureToImportToID + 1)]).GetImage().SetBitmap(newTexture);
+                            ((Texture)_scFile.GetTextures()[_textureToImportToID + i]).GetImage().SetBitmap(newTexture);
                         }
                     }
                 }
@@ -843,15 +871,15 @@ namespace SCEditor.Features
                 JArray framesData = new JArray();
                 if (texturesCount > 1)
                 {
-                    for (int i = 0; i < texturesCount; i++)
+                    for (int textureIndex = 0; textureIndex < texturesCount; textureIndex++)
                     {
-                        string jsonFileDataX = File.ReadAllText(tempFolder + "\\output\\data-" + (i + 1) + ".json");
-                        JObject jsonParsedDataX = JObject.Parse(jsonFileData);
+                        string eachJsonFileData = File.ReadAllText(tempFolder + "\\output\\data-" + (textureIndex + 1) + ".json");
+                        JObject eachJsonParsedData = JObject.Parse(eachJsonFileData);
 
-                        for (int fi = 0; fi < jsonParsedDataX["frames"].Count(); fi++)
+                        for (int frameIndex = 0; frameIndex < eachJsonParsedData["frames"].Count(); frameIndex++)
                         {
-                            JObject item = ((JObject)((JArray)jsonParsedDataX["frames"])[fi]);
-                            item.Add("textureCount", i);
+                            JObject item = ((JObject)((JArray)eachJsonParsedData["frames"])[frameIndex]);
+                            item.Add("textureCount", textureIndex);
 
                             framesData.Add(item);
                         }
@@ -909,14 +937,84 @@ namespace SCEditor.Features
                 throw new Exception("Not supposed to happen.");
             }
 
+            if (_shapeChunksMultipleBlobs.Count > 1)
+            {
+                for (int i = 0; i < _shapeChunksMultipleBlobs.Count; i++)
+                {
+                    ushort newShapeId = (ushort)_shapeChunksMultipleBlobs.ElementAt(i).Key;
+                    ushort oldShapeId = KeyByValue(_shapesAlreadyAdded, newShapeId);
+
+                    List<int> shapeChunkIndexes = _shapeChunksMultipleBlobs.ElementAt(i).Value;
+
+                    Shape newShape = (Shape)_scFile.GetShapes().Find(s => s.Id == newShapeId);
+                    Shape oldShape = (Shape)scToImportFrom.GetShapes().Find(s => s.Id == oldShapeId);
+
+                    for (int cI = 0; cI < shapeChunkIndexes.Count; cI++)
+                    {
+                        ShapeChunk oldShapeChunk = (ShapeChunk)oldShape.GetChunks()[shapeChunkIndexes[cI]];
+                        ShapeChunk newShapeChunk = (ShapeChunk)newShape.GetChunks()[shapeChunkIndexes[cI]];
+
+                        Bitmap oldBitmap = oldShapeChunk.Render(new RenderingOptions() { InternalRendering = true });
+
+                        bool scale = false;
+                        oldBitmap = generateScaledBitmap(oldBitmap, 1, ref scale);
+
+                        Texture texture = (Texture)_scFile.GetTextures()[newShapeChunk.GetTextureId()];
+                        if (texture != null)
+                        {
+                            Bitmap bitmap = texture._image.GetBitmap();
+                            bitmap.SetResolution(96, 96);
+
+                            GraphicsPath gpuv = new GraphicsPath();
+                            gpuv.AddPolygon(newShapeChunk.UV);
+
+                            var uvBounds = System.Drawing.Rectangle.Round(gpuv.GetBounds());
+                            var x = uvBounds.X;
+                            var y = uvBounds.Y;
+                            var width = (int)uvBounds.Width;
+                            var height = (int)uvBounds.Height;
+
+                            GraphicsPath gpChunk = new GraphicsPath();
+                            gpChunk.AddRectangle(new System.Drawing.Rectangle(0, 0, width, height));
+
+                            using (Graphics g = Graphics.FromImage(bitmap))
+                            {
+                                gpChunk.Transform(new Matrix(1, 0, 0, 1, x, y));
+                                g.SetClip(gpuv);
+                                g.Clear(Color.Transparent);
+                                g.DrawImage(oldBitmap, x, y);
+                                g.Flush();
+                            }
+
+                            texture._image.SetBitmap(bitmap);
+
+                        }
+                    }
+                }
+            }
+
             texturePackerProcess = null;
-            clearTempFolder();
+            //clearTempFolder();
+        }
+
+        public T KeyByValue<T, W>(Dictionary<T, W> dict, W val)
+        {
+            T key = default;
+            foreach (KeyValuePair<T, W> pair in dict)
+            {
+                if (EqualityComparer<W>.Default.Equals(pair.Value, val))
+                {
+                    key = pair.Key;
+                    break;
+                }
+            }
+            return key;
         }
 
         public PointF[] findUVXYDifference(PointF[] XYArray, ushort shapeId, int chunkIndex)
         {
             PointF[] newPointF = (PointF[])XYArray.Clone();
-            Matrix chunkTransform = shapeChunksTMatrix.Find(T => T.Item1 == shapeId).Item2[chunkIndex];
+            Matrix chunkTransform = _shapeChunksTMatrix.Find(T => T.Item1 == shapeId).Item2[chunkIndex];
 
             chunkTransform.TransformPoints(newPointF);
 

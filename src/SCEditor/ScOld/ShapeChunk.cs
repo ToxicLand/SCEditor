@@ -213,7 +213,7 @@ namespace SCEditor.ScOld
                             g.DrawImage(bitmap, -x, -y);
 
                             if (options.ViewPolygons)
-                                g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                g.DrawPath(new Pen(Color.DeepSkyBlue, 2), gpuv);
                             g.Flush();
                         }
                     }

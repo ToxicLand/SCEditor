@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <OutputType>WinExe</OutputType>
     <RootNamespace>SCEditor</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -45,6 +45,23 @@
     <PackageReference Include="ZstdSharp.Port" Version="0.5.0" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Accord">
+      <HintPath>libs\Accord.dll</HintPath>
+    </Reference>
+    <Reference Include="Accord.Imaging">
+      <HintPath>libs\Accord.Imaging.dll</HintPath>
+    </Reference>
+    <Reference Include="Accord.Math">
+      <HintPath>libs\Accord.Math.dll</HintPath>
+    </Reference>
+    <Reference Include="Accord.Math.Core">
+      <HintPath>libs\Accord.Math.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Accord.Statistics">
+      <HintPath>libs\Accord.Statistics.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="logo_dark.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -52,7 +69,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
   <PropertyGroup>
     <Authors />
     <LangVersion>8.0</LangVersion>

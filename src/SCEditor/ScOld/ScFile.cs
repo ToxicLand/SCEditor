@@ -222,105 +222,161 @@ namespace SCEditor.ScOld
 
             if (_pendingMatrixs.Count > 0)
             {
-                input.Seek(0, SeekOrigin.Begin);
+                //input.Seek(0, SeekOrigin.Begin);
 
-                using (MemoryStream newData = new MemoryStream())
+                //using (MemoryStream newData = new MemoryStream())
+                //{
+                //    long offsetBefore = _eofMatrixOffset;
+
+                //    byte[] tillMatrixEndData = new byte[_eofMatrixOffset];
+                //    input.Read(tillMatrixEndData, 0, (int)_eofMatrixOffset);
+
+                //    newData.Write(tillMatrixEndData, 0, tillMatrixEndData.Length);
+
+                //    foreach (Matrix matrix in _pendingMatrixs)
+                //    {
+                //        newData.WriteByte(8);
+                //        newData.Write(BitConverter.GetBytes(24), 0, 4);
+
+                //        Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
+                //            matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
+
+                //        for (int i = 0; i < 6; i++)
+                //        {
+                //            newData.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
+                //        }
+
+                //        _eofMatrixOffset = newData.Position;
+
+                //        matrixAdd += 1;
+                //    }
+
+                //    byte[] restData = new byte[input.Length - offsetBefore];
+                //    input.Read(restData, 0, restData.Length);
+                //    newData.Write(restData, 0, restData.Length);
+
+                //    input.Seek(0, SeekOrigin.Begin);
+                //    newData.Seek(0, SeekOrigin.Begin);
+                //    newData.CopyTo(input);
+                //}
+
+                //_pendingMatrixs.Clear();
+
+                //input.Seek(8, SeekOrigin.Begin);
+                //this._matrixCount += matrixAdd;
+                //input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
+
+                //input.Close();
+                //reloadInfoFile();
+                //input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+
+                input.Seek(this._eofOffset, SeekOrigin.Begin);
+                foreach (Matrix matrix in _pendingMatrixs)
                 {
-                    long offsetBefore = _eofMatrixOffset;
+                    input.WriteByte(8);
+                    input.Write(BitConverter.GetBytes(24), 0, 4);
 
-                    byte[] tillMatrixEndData = new byte[_eofMatrixOffset];
-                    input.Read(tillMatrixEndData, 0, (int)_eofMatrixOffset);
+                    Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
+                        matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
 
-                    newData.Write(tillMatrixEndData, 0, tillMatrixEndData.Length);
-
-                    foreach (Matrix matrix in _pendingMatrixs)
+                    for (int i = 0; i < 6; i++)
                     {
-                        newData.WriteByte(8);
-                        newData.Write(BitConverter.GetBytes(24), 0, 4);
-
-                        Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
-                            matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
-
-                        for (int i = 0; i < 6; i++)
-                        {
-                            newData.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
-                        }
-
-                        _eofMatrixOffset = newData.Position;
-
-                        matrixAdd += 1;
+                        input.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
                     }
 
-                    byte[] restData = new byte[input.Length - offsetBefore];
-                    input.Read(restData, 0, restData.Length);
-                    newData.Write(restData, 0, restData.Length);
+                    _eofMatrixOffset = input.Position;
+                    _eofOffset = input.Position;
 
-                    input.Seek(0, SeekOrigin.Begin);
-                    newData.Seek(0, SeekOrigin.Begin);
-                    newData.CopyTo(input);
+                    matrixAdd += 1;
                 }
+                input.Write(new byte[] { 0, 0, 0, 0, 0 });
 
                 _pendingMatrixs.Clear();
 
                 input.Seek(8, SeekOrigin.Begin);
                 this._matrixCount += matrixAdd;
                 input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
-
-                input.Close();
-                reloadInfoFile();
-                input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
             }
 
             if (_pendingColors.Count > 0)
             {
-                input.Seek(0, SeekOrigin.Begin);
+                //input.Seek(0, SeekOrigin.Begin);
 
-                using (MemoryStream newData = new MemoryStream())
+                //using (MemoryStream newData = new MemoryStream())
+                //{
+                //    long offsetBefore = _eofColorsOffset;
+
+                //    byte[] tillColorEndData = new byte[_eofColorsOffset];
+                //    input.Read(tillColorEndData, 0, (int)_eofColorsOffset);
+
+                //    newData.Write(tillColorEndData, 0, tillColorEndData.Length);
+
+                //    foreach (Tuple<Color, byte, Color> color in _pendingColors)
+                //    {
+                //        newData.WriteByte(9);
+                //        newData.Write(BitConverter.GetBytes(7), 0, 4);
+
+                //        newData.WriteByte(color.Item1.R);
+                //        newData.WriteByte(color.Item1.G);
+                //        newData.WriteByte(color.Item1.B);
+                //        newData.WriteByte(color.Item2);
+                //        newData.WriteByte(color.Item1.R);
+                //        newData.WriteByte(color.Item1.G);
+                //        newData.WriteByte(color.Item1.B);
+
+                //        _eofColorsOffset = newData.Position;
+
+                //        colorsAdd += 1;
+                //    }
+
+                //    byte[] restData = new byte[input.Length - offsetBefore];
+                //    input.Read(restData, 0, restData.Length);
+                //    newData.Write(restData, 0, restData.Length);
+
+                //    input.Seek(0, SeekOrigin.Begin);
+                //    newData.Seek(0, SeekOrigin.Begin);
+                //    newData.CopyTo(input);
+                //}
+
+                //_pendingColors.Clear();
+
+                //input.Seek(10, SeekOrigin.Begin);
+                //this._colorsCount += colorsAdd;
+                //input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
+
+                //input.Close();
+                //reloadInfoFile();
+                //input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+
+                input.Seek(this._eofOffset, SeekOrigin.Begin);
+                foreach (Tuple<Color, byte, Color> color in _pendingColors)
                 {
-                    long offsetBefore = _eofColorsOffset;
+                    input.WriteByte(9);
+                    input.Write(BitConverter.GetBytes(7), 0, 4);
 
-                    byte[] tillColorEndData = new byte[_eofColorsOffset];
-                    input.Read(tillColorEndData, 0, (int)_eofColorsOffset);
+                    input.WriteByte(color.Item1.R);
+                    input.WriteByte(color.Item1.G);
+                    input.WriteByte(color.Item1.B);
+                    input.WriteByte(color.Item2);
+                    input.WriteByte(color.Item1.R);
+                    input.WriteByte(color.Item1.G);
+                    input.WriteByte(color.Item1.B);
 
-                    newData.Write(tillColorEndData, 0, tillColorEndData.Length);
+                    _eofColorsOffset = input.Position;
+                    _eofOffset = input.Position;
 
-                    foreach (Tuple<Color, byte, Color> color in _pendingColors)
-                    {
-                        newData.WriteByte(9);
-                        newData.Write(BitConverter.GetBytes(7), 0, 4);
-
-                        newData.WriteByte(color.Item1.R);
-                        newData.WriteByte(color.Item1.G);
-                        newData.WriteByte(color.Item1.B);
-                        newData.WriteByte(color.Item2);
-                        newData.WriteByte(color.Item1.R);
-                        newData.WriteByte(color.Item1.G);
-                        newData.WriteByte(color.Item1.B);
-
-                        _eofColorsOffset = newData.Position;
-
-                        colorsAdd += 1;
-                    }
-
-                    byte[] restData = new byte[input.Length - offsetBefore];
-                    input.Read(restData, 0, restData.Length);
-                    newData.Write(restData, 0, restData.Length);
-
-                    input.Seek(0, SeekOrigin.Begin);
-                    newData.Seek(0, SeekOrigin.Begin);
-                    newData.CopyTo(input);
+                    colorsAdd += 1;
                 }
+                input.Write(new byte[] { 0, 0, 0, 0, 0 });
 
                 _pendingColors.Clear();
 
                 input.Seek(10, SeekOrigin.Begin);
                 this._colorsCount += colorsAdd;
                 input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
-
-                input.Close();
-                reloadInfoFile();
-                input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
             }
+
+            input.Seek(0, SeekOrigin.Begin);
 
             // Flushing depending edits.
             List<ScObject> exports = new List<ScObject>();
@@ -341,8 +397,9 @@ namespace SCEditor.ScOld
                         textureAdd += 1;
                         if (data.customAdded == true)
                         {
+                            _textureCount += 1;
                             input.Seek(4, SeekOrigin.Begin);
-                            input.Write(BitConverter.GetBytes((ushort)this._textures.Count), 0, 2);
+                            input.Write(BitConverter.GetBytes(this._textureCount), 0, 2);
                         }
 
                         break;
@@ -772,8 +829,7 @@ namespace SCEditor.ScOld
                                 _movieClipCount != movieClipIndex ||
                                 _matrixCount != matrixIndex ||
                                 _textFieldCount != textFieldIndex ||
-                                _colorsCount != colorIndex ||
-                                _textureCount != _textures.Count)
+                                _colorsCount != colorIndex)
                                 {
                                     throw new Exception("Didn't load whole .sc properly.");
                                 }
