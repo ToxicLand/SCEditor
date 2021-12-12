@@ -42,9 +42,11 @@ namespace SCEditor.Features
 
             List<PointF> newUVArray = performGarham(_oldUVArray);
 
-            //return newUVArray.ToArray();
+            return newUVArray.ToArray();
 
+#pragma warning disable CS0162 // Unreachable code detected
             _newUVArray = new List<PointF>();
+#pragma warning restore CS0162 // Unreachable code detected
             _oldUVArray = newUVArray.ToArray();
 
             _offsetXMin = _oldUVArray.Min(f => f.X);

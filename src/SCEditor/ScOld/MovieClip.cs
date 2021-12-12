@@ -96,7 +96,6 @@ namespace SCEditor.ScOld
         private List<ScObject> _childrens;
         private ScFile _scFile;
         private List<ScObject> _frames;
-        private unsafe ushort* _timelineOffset;
         private ushort _timelineChildrenCount;
         private ushort[] _timelineChildrenId;
         private Rect _scalingGrid;
@@ -193,11 +192,6 @@ namespace SCEditor.ScOld
                 _timelineOffsetArray[3 * i + 2] = br.ReadUInt16();
             }
 
-            br.BaseStream.Seek(-(_timelineOffsetCount * 2), SeekOrigin.Current);
-
-            _timelineOffset = (ushort*)Marshal.AllocHGlobal(_timelineOffsetCount * sizeof(ushort));
-            br.Read(new Span<byte>((byte*)_timelineOffset, _timelineOffsetCount * 2));
-
             for (int i = 0; i < _frameCount; i++)
             {
                 _frames.Add(new MovieClipFrame(_scFile));
@@ -237,10 +231,6 @@ namespace SCEditor.ScOld
 
             int index = 0;
             int timelineOffsetIndex = 0;
-            int previousFrameId = 0;
-            int maxChildMemoryNeed = 0;
-
-            MovieClipFrame previousFrame = null;
 
             while (true)
             {
@@ -306,16 +296,8 @@ namespace SCEditor.ScOld
                                 frame.SetId(frameId);
                                 frame.SetName(frameName);
 
-                                frame.SetTimeline(&_timelineOffset[timelineOffsetIndex]);
-
-                                maxChildMemoryNeed = previousFrame != null
-                                ? System.Math.Max(maxChildMemoryNeed, frame.GetAmountOfChildMemoryNeeded(frame, frameId, previousFrameId))
-                                : frameId;
-
                                 timelineOffsetIndex += frameId * 3;
                                 index++;
-                                previousFrame = frame;
-                                previousFrameId = frameId;
                                 break;
                             }
 
@@ -431,23 +413,13 @@ namespace SCEditor.ScOld
             dataLength += 5;
 
             // timelineOffset
-            input.Write(BitConverter.GetBytes(_timelineOffsetCount / 3), 0, 4);
+            input.Write(BitConverter.GetBytes(timelineOffsetCount / 3), 0, 4);
             dataLength += 4;
 
             byte[] target = new byte[_timelineOffsetArray.Length * 2];
             Buffer.BlockCopy(_timelineOffsetArray, 0, target, 0, _timelineOffsetArray.Length * 2);
             input.Write(target, 0, target.Length);
             dataLength += target.Length;
-
-            int shapesCount = _childrens.Count;
-
-            if (_exportType == exportType.Icon)
-            {
-                if (_iconType == iconType.Hero)
-                {
-                    shapesCount += 1;
-                }
-            }
 
             // Childrens Count
             input.Write(BitConverter.GetBytes((ushort)timelineChildrenId.Length), 0, 2);
@@ -902,10 +874,6 @@ namespace SCEditor.ScOld
         {
             _frameCount = count;
         }
-        public void SetTimelineOffsetCount(int count)
-        {
-            _timelineOffsetCount = count * 3;
-        }
         public void SetFramePerSecond(byte fps)
         {
             _framePerSeconds = fps;
@@ -956,7 +924,7 @@ namespace SCEditor.ScOld
         public ushort timelineChildrenCount => _timelineChildrenCount;
         public ushort[] timelineChildrenId => _timelineChildrenId;
         public string[] timelineChildrenNames => _timelineChildrenNames;
-        public int timelineOffsetCount => _timelineOffsetCount;
+        public int timelineOffsetCount => _timelineOffsetArray.Length;
 
         public void setTimelineChildrenCount(ushort count)
         {
@@ -969,10 +937,6 @@ namespace SCEditor.ScOld
         public void setTimelineChildrenNames(string[] names)
         {
             _timelineChildrenNames = names;
-        }
-        public void setTimelineOffsetCount(int count)
-        {
-            _timelineOffsetCount = count;
         }
 
         public List<ScObject> GetFrames()

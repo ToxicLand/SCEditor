@@ -378,7 +378,6 @@ namespace SCEditor.Features
                                     }
                                 }
 
-                                movieClipData.SetTimelineOffsetCount(timelineOffset.Length / 3);
                                 movieClipData.setTimelineOffsetArray(timelineOffset);
 
                                 for (int i = 0; i < 2; i++)

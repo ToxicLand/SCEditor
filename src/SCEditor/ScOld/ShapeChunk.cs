@@ -213,7 +213,9 @@ namespace SCEditor.ScOld
                             g.DrawImage(bitmap, -x, -y);
 
                             if (options.ViewPolygons)
-                                g.DrawPath(new Pen(Color.DeepSkyBlue, 2), gpuv);
+                                g.DrawPath(new Pen(Color.DeepSkyBlue, options.polygonLineWidth), gpuv);
+                            if (options.fillPolygon)
+                                g.FillPolygon(new SolidBrush(Color.FromArgb(100, Color.DeepSkyBlue)), gpuv.PathPoints);
                             g.Flush();
                         }
                     }

@@ -137,6 +137,12 @@ namespace SCEditor
             chunkToolStripMenuItem.Visible = false;
             if (treeView1.SelectedNode?.Tag != null)
             {
+                if (treeView1.SelectedNode.Name == "2")
+                {
+                    textureToolStripMenuItem.Visible = true;
+                    addTextureToolStripMenuItem.Visible = true;
+                }
+
                 ScObject data = (ScObject)treeView1.SelectedNode.Tag;
 
                 switch (data.GetDataType())
@@ -196,13 +202,7 @@ namespace SCEditor
             RenderingOptions options = new RenderingOptions()
             {
                 ViewPolygons = viewPolygonsToolStripMenuItem.Checked
-            };
-
-            if (treeView1.SelectedNode.Name == "2" && treeView1.SelectedNode?.Tag == null)
-            {
-                textureToolStripMenuItem.Visible = true;
-                addTextureToolStripMenuItem.Visible = true;
-            }
+            }; 
 
             if (treeView1.SelectedNode?.Tag != null)
             {
@@ -280,7 +280,7 @@ namespace SCEditor
                 return;
 
             fixChunksPoints fixP = new fixChunksPoints();
-            PointF[] newArray = null;
+            PointF[] newArray = fixP.initiate(data);
 
             if (newArray == null)
                 return;
@@ -1305,6 +1305,208 @@ namespace SCEditor
         private void fixPointsChunkToolStripMenuItem_Click(object sender, EventArgs e)
         {
             fixPoints();
+        }
+
+        private void fixBoomBeachBuildings(ScObject data)
+        {
+            MovieClip mvData = (MovieClip)data;
+
+            string[] childrenName = (string[])mvData.timelineChildrenNames.Clone();
+            ushort[] childrenId = (ushort[])mvData.timelineChildrenId.Clone();
+            ushort[] timelineArray = (ushort[])mvData.timelineArray.Clone();
+
+            ushort? turretId = null;
+            int? turretIndex = null;
+
+            ushort? barrelId = null;
+            int? barrelIndex = null;
+
+            for (int i = 0; i < childrenName.Length; i++)
+            {
+                if (childrenName[i] == "turret")
+                {
+                    turretId = childrenId[i];
+                    turretIndex = i;
+                }
+
+                if (childrenName[i] == "barrel")
+                {
+                    barrelId = childrenId[i];
+                    barrelIndex = i;
+                }
+            }
+
+            if (turretId == null || barrelId == null)
+                return;
+
+            MovieClip turretMVData = (MovieClip)_scFile.GetMovieClips().Find(m => m.Id == turretId);
+            MovieClip barrelMVData = (MovieClip)_scFile.GetMovieClips().Find(m => m.Id == barrelId);
+
+            MovieClip combinedMVData = new MovieClip(_scFile, turretMVData.GetMovieClipDataType());
+            combinedMVData.SetFramePerSecond(turretMVData.FPS);
+            combinedMVData.SetId(_scFile.getMaxId());
+            combinedMVData.setCustomAdded(true);
+
+            int combinedChildCount = turretMVData.timelineChildrenId.Length + barrelMVData.timelineChildrenId.Length;
+            string[] combinedChildrenName = new string[combinedChildCount];
+            ushort[] combinedChildrenId = new ushort[combinedChildCount];
+
+            for (int i = 0; i < turretMVData.timelineChildrenId.Length; i++)
+            {
+                combinedChildrenName[i] = turretMVData.timelineChildrenNames[i];
+                combinedChildrenId[i] = turretMVData.timelineChildrenId[i];
+            }
+            for (int i = 0; i < barrelMVData.timelineChildrenId.Length; i++)
+            {
+                int index = turretMVData.timelineChildrenId.Length + i;
+
+                combinedChildrenName[index] = barrelMVData.timelineChildrenNames[i];
+                combinedChildrenId[index] = barrelMVData.timelineChildrenId[i];
+            }
+
+            List<ushort> combinedTimelineArray = new List<ushort>();
+            List<ScObject> combinedFrames = new List<ScObject>();
+
+            if (turretMVData.Frames.Count != barrelMVData.Frames.Count)
+            {
+                Console.WriteLine("not equal");
+                return;
+            }
+
+            int turretTimelineIndex = 0;
+            int barrelTimelineIndex = 0;
+            for (int frameIndex = 0; frameIndex < turretMVData.Frames.Count; frameIndex++)
+            {
+                MovieClipFrame turretFrame = (MovieClipFrame)turretMVData.Frames[frameIndex];
+                MovieClipFrame barrelFrame = (MovieClipFrame)barrelMVData.Frames[frameIndex];
+
+                for (int ti = 0; ti < turretFrame.Id; ti++)
+                {
+                    int idx = turretTimelineIndex + (ti * 3);
+                    combinedTimelineArray.Add(turretMVData.timelineArray[idx]);
+                    combinedTimelineArray.Add(turretMVData.timelineArray[idx + 1]);
+                    combinedTimelineArray.Add(turretMVData.timelineArray[idx + 2]);
+                }
+
+                for (int ti = 0; ti < barrelFrame.Id; ti++)
+                {
+                    int idx = barrelTimelineIndex + (ti * 3);
+                    combinedTimelineArray.Add((ushort)(turretMVData.timelineArray[idx] + turretMVData.timelineChildrenId.Length));
+                    combinedTimelineArray.Add(turretMVData.timelineArray[idx + 1]);
+                    combinedTimelineArray.Add(turretMVData.timelineArray[idx + 2]);
+                }
+
+                turretTimelineIndex += turretFrame.Id * 3;
+                barrelTimelineIndex += barrelFrame.Id * 3;
+
+                MovieClipFrame newF = new MovieClipFrame(_scFile);
+                newF.SetId((ushort)(turretFrame.Id + barrelFrame.Id));
+                combinedFrames.Add(newF);
+            }
+
+            combinedMVData.setTimelineChildrenId(combinedChildrenId);
+            combinedMVData.setTimelineChildrenNames(combinedChildrenName);
+            combinedMVData.setTimelineOffsetArray(combinedTimelineArray.ToArray());
+            combinedMVData.SetFrames(combinedFrames);
+
+            List<string> childNameList = childrenName.ToList();
+            List<ushort> childIdList = childrenId.ToList();
+
+            childNameList.RemoveAt((int)barrelIndex);
+            childIdList.RemoveAt((int)barrelIndex);
+
+            childrenName = childNameList.ToArray();
+            childrenId = childIdList.ToArray();
+
+            childrenId[(int)(turretIndex > barrelIndex ? turretIndex - 1 : turretIndex)] = combinedMVData.Id;
+
+            List<ushort> newTimeLineArray = new List<ushort>();
+
+            List<ScObject> frames = ((ScObject[])mvData.Frames.ToArray().Clone()).ToList();
+            List<ScObject> newFrames = new List<ScObject>();
+
+            int frameTimeLineIndex = 0;
+            for (int frameIndex = 0; frameIndex < frames.Count; frameIndex++)
+            {
+                int frameTimeLineCount = frames[frameIndex].Id;
+                int barrelCount = 0;
+
+                for (int i = 0; i < frameTimeLineCount; i++)
+                {
+                    int currentIdx = frameTimeLineIndex + (i * 3);
+                    ushort childrenID = timelineArray[currentIdx];
+
+                    if (childrenID == barrelIndex)
+                    {
+                        barrelCount++;
+                        continue;
+                    }
+
+                    if (childrenID > barrelIndex)
+                    {
+                        newTimeLineArray.Add((ushort)(timelineArray[currentIdx] - 1));
+                    }
+                    else
+                    {
+                        newTimeLineArray.Add((ushort)(timelineArray[currentIdx]));
+                    }
+
+                    newTimeLineArray.Add(timelineArray[currentIdx + 1]);
+                    newTimeLineArray.Add(timelineArray[currentIdx + 2]);
+                }
+
+                frameTimeLineIndex += frameTimeLineCount * 3;
+
+                if (barrelCount == frameTimeLineCount)
+                    continue;
+
+                MovieClipFrame newF = new MovieClipFrame(_scFile);
+                newF.SetId((ushort)(frameTimeLineCount - barrelCount));
+                newFrames.Add(newF);
+            }
+
+            byte[] flagData = (byte[])mvData.flags.Clone();
+            List<byte> fList = flagData.ToList();
+            fList.RemoveAt((int)barrelIndex);
+
+            mvData.setFlags(fList.ToArray());
+            mvData.setTimelineChildrenId(childrenId);
+            mvData.setTimelineChildrenNames(childrenName);
+            mvData.SetFrames(newFrames);
+            mvData.setTimelineOffsetArray(newTimeLineArray.ToArray());
+
+            _scFile.AddChange(mvData);
+
+            _scFile.AddChange(combinedMVData);
+            _scFile.AddMovieClip(combinedMVData);
+
+            mvData.Children.Remove(barrelMVData);
+            mvData.Children.Remove(turretMVData);
+
+            mvData.Children.Add(combinedMVData);
+
+            treeView1.SelectedNode.Nodes.Clear();
+            treeView1.SelectedNode.PopulateChildren(mvData);
+
+            treeView1.Refresh();
+
+            Console.WriteLine("Boom Beach Fixed");
+        }
+
+        private void fixBoomBeachToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (treeView1.SelectedNode?.Tag == null)
+                return;
+
+            ScObject data = treeView1.SelectedNode?.Tag as ScObject;
+
+            if (data.GetDataType() != 7 && data.GetDataType() != 1)
+                return;
+
+            if (data.GetDataType() == 7)
+                data = data.GetDataObject();
+
+            fixBoomBeachBuildings(data);
         }
     }
 }

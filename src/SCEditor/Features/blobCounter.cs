@@ -190,6 +190,10 @@ namespace SCEditor.Features
             return dataBitmap;
         }
 
+        public void setBitmap(Bitmap bitmap)
+        {
+            dataBitmap = bitmap;
+        }
 
         // Convert list of AForge.NET's IntPoint to array of .NET's Point
         private static System.Drawing.Point[] PointsListToArray(List<IntPoint> list)
