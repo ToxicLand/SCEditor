@@ -25,8 +25,8 @@ namespace SCEditor.Features
         private Dictionary<ushort, ushort> _shapesAlreadyAdded;
         private Dictionary<ushort, ushort> _movieClipsAlreadyAdded;
         private Dictionary<ushort, ushort> _textFieldsAlreadyAdded;
-        private List<ushort> _matricesToAdd;
-        private List<ushort> _colorTransformToAdd;
+        private List<(int, ushort)> _matricesToAdd;
+        private List<(int, ushort)> _colorTransformToAdd;
         private bool _createNewTexture;
         private bool _newTextureImport = false;
         private ushort _textureToImportToID;
@@ -45,8 +45,8 @@ namespace SCEditor.Features
             _shapesAlreadyAdded = new Dictionary<ushort, ushort>();
             _movieClipsAlreadyAdded = new Dictionary<ushort, ushort>();
             _textFieldsAlreadyAdded = new Dictionary<ushort, ushort>();
-            _matricesToAdd = new List<ushort>();
-            _colorTransformToAdd = new List<ushort>();
+            _matricesToAdd = new List<(int, ushort)>();
+            _colorTransformToAdd = new List<(int, ushort)>();
             _shapeChunksTMatrix = new List<(ushort, List<Matrix>)>();
             _texturesToAdd = new List<(byte, int)>();
             _queriesToPerform = new Dictionary<string, Dictionary<string, Dictionary<string, float>>>();
@@ -166,8 +166,8 @@ namespace SCEditor.Features
 
                 string crTroops = "bandit_;chr_musketeer_;electro_wizard_;elixir_blob_;elixir_golem_;elixir_golemite_;GoldenKnight_;magic_archer_;mega_knight_;princess_;rascal_;skeletondragon_;SkeletonKing_";
                 string bbTroops = "tank_";
-                //string bbBuildings = "barb_wire;barbwire_lvl1_0;barbwire_lvl1_1_a;barbwire_lvl1_1_b;barbwire_lvl1_2_a;barbwire_lvl1_2_b;barbwire_lvl1_3;boom_destroyed_1;boom_destroyed_2;boom_destroyed_3;cannon_destroyed_1;cannon_destroyed_2;cannon_destroyed_3;cannon_destroyed_4;cannon_destroyed_5;flamethrower_destroyed_1;flamethrower_destroyed_2;flamethrower_destroyed_3;gen_build_2;gen_build_3;gen_build_4;gen_build_5;gen_construction_2;gen_construction_3;gen_construction_4;gen_construction_5;gen_destroyed_2;gen_destroyed_2_native;gen_destroyed_3;gen_destroyed_3_C;gen_destroyed_3_M;gen_destroyed_3_native;gen_destroyed_3_sabotage;gen_destroyed_4;gen_destroyed_4_C;gen_destroyed_4_M;gen_destroyed_5;gen_destroyed_5_C;gen_destroyed_5_M;gen_destroyed_cell;hatch_destroyed_01;machinegun_destroyed_1;machinegun_destroyed_2;machinegun_destroyed_3;machinegun_destroyed_4;shock_destroyed_1;shock_destroyed_2;taunt_tower_destroyed;mortar_destroyed_1;mortar_destroyed_2;mortar_destroyed_3;mortar_destroyed_4;sniper_destroyed_1;sniper_destroyed_2;sniper_destroyed_3;sniper_destroyed_4;cryobomb_destroyed_1;tower_turret_lvl1;tower_turret_lvl2;tower_turret_lvl3;tower_turret_lvl4;tower_turret_lvl5;tower_turret_lvl6;tower_turret_lvl7;tower_turret_lvl8;tower_turret_lvl10;tower_turret_lvl11;tower_turret_lvl12;tower_turret_lvl13;tower_turret_lvl14;tower_turret_lvl15;tower_turret_lvl16;tower_turret_lvl17;tower_turret_lvl18;tower_turret_lvl19;tower_turret_lvl21;tower_turret_lvl22;mortar_lvl1;mortar_lvl2;mortar_lvl3;mortar_lvl4;mortar_lvl5;mortar_lvl6;mortar_lvl7;mortar_lvl8;mortar_lvl9;mortar_lvl11;mortar_lvl12;mortar_lvl13;mortar_lvl14;mortar_lvl16;mortar_lvl21;mortar_lvl22;mortar_lvl23;machinegun_turret_lvl1;machinegun_turret_lvl2;machinegun_turret_lvl3;machinegun_turret_lvl4;machinegun_turret_lvl5;machinegun_turret_lvl6;machinegun_turret_lvl8;machinegun_turret_lvl9;machinegun_turret_lvl11;machinegun_turret_lvl12;machinegun_turret_lvl21;machinegun_turret_lvl22;missile_launcher_lvl1;missile_launcher_lvl2;missile_launcher_lvl3;missile_launcher_lvl5;missile_launcher_lvl6;missile_launcher_lvl7;missile_launcher_lvl9;missile_launcher_lvl10;flame_thrower_lvl1;flame_thrower_lvl2;flame_thrower_lvl5;flame_thrower_lvl6;flame_thrower_lvl7;flame_thrower_lvl9;flame_thrower_lvl10;flame_thrower_lvl11;flame_thrower_lvl12;flame_thrower_lvl14;flame_thrower_lvl15;flame_thrower_lvl18;flame_thrower_lvl19;flame_thrower_lvl20;basic_cannon_lvl1;basic_cannon_lvl2;basic_cannon_lvl3;basic_cannon_lvl4;basic_cannon_lvl5;basic_cannon_lvl6;basic_cannon_lvl10;basic_cannon_lvl11;basic_cannon_lvl12;basic_cannon_lvl13;basic_cannon_lvl14;basic_cannon_lvl15;basic_cannon_lvl16;basic_cannon_lvl19;basic_cannon_lvl21;basic_cannon_lvl22;boom_cannon_lvl1;boom_cannon_lvl2;boom_cannon_lvl3;boom_cannon_lvl4;boom_cannon_lvl5;boom_cannon_lvl6;boom_cannon_lvl7;boom_cannon_lvl8;boom_cannon_lvl9;boom_cannon_lvl10;boom_cannon_lvl11;boom_cannon_lvl12;boom_cannon_lvl13;boom_cannon_lvl15;boom_cannon_lvl16;shock_launcher_lvl1;shock_launcher_lvl2;shock_launcher_lvl3;shock_launcher_lvl4;shock_launcher_lvl5;shock_launcher_lvl6;shock_launcher_lvl7;shock_launcher_lvl8;shock_minigun_lvl1;shock_minigun_lvl2;shock_minigun_lvl3;lazer_lvl1;lazer_lvl2;lazer_lvl3;attack_booster_lvl1;attack_booster_lvl2;attack_booster_lvl3;doom_cannon_lvl1;doom_cannon_lvl2;doom_cannon_lvl3;shieldgenerator_lvl1;shieldgenerator_lvl2;shieldgenerator_lvl3;harpoon_lvl1;harpoon_lvl2;harpoon_lvl3;flame_surprise_lvl1;flame_surprise_lvl1_appear;flame_surprise_lvl1_hide;flame_surprise_lvl1_hatch;flame_surprise_lvl2;flame_surprise_lvl2_appear;flame_surprise_lvl2_hide;flame_surprise_lvl2_hatch;flame_surprise_lvl3;flame_surprise_lvl3_appear;flame_surprise_lvl3_hide;flame_surprise_lvl3_hatch;super_sniper_lvl1;super_sniper_lvl2;super_sniper_lvl3;microwave_tower_lvl1;microwave_tower_lvl2;microwave_tower_lvl3;bubble_generator_lvl1;bubble_generator_lvl2;bubble_generator_lvl3;cannon_surprise_lvl1_appear;cannon_surprise_lvl1_hide;cannon_surprise_lvl1_hatch;cannon_surprise_lvl2_appear;cannon_surprise_lvl2_hide;cannon_surprise_lvl2_hatch;cannon_surprise_lvl3_appear;cannon_surprise_lvl3_hide;cannon_surprise_lvl3_hatch;bomb_tower_lvl1;bomb_tower_lvl2;bomb_tower_lvl3;bomb_tower_triggered;bomb_tower_triggered_2;bomb_tower_triggered_3;hidden_cannon_lvl1;hidden_cannon_lvl2;hidden_cannon_lvl3;freezeray_beam;laser_beam_glow";
-                string bbBuildings = "reef_b_base_guard_tower;reef_b_base_guard_tower_2;Machinegun_10;Machinegun_10_coop;Machinegun_1;reef_base_3x3_23_homeisland;reef_base_3x3_24_homeisland;reef_b_base_mortar;reef_b_base_mortar_2;reef_b_base_mortar_3;proto_base;proto_base_flotsamturret;reef_b_base_guard_tower_ice;reef_b_base_guard_tower_2_ice;Machinegun_10_ice;Machinegun_1_ice;reef_b_base_mortar_ice;reef_b_base_mortar_ice_2;reef_b_base_mortar_ice_3;reef_base_3x3_23_ice;reef_base_3x3_24_ice";
+                string bbBuildings = "barb_wire;barbwire_lvl1_0;barbwire_lvl1_1_a;barbwire_lvl1_1_b;barbwire_lvl1_2_a;barbwire_lvl1_2_b;barbwire_lvl1_3;boom_destroyed_1;boom_destroyed_2;boom_destroyed_3;cannon_destroyed_1;cannon_destroyed_2;cannon_destroyed_3;cannon_destroyed_4;cannon_destroyed_5;flamethrower_destroyed_1;flamethrower_destroyed_2;flamethrower_destroyed_3;gen_build_2;gen_build_3;gen_build_4;gen_build_5;gen_construction_2;gen_construction_3;gen_construction_4;gen_construction_5;gen_destroyed_2;gen_destroyed_2_native;gen_destroyed_3;gen_destroyed_3_C;gen_destroyed_3_M;gen_destroyed_3_native;gen_destroyed_3_sabotage;gen_destroyed_4;gen_destroyed_4_C;gen_destroyed_4_M;gen_destroyed_5;gen_destroyed_5_C;gen_destroyed_5_M;gen_destroyed_cell;hatch_destroyed_01;machinegun_destroyed_1;machinegun_destroyed_2;machinegun_destroyed_3;machinegun_destroyed_4;shock_destroyed_1;shock_destroyed_2;taunt_tower_destroyed;mortar_destroyed_1;mortar_destroyed_2;mortar_destroyed_3;mortar_destroyed_4;sniper_destroyed_1;sniper_destroyed_2;sniper_destroyed_3;sniper_destroyed_4;cryobomb_destroyed_1;tower_turret_lvl1;tower_turret_lvl2;tower_turret_lvl3;tower_turret_lvl4;tower_turret_lvl5;tower_turret_lvl6;tower_turret_lvl7;tower_turret_lvl8;tower_turret_lvl10;tower_turret_lvl11;tower_turret_lvl12;tower_turret_lvl13;tower_turret_lvl14;tower_turret_lvl15;tower_turret_lvl16;tower_turret_lvl17;tower_turret_lvl18;tower_turret_lvl19;tower_turret_lvl21;tower_turret_lvl22;mortar_lvl1;mortar_lvl2;mortar_lvl3;mortar_lvl4;mortar_lvl5;mortar_lvl6;mortar_lvl7;mortar_lvl8;mortar_lvl9;mortar_lvl11;mortar_lvl12;mortar_lvl13;mortar_lvl14;mortar_lvl16;mortar_lvl21;mortar_lvl22;mortar_lvl23;machinegun_turret_lvl1;machinegun_turret_lvl2;machinegun_turret_lvl3;machinegun_turret_lvl4;machinegun_turret_lvl5;machinegun_turret_lvl6;machinegun_turret_lvl8;machinegun_turret_lvl9;machinegun_turret_lvl11;machinegun_turret_lvl12;machinegun_turret_lvl21;machinegun_turret_lvl22;missile_launcher_lvl1;missile_launcher_lvl2;missile_launcher_lvl3;missile_launcher_lvl5;missile_launcher_lvl6;missile_launcher_lvl7;missile_launcher_lvl9;missile_launcher_lvl10;flame_thrower_lvl1;flame_thrower_lvl2;flame_thrower_lvl5;flame_thrower_lvl6;flame_thrower_lvl7;flame_thrower_lvl9;flame_thrower_lvl10;flame_thrower_lvl11;flame_thrower_lvl12;flame_thrower_lvl14;flame_thrower_lvl15;flame_thrower_lvl18;flame_thrower_lvl19;flame_thrower_lvl20;basic_cannon_lvl1;basic_cannon_lvl2;basic_cannon_lvl3;basic_cannon_lvl4;basic_cannon_lvl5;basic_cannon_lvl6;basic_cannon_lvl10;basic_cannon_lvl11;basic_cannon_lvl12;basic_cannon_lvl13;basic_cannon_lvl14;basic_cannon_lvl15;basic_cannon_lvl16;basic_cannon_lvl19;basic_cannon_lvl21;basic_cannon_lvl22;boom_cannon_lvl1;boom_cannon_lvl2;boom_cannon_lvl3;boom_cannon_lvl4;boom_cannon_lvl5;boom_cannon_lvl6;boom_cannon_lvl7;boom_cannon_lvl8;boom_cannon_lvl9;boom_cannon_lvl10;boom_cannon_lvl11;boom_cannon_lvl12;boom_cannon_lvl13;boom_cannon_lvl15;boom_cannon_lvl16;shock_launcher_lvl1;shock_launcher_lvl2;shock_launcher_lvl3;shock_launcher_lvl4;shock_launcher_lvl5;shock_launcher_lvl6;shock_launcher_lvl7;shock_launcher_lvl8;shock_minigun_lvl1;shock_minigun_lvl2;shock_minigun_lvl3;lazer_lvl1;lazer_lvl2;lazer_lvl3;attack_booster_lvl1;attack_booster_lvl2;attack_booster_lvl3;doom_cannon_lvl1;doom_cannon_lvl2;doom_cannon_lvl3;shieldgenerator_lvl1;shieldgenerator_lvl2;shieldgenerator_lvl3;harpoon_lvl1;harpoon_lvl2;harpoon_lvl3;flame_surprise_lvl1;flame_surprise_lvl1_appear;flame_surprise_lvl1_hide;flame_surprise_lvl1_hatch;flame_surprise_lvl2;flame_surprise_lvl2_appear;flame_surprise_lvl2_hide;flame_surprise_lvl2_hatch;flame_surprise_lvl3;flame_surprise_lvl3_appear;flame_surprise_lvl3_hide;flame_surprise_lvl3_hatch;super_sniper_lvl1;super_sniper_lvl2;super_sniper_lvl3;microwave_tower_lvl1;microwave_tower_lvl2;microwave_tower_lvl3;bubble_generator_lvl1;bubble_generator_lvl2;bubble_generator_lvl3;cannon_surprise_lvl1_appear;cannon_surprise_lvl1_hide;cannon_surprise_lvl1_hatch;cannon_surprise_lvl2_appear;cannon_surprise_lvl2_hide;cannon_surprise_lvl2_hatch;cannon_surprise_lvl3_appear;cannon_surprise_lvl3_hide;cannon_surprise_lvl3_hatch;bomb_tower_lvl1;bomb_tower_lvl2;bomb_tower_lvl3;bomb_tower_triggered;bomb_tower_triggered_2;bomb_tower_triggered_3;hidden_cannon_lvl1;hidden_cannon_lvl2;hidden_cannon_lvl3;freezeray_beam;laser_beam_glow";
+                //string bbBuildings = "reef_b_base_guard_tower;reef_b_base_guard_tower_2;Machinegun_10;Machinegun_10_coop;Machinegun_1;reef_base_3x3_23_homeisland;reef_base_3x3_24_homeisland;reef_b_base_mortar;reef_b_base_mortar_2;reef_b_base_mortar_3;proto_base;proto_base_flotsamturret;reef_b_base_guard_tower_ice;reef_b_base_guard_tower_2_ice;Machinegun_10_ice;Machinegun_1_ice;reef_b_base_mortar_ice;reef_b_base_mortar_ice_2;reef_b_base_mortar_ice_3;reef_base_3x3_23_ice;reef_base_3x3_24_ice";
 
                 List<string> crTroopsList = crTroops.Split(';').ToList();
                 List<string> bbTroopsList = bbTroops.Split(';').ToList();
@@ -178,7 +178,7 @@ namespace SCEditor.Features
                     Export exportToAdd = (Export)((ScObject)item.exportData);
                     bool crChangeName = false;
                     bool bbChangeName = false;
-                    bool bbBuildingChangeName = true;
+                    bool bbBuildingChangeName = false;
 
                     if (crChangeName && crTroopsList.FindIndex(name => exportToAdd.GetName().Contains(name)) != -1)
                     {
@@ -362,28 +362,34 @@ namespace SCEditor.Features
                     _scFile.AddChange(newExport);
                 }
 
-                foreach (int id in _matricesToAdd)
+                for (int i = 0; i < _matricesToAdd.Count; i++)
                 {
-                    if (scToImportFrom.GetMatrixs().Count < id)
+                    int storageID = _matricesToAdd[i].Item1;
+                    ushort matrixID = _matricesToAdd[i].Item2;
+
+                    if (scToImportFrom.GetMatrixs(_matricesToAdd[i].Item1).Count < matrixID)
                     {
-                        Console.WriteLine($"{id} matrix not found");
+                        Console.WriteLine($"{matrixID} matrix not found in storage {storageID}");
                         continue;
                     }
 
-                    _scFile.addMatrix(scToImportFrom.GetMatrixs()[id]);
-                    _scFile.addPendingMatrix(scToImportFrom.GetMatrixs()[id]);
+                    _scFile.addMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID]);
+                    _scFile.addPendingMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID]);
                 }
 
-                foreach (int id in _colorTransformToAdd)
+                for (int i = 0; i < _colorTransformToAdd.Count; i++)
                 {
-                    if (scToImportFrom.getColors().Count < id)
+                    int storageID = _colorTransformToAdd[i].Item1;
+                    ushort colorID = _colorTransformToAdd[i].Item2;
+
+                    if (scToImportFrom.getColors(storageID).Count < colorID)
                     {
-                        Console.WriteLine($"{id} color not found");
+                        Console.WriteLine($"{storageID} color not found in storage {storageID}");
                         continue;
                     }
 
-                    _scFile.addColor(scToImportFrom.getColors()[id]);
-                    _scFile.addPendingColor(scToImportFrom.getColors()[id]);
+                    _scFile.addColor(scToImportFrom.getColors(storageID)[colorID]);
+                    _scFile.addPendingColor(scToImportFrom.getColors(storageID)[colorID]);
                 }
 
                 if (_createNewTexture)
@@ -430,19 +436,19 @@ namespace SCEditor.Features
                 }
                 else
                 {
-                    int newMatrixId = _matricesToAdd.FindIndex(m => m == movieClipToAdd.timelineArray[3 * i + 1]);
+                    int newMatrixId = _matricesToAdd.FindIndex(m => (m.Item1 == movieClipToAdd._transformStorageId && m.Item2 == movieClipToAdd.timelineArray[3 * i + 1]));
 
                     if (newMatrixId == -1)
                     {
-                        _matricesToAdd.Add(movieClipToAdd.timelineArray[3 * i + 1]);
+                        _matricesToAdd.Add((movieClipToAdd._transformStorageId, movieClipToAdd.timelineArray[3 * i + 1]));
                         newMatrixId = _matricesToAdd.Count - 1;
                     }
                     else
                     {
-                        newMatrixId = _matricesToAdd.IndexOf(movieClipToAdd.timelineArray[3 * i + 1]);
+                        newMatrixId = _matricesToAdd.IndexOf((movieClipToAdd._transformStorageId, movieClipToAdd.timelineArray[3 * i + 1]));
                     }
 
-                    newTimelineArray[3 * i + 1] = (ushort)(_scFile.GetMatrixs().Count + newMatrixId);
+                    newTimelineArray[3 * i + 1] = (ushort)(_scFile.GetMatrixs(0).Count + newMatrixId);
                 }
 
                 if (movieClipToAdd.timelineArray[3 * i + 2] == 65535)
@@ -451,19 +457,19 @@ namespace SCEditor.Features
                 }
                 else
                 {
-                    int newcolorTransformId = _colorTransformToAdd.FindIndex(c => c == movieClipToAdd.timelineArray[3 * i + 2]); ;
+                    int newcolorTransformId = _colorTransformToAdd.FindIndex(c => (c.Item1 == movieClipToAdd._transformStorageId && c.Item2 == movieClipToAdd.timelineArray[3 * i + 2]));
 
                     if (newcolorTransformId == -1)
                     {
-                        _colorTransformToAdd.Add(movieClipToAdd.timelineArray[3 * i + 2]);
+                        _colorTransformToAdd.Add((movieClipToAdd._transformStorageId, movieClipToAdd.timelineArray[3 * i + 2]));
                         newcolorTransformId = _colorTransformToAdd.Count - 1;
                     }
                     else
                     {
-                        newcolorTransformId = _colorTransformToAdd.IndexOf(movieClipToAdd.timelineArray[3 * i + 2]);
+                        newcolorTransformId = _colorTransformToAdd.IndexOf((movieClipToAdd._transformStorageId, movieClipToAdd.timelineArray[3 * i + 2]));
                     }
 
-                    newTimelineArray[3 * i + 2] = (ushort)(_scFile.getColors().Count + newcolorTransformId);
+                    newTimelineArray[3 * i + 2] = (ushort)(_scFile.getColors(0).Count + newcolorTransformId);
                 }
 
                 i++;
@@ -698,12 +704,12 @@ namespace SCEditor.Features
             int shapeChunkTMatrixIndex = _shapeChunksTMatrix.FindIndex(X => X.Item1 == maxId);
             if (shapeChunkTMatrixIndex != -1)
             {
-                _shapeChunksTMatrix[shapeChunkTMatrixIndex].Item2.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
+                _shapeChunksTMatrix[shapeChunkTMatrixIndex].Item2.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd));
             }
             else
             {
                 List<Matrix> newList = new List<Matrix>();
-                newList.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd, useScaleFactor));
+                newList.Add(getShapeChunkMatrixTransformation(shapeChunkToAdd));
                 _shapeChunksTMatrix.Add((maxId, ((Matrix[])newList.ToArray().Clone()).ToList()));
             }
 
@@ -806,10 +812,10 @@ namespace SCEditor.Features
 
             int generatedTextureScale = 1;
             int generatedSpritesExtrude = 0;
-            int generatedSpritesPadding = 6;
+            int generatedSpritesPadding = 8;
             int generatedTextureMaxWidth = 4096;
             int generatedTextureMaxHeight = 4096;
-            int generatedTexturePolygonTolerance = 120;
+            int generatedTexturePolygonTolerance = 100;
             string generatedTexturePixelFormat = isGeneratedTextureRGBA4444 ? "RGBA4444 --dither-type Linear" : "RGBA8888";
             string generatedSpritesPackMode = "Best";
             string generatedSpritesAlphaHandling = "KeepTransparentPixels"; //"ClearTransparentPixels";
@@ -1026,16 +1032,12 @@ namespace SCEditor.Features
             return newPointF;
         }
 
-        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN, bool useScaleFactor)
+        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN)
         {
             PointF[] shapeChunkUVData = (PointF[])shapeChunkIN.UV.Clone();
             PointF[] shapeChunkXYData = (PointF[])shapeChunkIN.XY.Clone();
             float leftWidth = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Width;
             float topHeight = scToImportFrom.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Height;
-            float scaleFactor = _scaleFactor;
-
-            if (!useScaleFactor)
-                scaleFactor = 1;
 
             for (int i = 0; i < shapeChunkUVData.Length; i++)
             {
@@ -1054,22 +1056,6 @@ namespace SCEditor.Features
             {
                 shapeChunkUVData[i].X -= leftWidth;
                 shapeChunkUVData[i].Y -= topHeight;
-
-                if (scaleFactor != 1)
-                {
-                    shapeChunkUVData[i].X *= scaleFactor;
-                    shapeChunkUVData[i].Y *= scaleFactor;
-                }
-            }
-
-            if (scaleFactor != 1)
-            {
-                for (int i = 0; i < shapeChunkXYData.Length; i++)
-                {
-
-                    shapeChunkXYData[i].X *= scaleFactor;
-                    shapeChunkXYData[i].Y *= scaleFactor;
-                }
             }
 
             double[,] matrixArrayUV =
@@ -1085,14 +1071,12 @@ namespace SCEditor.Features
                 }
             };
 
-
-
             double[,] matrixArrayXY = {
                 {
-                     shapeChunkIN.XY[0].X, shapeChunkIN.XY[1].X, shapeChunkIN.XY[2].X
+                     shapeChunkXYData[0].X, shapeChunkXYData[1].X, shapeChunkXYData[2].X
                 },
                 {
-                     shapeChunkIN.XY[0].Y, shapeChunkIN.XY[1].Y, shapeChunkIN.XY[2].Y
+                     shapeChunkXYData[0].Y, shapeChunkXYData[1].Y, shapeChunkXYData[2].Y
                 },
                 {
                      1, 1, 1

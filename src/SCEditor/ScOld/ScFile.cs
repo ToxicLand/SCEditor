@@ -25,8 +25,6 @@ namespace SCEditor.ScOld
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
             _pendingMatrixs = new List<Matrix>();
-            _matrixs = new List<Matrix>();
-            _colors = new List<Tuple<Color, byte, Color>>();
             _infoFile = infoFile;
             _textureFile = textureFile;
             _pendingColors = new List<Tuple<Color, byte, Color>>();
@@ -49,8 +47,6 @@ namespace SCEditor.ScOld
         private List<ScObject> _textures;
         private List<ScObject> _shapes;
         private List<ScObject> _exports;
-        private List<Matrix> _matrixs;
-        private List<Tuple<Color, byte, Color>> _colors;
         private List<ScObject> _movieClips;
         private List<ScObject> _pendingChanges;
         private List<ScObject> _movieClipsModifier;
@@ -59,6 +55,7 @@ namespace SCEditor.ScOld
         private List<string> _fontNames;
         private List<ScObject> _textFields;
         private List<ScObject> _currentRenderingMovieClips;
+        private List<(List<Matrix>, List<Tuple<Color, byte, Color>>)> _transformStorage;
 
         private readonly string _infoFile;
         private readonly string _textureFile;
@@ -71,6 +68,7 @@ namespace SCEditor.ScOld
         private long _eofTexOffset;
         private long _exportStartOffset;
         private long _sofTagsOffset;
+        private int _transformStorageID;
 
         #endregion
 
@@ -124,9 +122,9 @@ namespace SCEditor.ScOld
             return _infoFile;
         }
 
-        public List<Tuple<Color, byte, Color>> getColors()
+        public List<Tuple<Color, byte, Color>> getColors(int storageID)
         {
-            return _colors;
+            return _transformStorage[storageID].Item2;
         }
 
         public string GetTextureFileName()
@@ -139,14 +137,17 @@ namespace SCEditor.ScOld
             return _movieClips;
         }
 
-        public List<Matrix> GetMatrixs()
+        public List<Matrix> GetMatrixs(int storageID)
         {
-            return _matrixs;
+            return _transformStorage[storageID].Item1;
         }
 
         public void addMatrix(Matrix matrix)
         {
-            _matrixs.Add(matrix);
+            if (_transformStorage[0].Item1.Count == 65535)
+                throw new Exception("Not implemented");
+
+            _transformStorage[0].Item1.Add(matrix);
         }
         public List<ScObject> GetShapes()
         {
@@ -744,6 +745,10 @@ namespace SCEditor.ScOld
                     _matrixCount = reader.ReadUInt16();
                     _colorsCount = reader.ReadUInt16();
 
+                    _transformStorageID = 0;
+                    _transformStorage = new List<(List<Matrix>, List<Tuple<Color, byte, Color>>)>();
+                    _transformStorage.Add((new List<Matrix>(), new List<Tuple<Color, byte, Color>>()));
+
                     for (int i = 0; i < _shapeCount; i++)
                     {
                         _shapes.Add(null);
@@ -831,7 +836,7 @@ namespace SCEditor.ScOld
                                 _textFieldCount != textFieldIndex ||
                                 _colorsCount != colorIndex)
                                 {
-                                    throw new Exception("Didn't load whole .sc properly.");
+                                    //throw new Exception("Didn't load whole .sc properly.");
                                 }
 
                                 _eofOffset = offset;
@@ -934,7 +939,7 @@ namespace SCEditor.ScOld
                                 }
                                 Matrix _Matrix = new Matrix(Points[0] * 0.00097656f, Points[1] * 0.00097656f, Points[2] * 0.00097656f,
                                     Points[3] * 0.00097656f, Points[4] / 20f, Points[5] / 20f);
-                                this._matrixs.Add(_Matrix);
+                                this._transformStorage[_transformStorageID].Item1.Add(_Matrix);
 
                                 _eofMatrixOffset = reader.BaseStream.Position;
 
@@ -949,7 +954,7 @@ namespace SCEditor.ScOld
                                 var rm = reader.ReadByte();
                                 var gm = reader.ReadByte();
                                 var bm = reader.ReadByte();
-                                this._colors.Add(new Tuple<Color, byte, Color>(Color.FromArgb(ra, ga, ba), am, Color.FromArgb(rm, gm, bm)));
+                                this._transformStorage[_transformStorageID].Item2.Add(new Tuple<Color, byte, Color>(Color.FromArgb(ra, ga, ba), am, Color.FromArgb(rm, gm, bm)));
 
                                 _eofColorsOffset = reader.BaseStream.Position;
                                 colorIndex += 1;
@@ -995,7 +1000,7 @@ namespace SCEditor.ScOld
                                 }
                                 Matrix _Matrix2 = new Matrix(Points2[0] / 65535f, Points2[1] / 65535f, Points2[2] / 65535f,
                                     Points2[3] / 65535f, Points2[4] / 20f, Points2[5] / 20f);
-                                this._matrixs.Add(_Matrix2);
+                                this._transformStorage[_transformStorageID].Item1.Add(_Matrix2);
 
                                 _eofMatrixOffset = reader.BaseStream.Position;
 
@@ -1020,6 +1025,14 @@ namespace SCEditor.ScOld
                                 mcmo.Read(reader, tag);
 
                                 this._movieClipsModifier[movieClipModifierIndex++] = mcmo;
+                                break;
+
+                            case "2A": //42
+                                ushort mCount = reader.ReadUInt16();
+                                ushort cCount = reader.ReadUInt16();
+
+                                _transformStorage.Add((new List<Matrix>(), new List<Tuple<Color, byte, Color>>()));
+                                _transformStorageID += 1;
                                 break;
 
                             default:
@@ -1083,7 +1096,9 @@ namespace SCEditor.ScOld
                                 }
                                 else
                                 {
-                                    throw new Exception($"MovieClip with ID {mv.Id} has children id {tcId} of invalid type.");
+                                    string err = $"MovieClip with ID {mv.Id} has children id {tcId} of invalid type.";
+                                    MessageBox.Show(err, "Invalid Children Type");
+                                    Console.WriteLine(err);
                                 }
                             }
                         }
@@ -1121,8 +1136,6 @@ namespace SCEditor.ScOld
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
             _pendingMatrixs = new List<Matrix>();
-            _matrixs = new List<Matrix>();
-            _colors = new List<Tuple<Color, byte, Color>>();
             _exportCount = 0;
             _shapeCount = 0;
             _movieClipCount = 0;
@@ -1233,7 +1246,10 @@ namespace SCEditor.ScOld
 
         public void addColor(Tuple<Color, byte, Color> color)
         {
-            _colors.Add(color);
+            if (_transformStorage[0].Item2.Count == 65535)
+                throw new Exception("Not implemented");
+
+            _transformStorage[0].Item2.Add(color);
         }
 
         public void addRenderingItem(ScObject item)

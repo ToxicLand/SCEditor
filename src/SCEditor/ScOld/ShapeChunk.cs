@@ -121,7 +121,7 @@ namespace SCEditor.ScOld
             if (texture == null)
                 throw new InvalidOperationException($"Texture {_textureId} wasn't loaded yet.");
 
-            _vertexCount = id == "04" ? Convert.ToByte(4) : br.ReadByte();
+            _vertexCount = id == "04" ? 4 : br.ReadByte();
 
             _xy = new PointF[_vertexCount];
             _uv = new PointF[_vertexCount];
@@ -301,9 +301,9 @@ namespace SCEditor.ScOld
                 }
             }
         }
-        public override void Write(FileStream input, int inOffset, out int outOffset)
+        public void Write(Stream input, out int outOffset)
         {
-            outOffset = inOffset;
+            outOffset = 0;
             var texture = (Texture)_scFile.GetTextures()[_textureId];
 
             // Texture ID

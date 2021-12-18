@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -17,6 +18,11 @@ namespace SCEditor.ScOld
     public sealed class MovieClip : ScObject
     {
         #region Constructors
+
+        MovieClip()
+        {
+            _transformStorageId = 0;
+        }
 
         public MovieClip(ScFile scs , short dataType)
         {
@@ -99,7 +105,7 @@ namespace SCEditor.ScOld
         private ushort _timelineChildrenCount;
         private ushort[] _timelineChildrenId;
         private Rect _scalingGrid;
-        private byte _uk63;
+        public byte _transformStorageId { get; set; } // change
         private string[] _timelineChildrenNames;
         private int _timelineOffsetCount;
         private ushort[] _timelineOffsetArray;
@@ -276,7 +282,7 @@ namespace SCEditor.ScOld
                             break;
 
                         case 41:
-                            _uk63 = br.ReadByte();
+                            _transformStorageId = br.ReadByte();
                             break;
 
                         case 11:
@@ -619,8 +625,9 @@ namespace SCEditor.ScOld
 
             for (int i = 0; i < frameTimelineCount; i++)
             {
-                Matrix childrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[timelineIndex + 1]] : null;
+                Matrix childrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
                 Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
+                Tuple<Color, byte, Color> colorData = timelineArray[timelineIndex + 2] != 0xFFFF ? this._scFile.getColors(_transformStorageId)[timelineArray[timelineIndex + 2]] : null;
 
                 if (options.MatrixData != null)
                     matrixData.Multiply(options.MatrixData);
@@ -716,7 +723,28 @@ namespace SCEditor.ScOld
                                     originTransform.Translate(-x, -y);
                                     g.Transform = originTransform;
 
-                                    g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
+                                    ImageAttributes attr = new ImageAttributes();
+
+                                    if (colorData != null)
+                                    {
+                                        //ColorMap[] colorMap = new ColorMap[1];
+                                        //colorMap[0] = new ColorMap();
+                                        //colorMap[0].OldColor = colorData.Item1;
+
+                                        //if (colorData.Item2 != 0xFF)
+                                        //{
+                                        //    Color newCol = Color.FromArgb(colorData.Item2, colorData.Item3.R, colorData.Item3.G, colorData.Item3.B);
+                                        //    colorMap[0].NewColor = newCol;
+                                        //}
+                                        //else
+                                        //{
+                                        //    colorMap[0].NewColor = colorData.Item3;
+                                        //}
+
+                                        //attr.SetRemapTable(colorMap);
+                                    }       
+
+                                    g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel, attr);
 
                                     if (options.ViewPolygons)
                                     {
@@ -737,7 +765,7 @@ namespace SCEditor.ScOld
                     {
                         MovieClip extramovieClip = (MovieClip)_scFile.GetMovieClips()[movieClipIndex];
 
-                        Matrix newChildrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[timelineIndex + 1]] : null;
+                        Matrix newChildrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
                         Matrix newMatrix = newChildrenMatrixData != null ? newChildrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
 
 
@@ -802,7 +830,7 @@ namespace SCEditor.ScOld
                 {
                     Shape shapeToRender = (Shape)_scFile.GetShapes()[shapeIndex];
 
-                    Matrix childrenMatrixData = timelineArray[(i * 3) + 1] != 0xFFFF ? this._scFile.GetMatrixs()[timelineArray[(i * 3) + 1]] : null;
+                    Matrix childrenMatrixData = timelineArray[(i * 3) + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[(i * 3) + 1]] : null;
                     Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
 
                     if (matrixIn != null)

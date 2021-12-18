@@ -17,6 +17,7 @@ using GrahamConvexHull = Accord.Math.Geometry.GrahamConvexHull;
 using PointsCloud = Accord.Math.Geometry.PointsCloud;
 using System.Drawing.Drawing2D;
 using Point = System.Drawing.Point;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace SCEditor.Features
 {
@@ -24,6 +25,9 @@ namespace SCEditor.Features
     {
         private PointF[] _oldUVArray;
         private List<PointF> _newUVArray;
+
+        private ScObject scData;
+        private ScFile scFile;
 
         private float _offsetXMin;
         private float _offsetYMin;
@@ -36,8 +40,129 @@ namespace SCEditor.Features
         private List<PointF> _potentialPoints;
         private List<double> _potentialPointsDistance;
 
+        public bool fixPoints(ScObject data, ScFile file)
+        {
+            scData = data;
+            scFile = file;
+
+            Matrix transformMatrix = getShapeChunkMatrixTransformation((ShapeChunk)data);
+
+            _oldUVArray = ((PointF[])((ShapeChunk)data).UV.Clone());
+
+            List<PointF> newUVArray = performGarham(_oldUVArray);
+
+            if (newUVArray.ToArray() == _oldUVArray)
+            {
+                Console.WriteLine("UVArray same");
+                    return false;
+            }
+                
+            PointF[] UVNoOffsetForXY = findUVDifference(newUVArray.ToArray(), (ShapeChunk)data);
+            transformMatrix.TransformPoints(UVNoOffsetForXY);
+
+            if (newUVArray.Count != UVNoOffsetForXY.Length)
+            {
+                Console.WriteLine("UV and XY length not same");
+                return false;
+            }
+
+            ((ShapeChunk)data).SetUV(newUVArray.ToArray());
+            ((ShapeChunk)data).SetXY(UVNoOffsetForXY);
+            ((ShapeChunk)data).SetVertexCount(newUVArray.Count);
+            return true;
+        }
+
+        public PointF[] findUVDifference(PointF[] UVArray, ShapeChunk shapeChunkIN)
+        {
+            PointF[] newPointF = (PointF[])UVArray.Clone();
+
+            float leftWidth = scFile.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Width;
+            float topHeight = scFile.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Height;
+
+            for (int i = 0; i < newPointF.Length; i++)
+            {
+                if (newPointF[i].X < leftWidth)
+                {
+                    leftWidth = newPointF[i].X;
+                }
+
+                if (newPointF[i].Y < topHeight)
+                {
+                    topHeight = newPointF[i].Y;
+                }
+            }
+
+            for (int i = 0; i < newPointF.Length; i++)
+            {
+                newPointF[i].X -= leftWidth;
+                newPointF[i].Y -= topHeight;
+            }
+
+            return newPointF;
+        }
+
+        private Matrix getShapeChunkMatrixTransformation(ShapeChunk shapeChunkIN)
+        {
+            PointF[] shapeChunkUVData = (PointF[])shapeChunkIN.UV.Clone();
+            PointF[] shapeChunkXYData = (PointF[])shapeChunkIN.XY.Clone();
+            float leftWidth = scFile.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Width;
+            float topHeight = scFile.GetTextures()[shapeChunkIN.GetTextureId()].Bitmap.Height;
+
+            for (int i = 0; i < shapeChunkUVData.Length; i++)
+            {
+                if (shapeChunkUVData[i].X < leftWidth)
+                {
+                    leftWidth = shapeChunkUVData[i].X;
+                }
+
+                if (shapeChunkUVData[i].Y < topHeight)
+                {
+                    topHeight = shapeChunkUVData[i].Y;
+                }
+            }
+
+            for (int i = 0; i < shapeChunkUVData.Length; i++)
+            {
+                shapeChunkUVData[i].X -= leftWidth;
+                shapeChunkUVData[i].Y -= topHeight;
+            }
+
+            double[,] matrixArrayUV =
+            {
+                {
+                    shapeChunkUVData[0].X, shapeChunkUVData[1].X, shapeChunkUVData[2].X
+                },
+                {
+                    shapeChunkUVData[0].Y, shapeChunkUVData[1].Y, shapeChunkUVData[2].Y
+                },
+                {
+                    1, 1, 1
+                }
+            };
+
+            double[,] matrixArrayXY = {
+                {
+                     shapeChunkXYData[0].X, shapeChunkXYData[1].X, shapeChunkXYData[2].X
+                },
+                {
+                     shapeChunkXYData[0].Y, shapeChunkXYData[1].Y, shapeChunkXYData[2].Y
+                },
+                {
+                     1, 1, 1
+                }
+            };
+
+            var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
+            var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
+            var inverseMatrixUV = matrixUV.Inverse();
+            var transformMatrix = matrixXY * inverseMatrixUV;
+
+            return new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+        }
+
         public PointF[] initiate(ScObject data)
         {
+            scData = data;
             _oldUVArray = ((PointF[])((ShapeChunk)data).UV.Clone());
 
             List<PointF> newUVArray = performGarham(_oldUVArray);
@@ -357,6 +482,8 @@ namespace SCEditor.Features
             List<PointF> finalUVArray = performGarham(_newUVArray.ToArray());
             return finalUVArray.ToArray();
         }
+
+        
 
         private List<PointF> performGarham(PointF[] inputList)
         {

@@ -144,59 +144,6 @@ namespace SCEditor.ScOld
             return true;
         }
 
-        public sealed override void Read(BinaryReader br, string id)
-        {
-            _shapeId = br.ReadUInt16();
-            _shapeChunkCount = br.ReadUInt16();
-
-            for (int i = 0; i < _shapeChunkCount; i++)
-            {
-                _chunks.Add(new ShapeChunk(_scFile));
-            }
-
-            _shapeChunkVertexCount = id == "12" ? br.ReadUInt16() : 4 * _shapeChunkCount;
-
-            int index = 0;
-
-            while (true)
-            {
-                byte chunkType;
-                while (true)
-                {
-                    chunkType = br.ReadByte();
-                    _length = (uint)br.ReadInt32();
-
-                    if (_length < 0)
-                        throw new Exception("Negative tag length in Shape.");
-
-                    if (chunkType == 17 || chunkType == 22)
-                    {
-                        ShapeChunk chunk = (ShapeChunk) _chunks[index];
-                        chunk.SetChunkId((ushort)index);
-                        chunk.SetShapeId(_shapeId);
-                        chunk.SetChunkType(chunkType);
-                        chunk.Read(br, id);
-
-                        index++;
-                    }
-                    else if (chunkType == 6)
-                    {
-                        throw new Exception("SupercellSWF::TAG_SHAPE_DRAW_COLOR_FILL_COMMAND not supported");
-                    }
-                    else 
-                    {
-                        break;
-                    }
-                }
-
-                if (chunkType == 0)
-                    break;
-
-                Console.WriteLine("Unmanaged chunk type " + chunkType);
-                br.ReadBytes((int)_length);
-            }
-        }
-
         public override Bitmap Render(RenderingOptions options)
         {
             try
@@ -366,6 +313,59 @@ namespace SCEditor.ScOld
             
         }
 
+        public sealed override void Read(BinaryReader br, string id)
+        {
+            _shapeId = br.ReadUInt16();
+            _shapeChunkCount = br.ReadUInt16();
+
+            for (int i = 0; i < _shapeChunkCount; i++)
+            {
+                _chunks.Add(new ShapeChunk(_scFile));
+            }
+
+            _shapeChunkVertexCount = id == "12" ? br.ReadUInt16() : 4 * _shapeChunkCount;
+
+            int index = 0;
+
+            while (true)
+            {
+                byte chunkType;
+                while (true)
+                {
+                    chunkType = br.ReadByte();
+                    _length = (uint)br.ReadInt32();
+
+                    if (_length < 0)
+                        throw new Exception("Negative tag length in Shape.");
+
+                    if (chunkType == 17 || chunkType == 22)
+                    {
+                        ShapeChunk chunk = (ShapeChunk)_chunks[index];
+                        chunk.SetChunkId((ushort)index);
+                        chunk.SetShapeId(_shapeId);
+                        chunk.SetChunkType(chunkType);
+                        chunk.Read(br, id);
+
+                        index++;
+                    }
+                    else if (chunkType == 6)
+                    {
+                        throw new Exception("SupercellSWF::TAG_SHAPE_DRAW_COLOR_FILL_COMMAND not supported");
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (chunkType == 0)
+                    break;
+
+                Console.WriteLine("Unmanaged chunk type " + chunkType);
+                br.ReadBytes((int)_length);
+            }
+        }
+
         public override void Write(FileStream input)
         {
             if (customAdded == true)
@@ -376,50 +376,8 @@ namespace SCEditor.ScOld
                 input.Write(BitConverter.GetBytes(18), 0, 1);
                 input.Write(BitConverter.GetBytes(0), 0, 4);
 
-                int dataLength = 0;
-
-                // ID And Chunk Count
-                input.Write(BitConverter.GetBytes(_shapeId), 0, 2);
-                input.Write(BitConverter.GetBytes(_chunks.Count), 0, 2);
-                dataLength += 4;
-
-                // Shape Chunk Vertex Count
-                int shapeVertexCount = 0;
-                int totalChunkLength = 0;
-                input.Write(BitConverter.GetBytes(0), 0, 2);
-                dataLength += 2;
-
-                // Shape Chunk
-                for (int i = 0; i < _chunks.Count; i++)
-                {
-                    ShapeChunk chunk = (ShapeChunk)_chunks[i];
-
-                    // Add Vertex Count
-                    shapeVertexCount += chunk.XY.Length;
-
-                    // ChunkType and Length
-                    input.WriteByte(chunk.GetChunkType());
-                    input.Write(BitConverter.GetBytes(0), 0, 4);
-                    dataLength += 5;
-
-                    int chunkLenght = 0;
-
-                    // Chunk Data
-                    _chunks[i].Write(input, chunkLenght, out chunkLenght);
-
-                    // Chunk Length
-                    input.Seek(-(chunkLenght + 4), SeekOrigin.Current);
-                    input.Write(BitConverter.GetBytes(chunkLenght), 0, 4);
-                    input.Seek(chunkLenght, SeekOrigin.Current);
-
-                    totalChunkLength += chunkLenght + 5;
-                    dataLength += chunkLenght;
-                }
-
-                // Change Vertex Count
-                input.Seek(-(totalChunkLength + 2), SeekOrigin.Current);
-                input.Write(BitConverter.GetBytes((ushort)shapeVertexCount), 0, 2);
-                input.Seek(totalChunkLength, SeekOrigin.Current);
+                // Write Data
+                int dataLength = writeData(input);
 
                 // Shape DataLength
                 input.Seek(-(dataLength + 4), SeekOrigin.Current);
@@ -428,79 +386,120 @@ namespace SCEditor.ScOld
             }
             else
             {
-                if (_offset < 0) //new
+                if (_offset > 0)
                 {
-                    using (FileStream readInput = new FileStream(_scFile.GetInfoFileName(), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    input.Seek(0, SeekOrigin.Begin);
+
+                    using (MemoryStream finalData = new MemoryStream())
                     {
-                        //Positionnement des curseurs
-                        readInput.Seek(Math.Abs(_offset), SeekOrigin.Begin);
-                        input.Seek(_scFile.GetEofOffset(), SeekOrigin.Begin);
+                        // Data Before Copy
+                        byte[] beforeData = new byte[_offset + 1];
+                        input.Read(beforeData, 0, beforeData.Length);
+                        finalData.Write(beforeData, 0, beforeData.Length);
 
-                        //type and length
-                        byte dataType = (byte)readInput.ReadByte();
-                        byte[] dataLength = new byte[4];
-                        readInput.Read(dataLength, 0, 4);
+                        // OLD LENGTH
+                        byte[] beforeByte = new byte[4];
+                        input.Read(beforeByte, 0, 4);
+                        uint beforeLength = BitConverter.ToUInt32(beforeByte);
 
-                        input.WriteByte(dataType);
-                        input.Write(dataLength, 0, 4);
+                        // TEMP Length
+                        finalData.Write(BitConverter.GetBytes(beforeLength), 0, 4);
 
-                        //shape
-                        readInput.Seek(2, SeekOrigin.Current);
-                        input.Write(BitConverter.GetBytes(_shapeId), 0, 2);
+                        // All Data
+                        int dataLength = writeData(finalData);
 
-                        byte[] unknown1 = new byte[2];
-                        readInput.Read(unknown1, 0, 2); //0100
-                        input.Write(unknown1, 0, 2);
+                        // Write DataLength
+                        finalData.Seek(_offset + 1, SeekOrigin.Begin);
+                        finalData.Write(BitConverter.GetBytes(dataLength + 5), 0, 4);
+                        finalData.Seek(dataLength, SeekOrigin.Current);
 
-                        if (dataType == 18)
-                        {
-                            byte[] unknown2 = new byte[2];
-                            readInput.Read(unknown2, 0, 2); //0400
-                            input.Write(unknown2, 0, 2);
-                        }
+                        // End of Data
+                        finalData.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
 
-                        int chunkCounter = 0;
-                        while (true)
-                        {
-                            byte shapeType;
-                            byte[] length = new byte[4];
-                            while (true)
-                            {
-                                shapeType = (byte)readInput.ReadByte(); //11
-                                input.WriteByte(shapeType);
+                        // Copy Rest of Data
+                        long newLength = _offset + 5 + beforeLength;
+                        input.Seek(newLength, SeekOrigin.Begin);
+                        byte[] afterData = new byte[input.Length - newLength];
+                        input.Read(afterData, 0, afterData.Length);
+                        finalData.Write(afterData, 0, afterData.Length);
 
-                                readInput.Read(length, 0, 4); //32000000
-                                input.Write(length, 0, 4);
+                        if ((input.Length - beforeLength) != (finalData.Length - (dataLength + 5)))
+                            throw new Exception("Data abnormal");
 
-                                if (shapeType == 17 || shapeType == 22)
-                                {
-                                    Console.WriteLine("Managed shape type " + shapeType);
-                                    _chunks[chunkCounter].Write(input);
-                                    chunkCounter++;
-                                    readInput.Seek(BitConverter.ToInt32(length, 0), SeekOrigin.Current);
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                            if (shapeType == 0)
-                            {
-                                break;
-                            }
-                            Console.WriteLine("Unmanaged shape type " + shapeType);
-                            for (int i = 0; i < BitConverter.ToInt32(length, 0); i++)
-                            {
-                                input.WriteByte((byte)readInput.ReadByte());
-                            }
-                        }
+                        // Copy To Input
+                        input.Flush();
+                        input.SetLength(input.Length - (beforeLength - (dataLength + 5)));
+                        input.Seek(0, SeekOrigin.Begin);
+                        finalData.Seek(0, SeekOrigin.Begin);
+                        finalData.CopyTo(input);
+
+                        this.setLength((uint)(dataLength + 5));
                     }
+
+                    _scFile.SetEofOffset(input.Length - 5);
+                }
+                else
+                {
+                    throw new NotImplementedException();
                 }
             }
 
-            input.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
-            _offset = _scFile.GetEofOffset();
+            if (_offset < 0 || customAdded == true)
+            {
+                input.Write(new byte[] { 0, 0, 0, 0, 0 }, 0, 5);
+                _offset = _scFile.GetEofOffset();
+            }
         }
+
+        private int writeData(Stream input)
+        {
+            int dataLength = 0;
+
+            // ID And Chunk Count
+            input.Write(BitConverter.GetBytes(_shapeId), 0, 2);
+            input.Write(BitConverter.GetBytes(_chunks.Count), 0, 2);
+            dataLength += 4;
+
+            // Shape Chunk Vertex Count
+            int shapeVertexCount = 0;
+            int totalChunkLength = 0;
+            input.Write(BitConverter.GetBytes(0), 0, 2);
+            dataLength += 2;
+
+            // Shape Chunk
+            for (int i = 0; i < _chunks.Count; i++)
+            {
+                ShapeChunk chunk = (ShapeChunk)_chunks[i];
+
+                // Add Vertex Count
+                shapeVertexCount += chunk.UV.Length;
+
+                // ChunkType and Length
+                input.WriteByte(chunk.GetChunkType());
+                input.Write(BitConverter.GetBytes(0), 0, 4);
+                dataLength += 5;
+
+                // Chunk Data
+                int chunkLenght = 0;
+                chunk.Write(input, out chunkLenght);
+
+                // Chunk Length
+                input.Seek(-(chunkLenght + 4), SeekOrigin.Current);
+                input.Write(BitConverter.GetBytes(chunkLenght), 0, 4);
+                input.Seek(chunkLenght, SeekOrigin.Current);
+
+                totalChunkLength += chunkLenght + 5;
+                dataLength += chunkLenght;
+            }
+
+            // Change Vertex Count
+            input.Seek(-(totalChunkLength + 2), SeekOrigin.Current);
+            input.Write(BitConverter.GetBytes((ushort)shapeVertexCount), 0, 2);
+            input.Seek(totalChunkLength, SeekOrigin.Current);
+
+            return dataLength;
+        }
+
         public override void Dispose()
         {
             if (_disposed)
@@ -521,6 +520,11 @@ namespace SCEditor.ScOld
         public void setMatrix(Matrix data)
         {
             _matrix = data;
+        }
+
+        public void setShapeChunkVertexCount(int count)
+        {
+            _shapeChunkVertexCount = count;
         }
 
         public Shape Clone()

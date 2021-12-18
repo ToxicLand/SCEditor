@@ -189,7 +189,7 @@ namespace SCEditor
             RefreshMenu();
 
             treeView1.Populate(_scFile.GetTextures());
-            treeView1.Populate(_scFile.GetExports());
+            treeView1.Populate(_scFile.GetExports().OrderBy(e => e.GetName()).ToList());
             treeView1.Populate(_scFile.GetShapes());
             treeView1.Populate(_scFile.GetMovieClips());
             treeView1.Populate(_scFile.getTextFields());
@@ -279,13 +279,31 @@ namespace SCEditor
             if (data.GetDataType() != 99)
                 return;
 
-            fixChunksPoints fixP = new fixChunksPoints();
-            PointF[] newArray = fixP.initiate(data);
+            ScObject parentData = (ScObject)treeView1.SelectedNode.Parent?.Tag;
 
-            if (newArray == null)
+            if (parentData == null)
                 return;
 
-            ((ShapeChunk)data).SetUV(newArray);
+            if (parentData.GetDataType() != 0)
+                return;
+
+            fixChunksPoints fixP = new fixChunksPoints();
+            bool newArray = fixP.fixPoints(data, _scFile);
+
+            if (!newArray)
+                return;
+
+            int shapeChunkVexCount = 0;
+            foreach (ShapeChunk chunk in parentData.Children)
+            {
+                shapeChunkVexCount += chunk.vertexCount;
+            }
+
+            ((Shape)parentData).setShapeChunkVertexCount(shapeChunkVexCount);
+
+            _scFile.AddChange(parentData);
+
+            Console.WriteLine("FIXED");
             Render();
         }
 
@@ -379,17 +397,20 @@ namespace SCEditor
 
         private void resetPreviousRendering(bool isEnd)
         {
-            if (this._scFile.CurrentRenderingMovieClips.Count > 0)
+            if (_scFile.CurrentRenderingMovieClips != null)
             {
-                foreach (MovieClip mv in this._scFile.CurrentRenderingMovieClips)
+                if (_scFile.CurrentRenderingMovieClips.Count > 0)
                 {
-                    mv._lastPlayedFrame = 0;
+                    foreach (MovieClip mv in this._scFile.CurrentRenderingMovieClips)
+                    {
+                        mv._lastPlayedFrame = 0;
 
-                    if (isEnd)
-                        mv.destroyPointFList();
+                        if (isEnd)
+                            mv.destroyPointFList();
+                    }
+
+                    _scFile.setRenderingItems(new List<ScObject>());
                 }
-
-                this._scFile.setRenderingItems(new List<ScObject>());
             }
         }
 
@@ -797,7 +818,7 @@ namespace SCEditor
 
                             foreach (OriginalData data in saveChanges)
                             {
-                                int matrixId = _scFile.GetMatrixs().Count;
+                                int matrixId = _scFile.GetMatrixs(((MovieClip)eachData)._transformStorageId).Count;
                                 Console.WriteLine($"Saved Matrix with id {matrixId} for Shape id {data.shapeId}");
 
                                 _scFile.addMatrix(data.matrixData);
@@ -869,7 +890,10 @@ namespace SCEditor
 
         private void addEditMatrixtoolStripMenuItem_Click(object sender, EventArgs e)
         {
-            List<Matrix> matrixList = this._scFile.GetMatrixs();
+            if (_scFile.GetMatrixs(0).Count == 65535)
+                throw new Exception("Not Implemented");
+
+            List<Matrix> matrixList = _scFile.GetMatrixs(0);
 
             using (editMatrixes form = new editMatrixes(matrixList))
             {
@@ -1329,7 +1353,7 @@ namespace SCEditor
                     turretIndex = i;
                 }
 
-                if (childrenName[i] == "barrel")
+                if (childrenName[i] == "turret2") // change barrel, barrel2, turret2
                 {
                     barrelId = childrenId[i];
                     barrelIndex = i;
@@ -1391,9 +1415,9 @@ namespace SCEditor
                 for (int ti = 0; ti < barrelFrame.Id; ti++)
                 {
                     int idx = barrelTimelineIndex + (ti * 3);
-                    combinedTimelineArray.Add((ushort)(turretMVData.timelineArray[idx] + turretMVData.timelineChildrenId.Length));
-                    combinedTimelineArray.Add(turretMVData.timelineArray[idx + 1]);
-                    combinedTimelineArray.Add(turretMVData.timelineArray[idx + 2]);
+                    combinedTimelineArray.Add((ushort)(barrelMVData.timelineArray[idx] + turretMVData.timelineChildrenId.Length));
+                    combinedTimelineArray.Add(barrelMVData.timelineArray[idx + 1]);
+                    combinedTimelineArray.Add(barrelMVData.timelineArray[idx + 2]);
                 }
 
                 turretTimelineIndex += turretFrame.Id * 3;
@@ -1498,15 +1522,22 @@ namespace SCEditor
             if (treeView1.SelectedNode?.Tag == null)
                 return;
 
-            ScObject data = treeView1.SelectedNode?.Tag as ScObject;
+            foreach (ScObject data in _scFile.GetExports())
+            {
+                if (!string.IsNullOrEmpty(data.GetName()))
+                {
+                    if (data.GetName().Length < 3)
+                        continue;
 
-            if (data.GetDataType() != 7 && data.GetDataType() != 1)
-                return;
+                    if (data.GetName().Substring(0, 3) != "bb_")
+                        continue;
 
-            if (data.GetDataType() == 7)
-                data = data.GetDataObject();
+                    ScObject data2 = data.GetDataObject();
 
-            fixBoomBeachBuildings(data);
+                    if (data2 != null)
+                        fixBoomBeachBuildings(data2);
+                }
+            }
         }
     }
 }

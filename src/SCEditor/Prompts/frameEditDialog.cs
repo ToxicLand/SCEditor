@@ -97,7 +97,7 @@ namespace SCEditor.Prompts
                 }
                 else if (frameTimelineIndex == 1 || (frameTimelineIndex - 1) % 3 == 0)
                 {
-                    if (newValue >= _scfile.GetMatrixs().Count && newValue != 65535)
+                    if (newValue >= _scfile.GetMatrixs(((MovieClip)_data)._transformStorageId).Count && newValue != 65535)
                     {
                         MessageBox.Show($"Matrix with specified index {newValue} not found.");
                         return;
@@ -123,7 +123,7 @@ namespace SCEditor.Prompts
                 }
                 else if (frameTimelineIndex == 2 || (frameTimelineIndex - 2) % 3 == 0)
                 {
-                    if (newValue >= _scfile.getColors().Count && newValue != 65535)
+                    if (newValue >= _scfile.getColors(((MovieClip)_data)._transformStorageId).Count && newValue != 65535)
                     {
                         MessageBox.Show($"Color with specified index {newValue} not found.");
                         return;
@@ -180,7 +180,7 @@ namespace SCEditor.Prompts
                 }
                 else if (frameTimelineIndex == 1 || (frameTimelineIndex - 1) % 3 == 0)
                 {
-                    if (newValue >= _scfile.GetMatrixs().Count && newValue != 65535)
+                    if (newValue >= _scfile.GetMatrixs(((MovieClip)_data)._transformStorageId).Count && newValue != 65535)
                     {
                         MessageBox.Show($"Matrix with specified index {newValue} not found.");
                         return;
@@ -192,7 +192,7 @@ namespace SCEditor.Prompts
                 }
                 else if (frameTimelineIndex == 2 || (frameTimelineIndex - 2) % 3 == 0)
                 {
-                    if (newValue >= _scfile.getColors().Count && newValue != 65535)
+                    if (newValue >= _scfile.getColors(((MovieClip)_data)._transformStorageId).Count && newValue != 65535)
                     {
                         MessageBox.Show($"Color with specified index {newValue} not found.");
                         return;

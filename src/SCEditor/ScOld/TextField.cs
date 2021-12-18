@@ -13,28 +13,28 @@ namespace SCEditor.ScOld
     class TextField : ScObject
     {
         private string _fontName;
-        private ushort _unk16; // textFieldBounds 1 > float
-        private ushort _unk18; // textFieldBounds 2 > float
-        private ushort _unk20; // textFieldBounds 3 > float
-        private ushort _unk22; // textFieldBounds 4 > float
-        private int _unk24; // numbertext > color transform related
-        private int _unk28; // numberValue
-        private string _unk32; // stringObject - text
+        private ushort _leftCorner; // textFieldBounds 1 > float
+        private ushort _topCorner; // textFieldBounds 2 > float
+        private ushort _rightCorner; // textFieldBounds 3 > float
+        private ushort _bottomCorner; // textFieldBounds 4 > float
+        private Color _fontColor; // numbertext > color transform related
+        private Color _fontOutlineColor; // numberValue
+        private string _textData; // stringObject - text
         private byte _flag;
-        private byte _unk42; // align > matrix related
-        private byte _unk43; // characterScale - fontSize  > color transform related
-        private ushort _unk44;
+        private byte _fontWidth; // align > matrix related
+        private byte _fontSize; // characterScale - fontSize  > color transform related
+        private ushort _transform1;
         private ushort _unk46;
         private ScFile _scFile;
         private byte _dataType;
-        private bool _flag1;
-        private bool _flag2;
-        private bool _flag4;
-        private bool _flag8;
-        private bool _flag16; // multiline
+        private bool _wideCodes;
+        private bool _modifier5;
+        private bool _italic;
+        private bool _ansi;
+        private bool _shiftJIS; // multiline
         private bool _flag64;
-        private bool _unkR1;
-        private ushort _unkR2;
+        private bool _modifier4;
+        private ushort _transform2;
         private ushort _unk46tmp;
         // 124/248 interastiveResursive bool
         // 228 and 232 highlightRange
@@ -59,28 +59,28 @@ namespace SCEditor.ScOld
             Id = id;
             _scFile = scFile;
             _fontName = data._fontName;
-            _unk16 = data._unk16;
-            _unk18 = data._unk18;
-            _unk20 = data._unk20;
-            _unk22 = data._unk22;
-            _unk24 = data._unk24;
-            _unk28 = data._unk28;
-            _unk32 = data._unk32;
+            _leftCorner = data._leftCorner;
+            _topCorner = data._topCorner;
+            _rightCorner = data._rightCorner;
+            _bottomCorner = data._bottomCorner;
+            _fontColor = data._fontColor;
+            _fontOutlineColor = data._fontOutlineColor;
+            _textData = data._textData;
             _flag = data._flag;
-            _unk42 = data._unk42;
-            _unk43 = data._unk43;
-            _unk44 = data._unk44;
+            _fontWidth = data._fontWidth;
+            _fontSize = data._fontSize;
+            _transform1 = data._transform1;
             _unk46 = data._unk46;
             _scFile = scFile;
             _dataType = data._dataType;
-            _flag1 = data._flag1;
-            _flag2 = data._flag2;
-            _flag4 = data._flag4;
-            _flag8 = data._flag8;
-            _flag16 = data._flag16;
+            _wideCodes = data._wideCodes;
+            _modifier5 = data._modifier5;
+            _italic = data._italic;
+            _ansi = data._ansi;
+            _shiftJIS = data._shiftJIS;
             _flag64 = data._flag64;
-            _unkR1 = data._unkR1;
-            _unkR2 = data._unkR2;
+            _modifier4 = data._modifier4;
+            _transform2 = data._transform2;
             _unk46tmp = data._unk46tmp;
         }
 
@@ -96,12 +96,12 @@ namespace SCEditor.ScOld
 
         public override void Read(BinaryReader br, string packetid)
         {
-            Id = br.ReadUInt16(); // 82
+            Id = br.ReadUInt16();
 
             byte stringLength = br.ReadByte();
             if (stringLength < 255)
             {
-                _fontName = Encoding.ASCII.GetString(br.ReadBytes(stringLength)); // 128
+                _fontName = Encoding.ASCII.GetString(br.ReadBytes(stringLength));
             }
 
             if (!string.IsNullOrEmpty(_fontName))
@@ -110,42 +110,42 @@ namespace SCEditor.ScOld
                     _scFile.addFontName(_fontName);
             }
 
-            _unk24 = br.ReadInt32(); // 112 224 > color transform?
+            _fontColor = readColor(br);
 
             if (br.ReadBoolean())
             {
                 _flag |= 4; // 153
-                _flag4 = true;
+                _italic = true;
             } 
             if (br.ReadBoolean())
             {
                 _flag |= 8; // 154
-                _flag8 = true;
+                _ansi = true;
             } 
             if (br.ReadBoolean())
             {
                 _flag |= 16; // 155
-                _flag16 = true;
+                _shiftJIS = true;
             }
 
-            _unkR1 = br.ReadBoolean(); // 156
-            _unk42 = br.ReadByte(); // 168 42 > related to matrix
-            _unk43 = br.ReadByte(); // 172 43
-            _unk16 = br.ReadUInt16(); // 176 44 
-            _unk18 = br.ReadUInt16(); // 180 45
-            _unk20 = br.ReadUInt16(); // 184 46
-            _unk22 = br.ReadUInt16(); // 188 47
+            _modifier4 = br.ReadBoolean(); // 156
+            _fontWidth = br.ReadByte(); // 168 42 > related to matrix
+            _fontSize = br.ReadByte(); // 172 43
+            _leftCorner = br.ReadUInt16(); // 176 44 
+            _topCorner = br.ReadUInt16(); // 180 45
+            _rightCorner = br.ReadUInt16(); // 184 46
+            _bottomCorner = br.ReadUInt16(); // 188 47
 
             if (br.ReadBoolean())
             {
                 _flag |= 2; // 152
-                _flag2 = true;
+                _modifier5 = true;
             }
                 
             byte stringLength2 = br.ReadByte();
             if (stringLength2 < 255)
             {
-                _unk32 = Encoding.ASCII.GetString(br.ReadBytes(stringLength2)); // 196
+                _textData = Encoding.ASCII.GetString(br.ReadBytes(stringLength2)); // 196
             }
 
             if (packetid == "07")
@@ -154,7 +154,7 @@ namespace SCEditor.ScOld
             if (br.ReadBoolean())
             {
                 _flag |= 1;
-                _flag1 = true;
+                _wideCodes = true;
             }
                 
             switch (packetid)
@@ -164,18 +164,18 @@ namespace SCEditor.ScOld
                     break;
                 case "15":
                     _flag |= 32;
-                    _unk28 = br.ReadInt32();
+                    _fontOutlineColor = readColor(br);
                     break;
                 case "19":
-                    _unk28 = br.ReadInt32();
+                    _fontOutlineColor = readColor(br);
                     break;
 
                 case "21":
                 case "2B":
                 case "2C":
-                    _unk28 = br.ReadInt32();
-                    _unk44 = br.ReadUInt16();
-                    _unkR2 = br.ReadUInt16();
+                    _fontOutlineColor = readColor(br);
+                    _transform1 = br.ReadUInt16();
+                    _transform2 = br.ReadUInt16();
                     _flag |= 32;
 
                     if (packetid == "2B" || packetid == "2C")
@@ -192,6 +192,23 @@ namespace SCEditor.ScOld
 
                     break;
             }
+        }
+
+        private Color readColor(BinaryReader br)
+        {
+            byte cB = br.ReadByte();
+            byte cG = br.ReadByte();
+            byte cR = br.ReadByte();
+            byte cA = br.ReadByte();
+            return Color.FromArgb(cA, cR, cG, cB);
+        }
+
+        private void writeColor(Stream input, Color c)
+        {
+            input.WriteByte(c.B);
+            input.WriteByte(c.G);
+            input.WriteByte(c.R);
+            input.WriteByte(c.A);
         }
 
         public override void Write(FileStream input)
@@ -226,34 +243,34 @@ namespace SCEditor.ScOld
                 dataLength += 1;
 
                 // REST OF DATA
-                input.Write(BitConverter.GetBytes(_unk24), 0, 4);
+                writeColor(input, _fontColor);
                 dataLength += 4;
 
-                input.Write(BitConverter.GetBytes(_flag4), 0, 1);
-                input.Write(BitConverter.GetBytes(_flag8), 0, 1);
-                input.Write(BitConverter.GetBytes(_flag16), 0, 1);
+                input.Write(BitConverter.GetBytes(_italic), 0, 1);
+                input.Write(BitConverter.GetBytes(_ansi), 0, 1);
+                input.Write(BitConverter.GetBytes(_shiftJIS), 0, 1);
                 dataLength += 3;
 
-                input.Write(BitConverter.GetBytes(_unkR1), 0, 1);
-                input.WriteByte(_unk42);
-                input.WriteByte(_unk43);
-                input.Write(BitConverter.GetBytes(_unk16), 0, 2);
-                input.Write(BitConverter.GetBytes(_unk18), 0, 2);
-                input.Write(BitConverter.GetBytes(_unk20), 0, 2);
-                input.Write(BitConverter.GetBytes(_unk22), 0, 2);
+                input.Write(BitConverter.GetBytes(_modifier4), 0, 1);
+                input.WriteByte(_fontWidth);
+                input.WriteByte(_fontSize);
+                input.Write(BitConverter.GetBytes(_leftCorner), 0, 2);
+                input.Write(BitConverter.GetBytes(_topCorner), 0, 2);
+                input.Write(BitConverter.GetBytes(_rightCorner), 0, 2);
+                input.Write(BitConverter.GetBytes(_bottomCorner), 0, 2);
                 dataLength += 11;
 
-                input.Write(BitConverter.GetBytes(_flag2), 0, 1);
+                input.Write(BitConverter.GetBytes(_modifier5), 0, 1);
                 dataLength += 1;
 
                 // unk32
-                if (string.IsNullOrEmpty(_unk32))
+                if (string.IsNullOrEmpty(_textData))
                 {
                     input.WriteByte((byte)0xFF);
                 }
                 else
                 {
-                    byte[] stringData = Encoding.ASCII.GetBytes(_unk32);
+                    byte[] stringData = Encoding.ASCII.GetBytes(_textData);
                     input.WriteByte((byte)stringData.Length);
                     input.Write(stringData, 0, stringData.Length);
 
@@ -263,7 +280,7 @@ namespace SCEditor.ScOld
 
                 if (_dataType != 7)
                 {
-                    input.Write(BitConverter.GetBytes(_flag1), 0, 1);
+                    input.Write(BitConverter.GetBytes(_wideCodes), 0, 1);
                     dataLength += 1;
 
                     switch(_dataType)
@@ -274,16 +291,16 @@ namespace SCEditor.ScOld
 
                         case 21:
                         case 25:
-                            input.Write(BitConverter.GetBytes(_unk28), 0, 4);
+                            writeColor(input, _fontOutlineColor);
                             dataLength += 4;
                             break;
 
                         case 33:
                         case 43:
                         case 44:
-                            input.Write(BitConverter.GetBytes(_unk28), 0, 4);
-                            input.Write(BitConverter.GetBytes(_unk44), 0, 2);
-                            input.Write(BitConverter.GetBytes(_unkR2), 0, 2);
+                            writeColor(input, _fontOutlineColor);
+                            input.Write(BitConverter.GetBytes(_transform1), 0, 2);
+                            input.Write(BitConverter.GetBytes(_transform2), 0, 2);
                             dataLength += 8;
 
                             if (_dataType == 43 || _dataType == 44)
