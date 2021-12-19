@@ -836,7 +836,7 @@ namespace SCEditor.ScOld
                                 _textFieldCount != textFieldIndex ||
                                 _colorsCount != colorIndex)
                                 {
-                                    //throw new Exception("Didn't load whole .sc properly.");
+                                    throw new Exception("Didn't load whole .sc properly.");
                                 }
 
                                 _eofOffset = offset;

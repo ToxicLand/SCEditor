@@ -397,7 +397,7 @@ namespace SCEditor
 
         private void resetPreviousRendering(bool isEnd)
         {
-            if (_scFile.CurrentRenderingMovieClips != null)
+            if (_scFile != null)
             {
                 if (_scFile.CurrentRenderingMovieClips.Count > 0)
                 {
@@ -796,11 +796,7 @@ namespace SCEditor
                             foreach (OriginalData data in saveChanges)
                             {
                                 Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
-
-                                foreach (ShapeChunk chunkData in shapeData.GetChunks())
-                                {
-                                    _scFile.AddChange(chunkData);
-                                }
+                                _scFile.AddChange(shapeData);
                             }
                         }
                         else

@@ -66,7 +66,7 @@ namespace SCEditor.Prompts
                 int frameTimelineTypeIndex = (frameIndex * 3) + frameTimelineIndex;
 
                 int oldValue = _timelineArray[frameTimelineTypeIndex];
-                int newValue = int.Parse(dataTypeTextBox.Text); 
+                int newValue = int.Parse(dataTypeTextBox.Text);
 
                 if (frameTimelineIndex == 0 || frameTimelineIndex % 3 == 0)
                 {
@@ -76,18 +76,19 @@ namespace SCEditor.Prompts
                         return;
                     }
 
-                    DialogResult askChangeAll = MessageBox.Show($"Change children index with choosen childiren index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
+                    DialogResult changeAllSpecified = MessageBox.Show($"Change children index with choosen childiren index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
                     int currentChildrenId = _timelineArray[frameTimelineTypeIndex];
 
                     for (int i = 0; i < (_timelineArray.Length / 3); i++)
                     {
-                        if (askChangeAll == DialogResult.Yes)
+                        if (changeAllSpecified == DialogResult.Yes)
                         {
                             if (_timelineArray[i * 3] == currentChildrenId)
                             {
                                 _timelineArray[i * 3] = (ushort)newValue;
-                                continue;
                             }
+
+                            continue;
                         }
 
                         _timelineArray[i * 3] = (ushort)newValue;
@@ -103,18 +104,19 @@ namespace SCEditor.Prompts
                         return;
                     }
 
-                    DialogResult askChangeAll = MessageBox.Show($"Change matrix for only with specified children index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
+                    DialogResult changeAllSpecified = MessageBox.Show($"Change matrix for only with specified children index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
                     int currentChildrenId = _timelineArray[frameTimelineTypeIndex - 1];
 
                     for (int i = 0; i < (_timelineArray.Length / 3); i++)
                     {
-                        if (askChangeAll == DialogResult.Yes)
+                        if (changeAllSpecified == DialogResult.Yes)
                         {
                             if (_timelineArray[i * 3] == currentChildrenId)
                             {
                                 _timelineArray[(i * 3) + 1] = (ushort)newValue;
-                                continue;
                             }
+
+                            continue;
                         }
 
                         _timelineArray[(i * 3) + 1] = (ushort)newValue;
@@ -129,18 +131,19 @@ namespace SCEditor.Prompts
                         return;
                     }
 
-                    DialogResult askChangeAll = MessageBox.Show($"Change color for only with specified children index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
+                    DialogResult changeAllSpecified = MessageBox.Show($"Change color for only with specified children index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
                     int currentChildrenId = _timelineArray[frameTimelineTypeIndex - 2];
 
                     for (int i = 0; i < (_timelineArray.Length / 3); i++)
                     {
-                        if (askChangeAll == DialogResult.Yes)
+                        if (changeAllSpecified == DialogResult.Yes)
                         {
                             if (_timelineArray[i * 3] == currentChildrenId)
                             {
                                 _timelineArray[(i * 3) + 2] = (ushort)newValue;
-                                continue;
                             }
+
+                            continue;
                         }
 
                         _timelineArray[(i * 3) + 2] = (ushort)newValue;
