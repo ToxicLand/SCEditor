@@ -35,59 +35,23 @@ namespace SCEditor.ScOld
         public MovieClip(MovieClip mv)
         {
             _scFile = mv.GetStorageObject();
+
+            _offset = mv.offset;
+            _clipId = _scFile.getMaxId();
+            customAdded = true;
+
             _dataType = mv.GetMovieClipDataType();
-            _childrens = mv.getChildrens();
-            _frames = mv.GetFrames();
+            _childrens = mv._childrens;
 
-            this.SetOffset(-System.Math.Abs(mv.offset));
+            _framePerSeconds = mv._framePerSeconds;
+            _frames = mv._frames;
 
-            //Duplicate MovieClip
-            using (FileStream input = new FileStream(_scFile.GetInfoFileName(), FileMode.Open))
-            {
-                input.Seek(System.Math.Abs(mv.offset), SeekOrigin.Begin);
-                using (var br = new BinaryReader(input))
-                {
+            _timelineOffsetArray = mv.timelineArray;
+            _timelineChildrenId = mv._timelineChildrenId;
+            _timelineChildrenNames = mv.timelineChildrenNames;
+            _flags = mv.flags;
 
-                    var packetId = br.ReadByte().ToString("X2");
-                    var packetSize = br.ReadUInt32();
-                    this.Read(br, packetId);
-                }
-            }
-
-            //Set new clip id
-            ushort maxMovieClipId = this.Id;
-            foreach (MovieClip clip in _scFile.GetMovieClips())
-            {
-                if (clip.Id > maxMovieClipId)
-                    maxMovieClipId = clip.Id;
-            }
-            maxMovieClipId++;
-            this.SetId(maxMovieClipId);
-
-            //Get max shape id
-            ushort maxShapeId = 30000; //avoid collision with other objects in MovieClips
-            foreach (Shape shape in _scFile.GetShapes())
-            {
-                if (shape.Id > maxShapeId)
-                    maxShapeId = shape.Id;
-            }
-            maxShapeId++;
-
-            //Duplicate shapes associated to clip
-            List<ScObject> newShapes = new List<ScObject>();
-            foreach (Shape s in _childrens)
-            {
-                throw new NotImplementedException();
-
-                //Shape newShape = new Shape(s);
-                //newShape.SetId(maxShapeId);
-                //maxShapeId++;
-                //newShapes.Add(newShape);
-
-                //_scFile.AddShape(newShape); //Add to global shapelist
-                //_scFile.AddChange(newShape);
-            }
-            this._childrens = newShapes;
+            _transformStorageId = mv._transformStorageId;
         }
 
         #endregion

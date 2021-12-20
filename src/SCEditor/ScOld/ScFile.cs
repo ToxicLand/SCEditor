@@ -1310,7 +1310,7 @@ namespace SCEditor.ScOld
                 }
             }
 
-            return (maxId += 100);
+            return (maxId += 100); // change to 1
         }
     }
 }
