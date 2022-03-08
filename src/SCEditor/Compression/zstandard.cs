@@ -40,12 +40,18 @@ namespace SCEditor.Compression
 
         internal static void decompress(string file)
         {
-
             using (MemoryStream output = new MemoryStream())
             {
                 using (FileStream input = new FileStream(file, FileMode.Open))
                 {
-                    input.Position = 26;
+                    input.Position = 5;
+
+                    int version = input.ReadByte();
+                    if (version == 4)
+                        input.Position = 30;
+                    else
+                        input.Position = 26;
+
                     using (var decompressionStream = new DecompressionStream(input))
                     {
                         decompressionStream.CopyTo(output);

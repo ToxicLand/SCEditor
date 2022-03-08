@@ -628,6 +628,12 @@ namespace SCEditor.ScOld
                         if (result == DialogResult.Yes)
                         {
                             byte[] version = texReader.ReadBytes(4);
+
+                            if (version[3] == 4)
+                            {
+                                byte[] unkVal = texReader.ReadBytes(4);
+                            }  
+
                             byte[] hashLength = texReader.ReadBytes(4);
                             var hash = texReader.ReadBytes(hashLength[3]);
 
@@ -716,6 +722,12 @@ namespace SCEditor.ScOld
                         if (result == DialogResult.Yes)
                         {
                             byte[] version = reader.ReadBytes(4);
+
+                            if (version[3] == 4)
+                            {
+                                byte[] unkVal = reader.ReadBytes(4);
+                            }
+
                             byte[] hashLength = reader.ReadBytes(4);
                             var hash = reader.ReadBytes(hashLength[3]);
 
