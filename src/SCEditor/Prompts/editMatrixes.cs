@@ -79,7 +79,7 @@ namespace SCEditor.Prompts
 
                 newMatrixes.Add(newMatrix);
 
-                MessageBox.Show($"Matrix with ID {matrixes.Count + newMatrixes.Count} added", "New Matrix Added", MessageBoxButtons.OK);
+                MessageBox.Show($"Matrix with ID {matrixes.Count + newMatrixes.Count - 1} added", "New Matrix Added", MessageBoxButtons.OK);
 
                 refreshMenu();
             }

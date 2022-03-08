@@ -627,7 +627,6 @@ namespace SCEditor.ScOld
 
                         if (result == DialogResult.Yes)
                         {
-
                             byte[] version = texReader.ReadBytes(4);
                             byte[] hashLength = texReader.ReadBytes(4);
                             var hash = texReader.ReadBytes(hashLength[3]);
@@ -701,11 +700,21 @@ namespace SCEditor.ScOld
                     Console.WriteLine(BitConverter.ToString(IsCompressed) == "53-43");
                     if (BitConverter.ToString(IsCompressed) == "53-43")
                     {
+                        byte[] isPatch = reader.ReadBytes(2);
+
+                        if (isPatch[0] != 80 && isPatch[1] != 33)
+                        {
+                            reader.BaseStream.Seek(-2, SeekOrigin.Current);
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+
                         DialogResult result = MessageBox.Show("The tool detected that you have load a compressed file.\nWould you like to decompress and load it?", @"SC File is Compressed", MessageBoxButtons.YesNo, MessageBoxIcon.Error, MessageBoxDefaultButton.Button2);
 
                         if (result == DialogResult.Yes)
                         {
-
                             byte[] version = reader.ReadBytes(4);
                             byte[] hashLength = reader.ReadBytes(4);
                             var hash = reader.ReadBytes(hashLength[3]);
@@ -738,6 +747,7 @@ namespace SCEditor.ScOld
                     }
 
                     reader.BaseStream.Seek(0, SeekOrigin.Begin);
+
                     _shapeCount = reader.ReadUInt16();
                     _movieClipCount = reader.ReadUInt16();
                     _textureCount = reader.ReadUInt16();
@@ -827,6 +837,9 @@ namespace SCEditor.ScOld
                         if (tagSize < 0)
                             throw new Exception("Negative tag length. Tag " + tag);
 
+                        ScObject.SCObjectType lastSCType = ScObject.SCObjectType.None;
+                        ushort lastSCId = 0;
+
                         switch (tag)
                         {
                             case "00": //0
@@ -888,6 +901,8 @@ namespace SCEditor.ScOld
 
                                 _eofShapeOffset = reader.BaseStream.Position;
 
+                                lastSCId = shape.Id;
+                                lastSCType = ScObject.SCObjectType.Shape;
                                 shapeIndex += 1;
                                 break;
 
@@ -907,6 +922,8 @@ namespace SCEditor.ScOld
 
                                 _eofMovieClipOffset = reader.BaseStream.Position;
 
+                                lastSCId = movieClip.Id;
+                                lastSCType = ScObject.SCObjectType.MovieClip;
                                 movieClipIndex += 1;
                                 break;
 
@@ -928,6 +945,8 @@ namespace SCEditor.ScOld
 
                                 _eofTextFieldOffset = reader.BaseStream.Position;
 
+                                lastSCId = textField.Id;
+                                lastSCType = ScObject.SCObjectType.TextField;
                                 textFieldIndex += 1;
                                 break;
 
@@ -1042,7 +1061,10 @@ namespace SCEditor.ScOld
                         }
 
                         if ((offset + tagSize + 5) != reader.BaseStream.Position)
-                            Console.WriteLine($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag}");
+                        {
+                            string lastsctypeid = $"ID: {lastSCId}";
+                            Console.WriteLine($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag} {(lastSCType != ScObject.SCObjectType.None ? lastsctypeid : "")}");
+                        }
                     }
                 }
 

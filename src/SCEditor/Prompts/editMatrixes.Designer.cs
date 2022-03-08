@@ -168,7 +168,7 @@ namespace SCEditor.Prompts
             this.saveMatrixButton.Name = "saveMatrixButton";
             this.saveMatrixButton.Size = new System.Drawing.Size(127, 36);
             this.saveMatrixButton.TabIndex = 3;
-            this.saveMatrixButton.Text = "Save/Edit";
+            this.saveMatrixButton.Text = "Save/Edit/Add";
             this.saveMatrixButton.UseVisualStyleBackColor = false;
             this.saveMatrixButton.Click += new System.EventHandler(this.saveMatrixButton_Click);
             // 

@@ -515,7 +515,7 @@ namespace SCEditor.ScOld
                 }**/
 
                 int totalFrameTimelineCount = 0;
-                foreach(MovieClipFrame frame in this._frames)
+                foreach (MovieClipFrame frame in this._frames)
                 {
                     totalFrameTimelineCount += (frame.Id * 3);
                 }
@@ -529,6 +529,13 @@ namespace SCEditor.ScOld
                 // ^ move this check when the animation starts
 
                 List<PointF> A = _pointFList;
+
+                if (A.Count == 0 || A == null)
+                {
+                    Console.WriteLine("renderAnimation(): List<PointF> A empty or null.");
+                    return null;
+                }
+                    
 
                 using (var xyPath = new GraphicsPath())
                 {

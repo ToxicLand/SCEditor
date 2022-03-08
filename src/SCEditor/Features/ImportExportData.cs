@@ -349,7 +349,7 @@ namespace SCEditor.Features
 
                                     if (_iconType == iconType.Hero)
                                     {
-                                        timelineOffset = new ushort[] { 0, 24353, 65535, 1, 65535, 65535 }; // change after every coc update
+                                        //timelineOffset = new ushort[] { 0, 24353, 65535, 1, 65535, 65535 }; // change after every coc update
                                     }
                                 }
                                 else if (_exportType == exportType.Animation)
@@ -380,18 +380,16 @@ namespace SCEditor.Features
 
                                 movieClipData.setTimelineOffsetArray(timelineOffset);
 
-                                for (int i = 0; i < 2; i++)
+                                for (int i = 0; i < (_exportType == exportType.Animation ? 2 : 1); i++)
                                 {
                                     // MOVIECLIP FRAME DATA
                                     MovieClipFrame movieClipFrameData = new MovieClipFrame(_scFile);
 
-                                    ushort MovieClipFrameId = (ushort)(_exportType == exportType.Animation ? 2 : _exportType == exportType.Icon ? _iconType == iconType.Hero ? 2 : 1 : 1);
+                                    //ushort MovieClipFrameId = (ushort)(_exportType == exportType.Animation ? 2 : _exportType == exportType.Icon ? _iconType == iconType.Hero ? 2 : 1 : 1);
+                                    ushort MovieClipFrameId = (ushort)(_exportType == exportType.Animation ? 2 : 1);
 
                                     movieClipFrameData.SetId(MovieClipFrameId);
                                     movieClipData.AddFrame(movieClipFrameData);
-
-                                    if (_exportType != exportType.Animation)
-                                        break;
                                 }
 
                                 if (exportExist == true && exportIndex != -1)

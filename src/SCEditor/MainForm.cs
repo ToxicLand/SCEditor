@@ -519,6 +519,11 @@ namespace SCEditor
             {
                 using (FileStream input = new FileStream(_scFile.GetInfoFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
                 {
+                    if (_scFile.GetInfoFileName() == _scFile.GetTextureFileName())
+                    {
+                        _scFile.Save(input, input);
+                        return;
+                    }
                     using (FileStream inputtex = new FileStream(_scFile.GetTextureFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
                     {
                         _scFile.Save(input, inputtex);
@@ -564,6 +569,7 @@ namespace SCEditor
                 {
                     Bitmap textureImage = (Bitmap)Image.FromFile(dialog.FileName);
                     Texture data = new Texture(_scFile, textureImage);
+                    data.setCustomAdded(true);
 
                     _scFile.AddTexture(data);
                     _scFile.AddChange(data);

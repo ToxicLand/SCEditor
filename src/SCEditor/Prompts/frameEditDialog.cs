@@ -342,9 +342,8 @@ namespace SCEditor.Prompts
             List<ushort> newList = new List<ushort>(_timelineArray.ToList());
             ushort[] dataType = new ushort[3] { 0, 65535, 65535 };
             int dataTypeIndex = 0;
-            int frameIndex = getSelectedFrameIndex();
-            int frameEditIndex = beforeAfter == 0 ? frameIndex - (_frames[FramesArrayBox.SelectedIndex].Id * 3) : frameIndex;
-
+            int frameIndex = getSelectedFrameIndex() * 3;
+            int frameEditIndex = beforeAfter == 0 ? frameIndex : frameIndex + (_frames[FramesArrayBox.SelectedIndex].Id * 3); // check + right part
 
             for (int i = 0; i < (frameTimelineCount * 3); i++)
             {
@@ -362,7 +361,7 @@ namespace SCEditor.Prompts
             data.setCustomAdded(true);
 
             List<ScObject> newFramesList = new List<ScObject>(_frames.ToList());
-            newFramesList.Add(data);
+            newFramesList.Insert((beforeAfter == 0 ? FramesArrayBox.SelectedIndex : FramesArrayBox.SelectedIndex + 1), data);
             _frames = newFramesList.ToArray();
             _isEdited = true;
 
