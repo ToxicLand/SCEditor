@@ -76,11 +76,37 @@ namespace SCEditor.ScOld.ImageFormats
         {
             base.WriteImage(input);
 
-            for (int column = 0; column < _bitmap.Height; column++)
+            if (is32x32)
             {
-                for (int row = 0; row < _bitmap.Width; row++)
-                {                   
-                    input.WriteByte(_bitmap.GetPixel(row, column).R);
+                Color[,] oldPixelArray = new Color[_bitmap.Height, _bitmap.Width];
+                int oHeight = _bitmap.Height;
+                int oWidth = _bitmap.Width;
+                for (int col = 0; col < oHeight; col++)
+                {
+                    for (int row = 0; row < oWidth; row++)
+                    {
+                        oldPixelArray[col, row] = _bitmap.GetPixel(row, col);
+                    }
+                }
+
+                Color[,] pixelArray = Utils.Create32x32Blocks(_bitmap.Width, _bitmap.Height, oldPixelArray);
+
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        input.WriteByte(pixelArray[column, row].R);
+                    }
+                }
+            }
+            else
+            {
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        input.WriteByte(_bitmap.GetPixel(row, column).R);
+                    }
                 }
             }
         }

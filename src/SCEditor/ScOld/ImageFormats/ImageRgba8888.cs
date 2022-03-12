@@ -97,29 +97,71 @@ namespace SCEditor.ScOld
         {
             base.WriteImage(input);
 
-            for (int column = 0; column < _bitmap.Height; column++)
+            if (is32x32)
             {
-                for (int row = 0; row < _bitmap.Width; row++)
+                Color[,] oldPixelArray = new Color[_bitmap.Height, _bitmap.Width];
+                int oHeight = _bitmap.Height;
+                int oWidth = _bitmap.Width;
+                for (int col = 0; col < oHeight; col++)
                 {
-                    Color c = _bitmap.GetPixel(row, column);
-                    var r = c.R;
-                    var g = c.G;
-                    var b = c.B;
-                    var a = c.A;
-
-                    if (a == 0)
-                    {
-                        r = 0;
-                        g = 0;
-                        b = 0;
+                     for (int row = 0; row < oWidth; row++)
+                        {
+                        oldPixelArray[col, row] = _bitmap.GetPixel(row, col);
                     }
+                }
 
-                    input.WriteByte(r);
-                    input.WriteByte(g);
-                    input.WriteByte(b);
-                    input.WriteByte(a);
+                Color[,] pixelArray = Utils.Create32x32Blocks(_bitmap.Width, _bitmap.Height, oldPixelArray);
+
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        Color c = pixelArray[column, row];
+                        var r = c.R;
+                        var g = c.G;
+                        var b = c.B;
+                        var a = c.A;
+
+                        if (a == 0)
+                        {
+                            r = 0;
+                            g = 0;
+                            b = 0;
+                        }
+
+                        input.WriteByte(r);
+                        input.WriteByte(g);
+                        input.WriteByte(b);
+                        input.WriteByte(a);
+                    }
                 }
             }
+            else
+            {
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        Color c = _bitmap.GetPixel(row, column);
+                        var r = c.R;
+                        var g = c.G;
+                        var b = c.B;
+                        var a = c.A;
+
+                        if (a == 0)
+                        {
+                            r = 0;
+                            g = 0;
+                            b = 0;
+                        }
+
+                        input.WriteByte(r);
+                        input.WriteByte(g);
+                        input.WriteByte(b);
+                        input.WriteByte(a);
+                    }
+                }
+            }  
         }
 
         public override string GetImageTypeName()

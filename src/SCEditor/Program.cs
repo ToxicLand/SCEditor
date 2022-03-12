@@ -39,8 +39,14 @@ namespace SCEditor
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(Program.Interface = new MainForm());
-
+            try
+            {
+                Application.Run(Program.Interface = new MainForm());
+            }
+            catch
+            {
+                throw;
+            }
             #region Debug
             #if DEBUG
 

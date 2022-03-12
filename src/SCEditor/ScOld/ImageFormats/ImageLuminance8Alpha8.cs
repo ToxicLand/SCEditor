@@ -75,20 +75,53 @@ namespace SCEditor.ScOld.ImageFormats
         {
             base.WriteImage(input);
 
-            for (int column = 0; column < _bitmap.Height; column++)
+            if (is32x32)
             {
-                for (int row = 0; row < _bitmap.Width; row++)
+                Color[,] oldPixelArray = new Color[_bitmap.Height, _bitmap.Width];
+                int oHeight = _bitmap.Height;
+                int oWidth = _bitmap.Width;
+                for (int col = 0; col < oHeight; col++)
                 {
-                    Color cc = _bitmap.GetPixel(row, column);
-                    var a = cc.A;
-                    var r = cc.R;
-                    if (a == 0) 
-                        r = 0;
+                    for (int row = 0; row < oWidth; row++)
+                    {
+                        oldPixelArray[col, row] = _bitmap.GetPixel(row, col);
+                    }
+                }
 
-                    input.WriteByte(a);
-                    input.WriteByte(r);
+                Color[,] pixelArray = Utils.Create32x32Blocks(_bitmap.Width, _bitmap.Height, oldPixelArray);
+
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        Color cc = pixelArray[column, row];
+                        var a = cc.A;
+                        var r = cc.R;
+                        if (a == 0)
+                            r = 0;
+
+                        input.WriteByte(a);
+                        input.WriteByte(r);
+                    }
                 }
             }
+            else
+            {
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        Color cc = _bitmap.GetPixel(row, column);
+                        var a = cc.A;
+                        var r = cc.R;
+                        if (a == 0)
+                            r = 0;
+
+                        input.WriteByte(a);
+                        input.WriteByte(r);
+                    }
+                }
+            } 
         }
     }
 }

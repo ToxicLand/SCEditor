@@ -75,31 +75,75 @@ namespace SCEditor.ScOld
         public override void WriteImage(Stream input)
         {
             base.WriteImage(input);
-            for (int column = 0; column < _bitmap.Height; column++)
+
+            if (is32x32)
             {
-                for (int row = 0; row < _bitmap.Width; row++)
+                Color[,] oldPixelArray = new Color[_bitmap.Height, _bitmap.Width];
+                int oHeight = _bitmap.Height;
+                int oWidth = _bitmap.Width;
+                for (int col = 0; col < oHeight; col++)
                 {
-
-                    Color c = _bitmap.GetPixel(row, column);
-                    var r = c.R;
-                    var g = c.G;
-                    var b = c.B;
-                    var a = c.A;
-
-                    if (a == 0)
+                    for (int row = 0; row < oWidth; row++)
                     {
-                        r = 0;
-                        g = 0;
-                        b = 0;
+                        oldPixelArray[col, row] = _bitmap.GetPixel(row, col);
                     }
+                }
 
-                    int val = 0;
-                    val += (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3));
-                    UInt16 cc565 = (ushort)val;
+                Color[,] pixelArray = Utils.Create32x32Blocks(_bitmap.Width, _bitmap.Height, oldPixelArray);
 
-                    input.Write(BitConverter.GetBytes(cc565), 0, 2);
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+                        Color c = pixelArray[column, row];
+                        var r = c.R;
+                        var g = c.G;
+                        var b = c.B;
+                        var a = c.A;
+
+                        if (a == 0)
+                        {
+                            r = 0;
+                            g = 0;
+                            b = 0;
+                        }
+
+                        int val = 0;
+                        val += (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3));
+                        UInt16 cc565 = (ushort)val;
+
+                        input.Write(BitConverter.GetBytes(cc565), 0, 2);
+                    }
                 }
             }
+            else
+            {
+                for (int column = 0; column < _bitmap.Height; column++)
+                {
+                    for (int row = 0; row < _bitmap.Width; row++)
+                    {
+
+                        Color c = _bitmap.GetPixel(row, column);
+                        var r = c.R;
+                        var g = c.G;
+                        var b = c.B;
+                        var a = c.A;
+
+                        if (a == 0)
+                        {
+                            r = 0;
+                            g = 0;
+                            b = 0;
+                        }
+
+                        int val = 0;
+                        val += (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3));
+                        UInt16 cc565 = (ushort)val;
+
+                        input.Write(BitConverter.GetBytes(cc565), 0, 2);
+                    }
+                }
+            }         
         }
     }
 }

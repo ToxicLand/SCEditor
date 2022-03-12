@@ -68,6 +68,11 @@ namespace SCEditor.ScOld
             Console.WriteLine("ImageRgba5551.ReadImage finished in {0}ms", sw.Elapsed.TotalMilliseconds);
         }
 
+        public override void WriteImage(Stream input)
+        {
+            throw new NotImplementedException("ImageRgba5551 writing not supported yet");
+        }
+
         public override void Print()
         {
             base.Print();

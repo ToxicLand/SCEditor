@@ -222,6 +222,8 @@ namespace SCEditor.ScOld
 
             UInt32 packetSize = (uint) ((_image.Width) * (_image.Height) * bytesForPXFormat) + 5;
 
+            _image.is32x32 = (this.PacketId - 27) < 3;
+
             if (_offset < 0) // New
             { 
                 input.Seek(_scFile.GetEofTexOffset(), SeekOrigin.Begin);
@@ -306,6 +308,7 @@ namespace SCEditor.ScOld
                         newTexData.Write(newData, 0, newData.Length);
 
                         newTexData.WriteByte(Convert.ToByte(this.PacketId));
+
                         newTexData.Write(BitConverter.GetBytes(packetSize), 0, 4);
                         newTexData.WriteByte(_imageType);
                         _image.WriteImage(newTexData);
