@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -24,7 +25,7 @@ namespace SCEditor.ScOld
             _transformStorageId = 0;
         }
 
-        public MovieClip(ScFile scs , short dataType)
+        public MovieClip(ScFile scs, short dataType)
         {
             _scFile = scs;
             _dataType = dataType;
@@ -84,15 +85,16 @@ namespace SCEditor.ScOld
         public ushort[] timelineArray => _timelineOffsetArray;
         public bool hasShadow => _hasShadow;
         public byte FPS => _framePerSeconds;
-        public int _lastPlayedFrame { get; set; }
         public override SCObjectType objectType => SCObjectType.MovieClip;
         private string _packetId;
 
-        #endregion
+        public int _lastPlayedFrame { get; set; }
+        private MovieClipState _animationState { get; set; }
+    #endregion
 
-        #region Methods
+    #region Methods
 
-        public override int GetDataType()
+    public override int GetDataType()
         {
             return 1;
         }
@@ -172,7 +174,7 @@ namespace SCEditor.ScOld
             _timelineChildrenCount = count;
             _timelineChildrenId = new ushort[count];
             br.Read(MemoryMarshal.Cast<ushort, byte>((Span<ushort>)_timelineChildrenId));
-            
+
             if (packetId == "0C" || packetId == "23")
             {
                 _flags = new byte[count];
@@ -251,8 +253,8 @@ namespace SCEditor.ScOld
 
                         case 11:
                             {
-                                MovieClipFrame frame = (MovieClipFrame) _frames[index];
-                                
+                                MovieClipFrame frame = (MovieClipFrame)_frames[index];
+
                                 ushort frameId = br.ReadUInt16();
                                 byte frameNameLength = br.ReadByte();
                                 string frameName = null;
@@ -281,8 +283,8 @@ namespace SCEditor.ScOld
 
         public unsafe int GetFrameDataLength(int index)
         {
-            MovieClipFrame movieClipFrameFirst = (MovieClipFrame) _frames[index];
-            MovieClipFrame movieClipFrameSecond = (MovieClipFrame) _frames[index + 1];
+            MovieClipFrame movieClipFrameFirst = (MovieClipFrame)_frames[index];
+            MovieClipFrame movieClipFrameSecond = (MovieClipFrame)_frames[index + 1];
 
             return (int)((ulong)movieClipFrameSecond.GetTimeline() - (ulong)movieClipFrameFirst.GetTimeline()) >> 1;
         }
@@ -310,7 +312,7 @@ namespace SCEditor.ScOld
                 {
                     throw new NotImplementedException();
                 }
-                else if (_offset > 0) 
+                else if (_offset > 0)
                 {
                     input.Seek(0, SeekOrigin.Begin);
 
@@ -360,7 +362,7 @@ namespace SCEditor.ScOld
                         this.setLength((uint)(dataLength + 5));
                     }
 
-                    
+
                     _scFile.SetEofOffset(input.Length - 5);
                 }
             }
@@ -487,163 +489,142 @@ namespace SCEditor.ScOld
 
         public Bitmap renderAnimation(RenderingOptions options, int frameIndex)
         {
+            this._animationState = MovieClipState.Playing;
+
             if (timelineArray.Length > 0)
             {
-                /**List<ushort> addId = new List<ushort>();
-                List<int> IdValue = new List<int>();
-                for (int i = 0; i < this.timelineArray.Length; i++)
-                {
-                    for (int x = 0; x < 3; x++)
-                    {
-                        if (x == 0)
-                        {
-                            int idx = addId.FindIndex(g => g == this.timelineArray[i]);
-                            if (idx == -1)
-                            {
-                                addId.Add(this.timelineArray[i]);
-                                IdValue.Add(1);
-                            }
-                            else
-                            {
-
-                                IdValue[idx] += 1;
-                            }
-                        }
-
-                        x++; i++;
-                    }
-                }**/
-
-                int totalFrameTimelineCount = 0;
-                foreach (MovieClipFrame frame in this._frames)
-                {
-                    totalFrameTimelineCount += (frame.Id * 3);
-                }
-
-                if (/**addId.Count != this.Children.Count || **/this.timelineArray.Length % 3 != 0 || this.timelineArray.Length != totalFrameTimelineCount)
-                {
-                    MessageBox.Show("MoveClip:Render() ShapeCount does not match timeline count or timeline length is not sets of 6 or total shape count does not match frames count");
-                    return null;
-                }
-
-                // ^ move this check when the animation starts
-
-                List<PointF> A = _pointFList;
-
-                if (A.Count == 0 || A == null)
+                if (_pointFList?.Count == 0 || _pointFList == null)
                 {
                     Console.WriteLine("renderAnimation(): List<PointF> A empty or null.");
                     return null;
                 }
-                    
+
+                if (frameIndex == 0)
+                {
+                    if (this.Frames.Count != 1)
+                    {
+                        ((MovieClipFrame)this.Frames[this.Frames.Count - 1]).setBitmap(null);
+                    }
+                }
+                else
+                {
+                    ((MovieClipFrame)this.Frames[frameIndex - 1]).setBitmap(null);
+                }
 
                 using (var xyPath = new GraphicsPath())
                 {
-                    xyPath.AddPolygon(A.ToArray());
+                    xyPath.AddPolygon(_pointFList.ToArray());
                     var xyBound = Rectangle.Round(xyPath.GetBounds());
 
                     setFrame(frameIndex, options, xyBound);
-
-                    // REMOVE OLD DATA
-                    if (frameIndex != 0)
-                    {
-                        ((MovieClipFrame)this.Frames[frameIndex - 1]).setBitmap(null);
-                    }
-
                     return getFrame(frameIndex);
                 }
             }
+
             return null;
         }
 
         public Bitmap getFrame(int frameIndex)
         {
-            return ((MovieClipFrame)this.Frames[frameIndex]).Bitmap != null ? ((MovieClipFrame)this.Frames[frameIndex]).Bitmap : throw new Exception("getFrame Data is null?");
+            return ((MovieClipFrame)this.Frames[frameIndex]).Bitmap != null ? ((MovieClipFrame)this.Frames[frameIndex]).Bitmap : new Bitmap(1, 1);
         }
 
         public void setFrame(int frameIndex, RenderingOptions options, Rectangle xyBound)
         {
-            if (this._scFile.CurrentRenderingMovieClips.FindIndex(mv => mv.Id == this.Id) == -1)
-                this._scFile.addRenderingItem(this);
-
-            int frameIndextoAdd = 0;
-            int idxToAdd = 0;
-            foreach (MovieClipFrame mvframe in Frames)
+            try
             {
-                if (idxToAdd == frameIndex)
+                if (this._scFile.CurrentRenderingMovieClips.FindIndex(mv => mv.Id == this.Id) == -1)
+                    this._scFile.addRenderingItem(this);
+
+                int frameIndextoAdd = 0;
+                int idxToAdd = 0;
+                foreach (MovieClipFrame mvframe in Frames)
                 {
-                    break;
+                    if (idxToAdd == frameIndex)
+                    {
+                        break;
+                    }
+
+                    frameIndextoAdd += mvframe.Id;
+                    idxToAdd++;
                 }
 
-                frameIndextoAdd += mvframe.Id;
-                idxToAdd++;
-            }
+                int timelineIndex = frameIndextoAdd * 3;
 
-            int timelineIndex = frameIndextoAdd * 3;
+                var x = xyBound.X;
+                var y = xyBound.Y;
 
-            var x = xyBound.X;
-            var y = xyBound.Y;
+                var width = xyBound.Width;
+                width = width > 0 ? width : 1;
 
-            var width = xyBound.Width;
-            width = width > 0 ? width : 1;
+                var height = xyBound.Height;
+                height = height > 0 ? height : 1;
 
-            var height = xyBound.Height;
-            height = height > 0 ? height : 1;
+                var finalShape = new Bitmap(width, height);
 
-            var finalShape = new Bitmap(width, height);
+                int frameTimelineCount = _frames[frameIndex].Id;
 
-            int frameTimelineCount = _frames[frameIndex].Id;
-
-            for (int i = 0; i < frameTimelineCount; i++)
-            {
-                Matrix childrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
-                Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
-                Tuple<Color, byte, Color> colorData = timelineArray[timelineIndex + 2] != 0xFFFF ? this._scFile.getColors(_transformStorageId)[timelineArray[timelineIndex + 2]] : null;
-
-                if (options.MatrixData != null)
-                    matrixData.Multiply(options.MatrixData);
-
-                ushort childrenId = timelineChildrenId[timelineArray[timelineIndex]];
-
-                int shapeIndex = _scFile.GetShapes().FindIndex(s => s.Id == childrenId);
-                if (shapeIndex != -1)
-                {   
-                    foreach (ShapeChunk chunk in ((Shape)_scFile.GetShapes()[shapeIndex]).Children)
+                for (int i = 0; i < frameTimelineCount; i++)
+                {
+                    if (timelineChildrenNames[timelineArray[timelineIndex]] == "bounds")
                     {
-                        var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
+                        timelineIndex += 3;
+                        continue;
+                    }
 
-                        if (texture != null)
+                    Matrix childrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
+                    Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
+                    Tuple<Color, byte, Color> colorData = timelineArray[timelineIndex + 2] != 0xFFFF ? this._scFile.getColors(_transformStorageId)[timelineArray[timelineIndex + 2]] : null;
+
+                    if (options.MatrixData != null)
+                        matrixData.Multiply(options.MatrixData);
+
+                    ushort childrenId = timelineChildrenId[timelineArray[timelineIndex]];
+
+                    Bitmap temporaryBitmap = new Bitmap(width, height);
+
+                    int shapeIndex = _scFile.GetShapes().FindIndex(s => s.Id == childrenId);
+                    if (shapeIndex != -1)
+                    {
+                        /***
+                            - If children is shape
+                        ***/
+                        foreach (ShapeChunk chunk in ((Shape)_scFile.GetShapes()[shapeIndex]).Children)
                         {
-                            Bitmap bitmap = texture.Bitmap;
-                            using (var gpuv = new GraphicsPath())
+                            var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
+
+                            if (texture != null)
                             {
-                                gpuv.AddPolygon(chunk.UV.ToArray());
-
-                                var gxyBound = Rectangle.Round(gpuv.GetBounds());
-
-                                int gpuvWidth = gxyBound.Width;
-                                gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
-
-                                int gpuvHeight = gxyBound.Height;
-                                gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
-
-                                var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
-
-                                var chunkX = gxyBound.X;
-                                var chunkY = gxyBound.Y;
-
-                                using (var g = Graphics.FromImage(shapeChunk))
+                                Bitmap bitmap = texture.Bitmap;
+                                using (var gpuv = new GraphicsPath())
                                 {
-                                    gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
-                                    g.SetClip(gpuv);
-                                    g.DrawImage(bitmap, -chunkX, -chunkY);
-                                }
+                                    gpuv.AddPolygon(chunk.UV.ToArray());
 
-                                GraphicsPath gp = new GraphicsPath();
-                                gp.AddPolygon(new[] { new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight) });
+                                    var gxyBound = Rectangle.Round(gpuv.GetBounds());
 
-                                double[,] matrixArrayUV =
-                                {
+                                    int gpuvWidth = gxyBound.Width;
+                                    gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
+
+                                    int gpuvHeight = gxyBound.Height;
+                                    gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
+
+                                    var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
+
+                                    var chunkX = gxyBound.X;
+                                    var chunkY = gxyBound.Y;
+
+                                    using (var g = Graphics.FromImage(shapeChunk))
+                                    {
+                                        gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
+                                        g.SetClip(gpuv);
+                                        g.DrawImage(bitmap, -chunkX, -chunkY);
+                                    }
+
+                                    GraphicsPath gp = new GraphicsPath();
+                                    gp.AddPolygon(new[] { new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight) });
+
+                                    double[,] matrixArrayUV =
+                                    {
                                             {
                                                 gpuv.PathPoints[0].X, gpuv.PathPoints[1].X, gpuv.PathPoints[2].X
                                             },
@@ -655,18 +636,18 @@ namespace SCEditor.ScOld
                                             }
                                         };
 
-                                PointF[] newXY = new PointF[chunk.XY.Length];
+                                    PointF[] newXY = new PointF[chunk.XY.Length];
 
-                                for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
-                                {
-                                    float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
-                                    float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
+                                    for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                                    {
+                                        float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                        float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
 
-                                    newXY[xyIdx] = new PointF(xNew, yNew);
-                                }
+                                        newXY[xyIdx] = new PointF(xNew, yNew);
+                                    }
 
-                                double[,] matrixArrayXY =
-                                {
+                                    double[,] matrixArrayXY =
+                                    {
                                             {
                                                 newXY[0].X, newXY[1].X, newXY[2].X
                                             },
@@ -678,119 +659,213 @@ namespace SCEditor.ScOld
                                             }
                                         };
 
-                                var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
-                                var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
-                                var inverseMatrixUV = matrixUV.Inverse();
-                                var transformMatrix = matrixXY * inverseMatrixUV;
-                                var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+                                    var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
+                                    var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
+                                    var inverseMatrixUV = matrixUV.Inverse();
+                                    var transformMatrix = matrixXY * inverseMatrixUV;
+                                    var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
 
-                                //Perform transformations
-                                gp.Transform(m);
+                                    //Perform transformations
+                                    gp.Transform(m);
 
-                                using (Graphics g = Graphics.FromImage(finalShape))
-                                {
-                                    //Set origin
-                                    Matrix originTransform = new Matrix();
-                                    originTransform.Translate(-x, -y);
-                                    g.Transform = originTransform;
-
-                                    ImageAttributes attr = new ImageAttributes();
-
-                                    if (colorData != null)
+                                    using (Graphics g = Graphics.FromImage(temporaryBitmap))
                                     {
-                                        //ColorMap[] colorMap = new ColorMap[1];
-                                        //colorMap[0] = new ColorMap();
-                                        //colorMap[0].OldColor = colorData.Item1;
+                                        //Set origin
+                                        Matrix originTransform = new Matrix();
+                                        originTransform.Translate(-x, -y);
+                                        g.Transform = originTransform;
 
-                                        //if (colorData.Item2 != 0xFF)
-                                        //{
-                                        //    Color newCol = Color.FromArgb(colorData.Item2, colorData.Item3.R, colorData.Item3.G, colorData.Item3.B);
-                                        //    colorMap[0].NewColor = newCol;
-                                        //}
-                                        //else
-                                        //{
-                                        //    colorMap[0].NewColor = colorData.Item3;
-                                        //}
+                                        g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
 
-                                        //attr.SetRemapTable(colorMap);
-                                    }       
-
-                                    g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel, attr);
-
-                                    if (options.ViewPolygons)
-                                    {
-                                        gpuv.Transform(m);
-                                        g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                        if (options.ViewPolygons)
+                                        {
+                                            gpuv.Transform(m);
+                                            g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                        }
+                                        g.Flush();
                                     }
-                                    g.Flush();
                                 }
                             }
                         }
                     }
-                }
-                else 
-                {
-                    int movieClipIndex = _scFile.GetMovieClips().FindIndex(s => s.Id == childrenId);
-
-                    if (movieClipIndex != -1)
+                    else
                     {
-                        MovieClip extramovieClip = (MovieClip)_scFile.GetMovieClips()[movieClipIndex];
+                        int movieClipIndex = _scFile.GetMovieClips().FindIndex(s => s.Id == childrenId);
 
-                        Matrix newChildrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
-                        Matrix newMatrix = newChildrenMatrixData != null ? newChildrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
-
-
-                        if (options.MatrixData != null)
+                        /***
+                            - If children is movieclip
+                        ***/
+                        if (movieClipIndex != -1)
                         {
-                            if (newMatrix != null)
+                            MovieClip extramovieClip = (MovieClip)_scFile.GetMovieClips()[movieClipIndex];
+
+                            Matrix newChildrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
+                            Matrix newMatrix = newChildrenMatrixData != null ? newChildrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
+
+                            if (options.MatrixData != null)
                             {
-                                newMatrix.Multiply(options.MatrixData);
+                                if (newMatrix != null)
+                                {
+                                    newMatrix.Multiply(options.MatrixData);
+                                }
+                                else
+                                {
+                                    newMatrix = new Matrix();
+                                    newMatrix.Multiply(options.MatrixData);
+                                }
+                            }
+
+                            if (extramovieClip.getPointFList() == null || extramovieClip.getPointFList().Count == 0)
+                                extramovieClip.initPointFList(newMatrix);
+
+                            if (_scFile.CurrentRenderingMovieClips.FindIndex(s => s.Id == extramovieClip.Id) == -1)
+                                _scFile.CurrentRenderingMovieClips.Add(extramovieClip);                          
+
+                            int extraFrameIndex = extramovieClip._lastPlayedFrame;
+
+                            RenderingOptions newOptions = new RenderingOptions() { MatrixData = newMatrix, ViewPolygons = options.ViewPolygons };
+
+                            extramovieClip.setFrame(extraFrameIndex, newOptions, xyBound);
+
+                            Bitmap frameData = extramovieClip.getFrame(extraFrameIndex);
+
+                            extramovieClip._lastPlayedFrame += 1;
+
+                            if (extramovieClip._lastPlayedFrame == extramovieClip.Frames.Count)
+                                extramovieClip._lastPlayedFrame = 0;
+
+                            using (Graphics g = Graphics.FromImage(temporaryBitmap))
+                            {
+                                g.DrawImage(frameData, 0, 0);
+
+                                g.Flush();
+                            }
+                        }
+                        else
+                        {
+                            int textFieldIndex = _scFile.getTextFields().FindIndex(s => s.Id == childrenId);
+
+                            /***
+                                - If children is textfield
+                            ***/
+                            if (textFieldIndex != -1)
+                            {
+                                if (!RenderingOptions.disableTextFieldRendering)
+                                {
+                                    TextField textFieldData = (TextField)_scFile.getTextFields()[textFieldIndex];
+
+                                    using (Graphics g = Graphics.FromImage(temporaryBitmap))
+                                    {
+                                        StringFormat sf = new StringFormat();
+                                        sf.Alignment = StringAlignment.Center;
+                                        sf.LineAlignment = StringAlignment.Far;
+
+                                        InstalledFontCollection fonts = new InstalledFontCollection();
+                                        FontFamily textFontFamily = fonts.Families.Where(f => f.Name == textFieldData._fontName).FirstOrDefault();
+                                        if (textFontFamily == null)
+                                        {
+                                            MessageBox.Show($"Movieclip childiren {childrenId} textfield font {textFieldData._fontName} not installed");
+                                            textFontFamily = SystemFonts.DefaultFont.FontFamily;
+                                        }
+
+                                        var p = new Pen(textFieldData._fontOutlineColor, 0);
+                                        p.LineJoin = LineJoin.Round;
+                                        if (textFieldData._fontOutlineColor != (new Color()))
+                                        {
+                                            p.Width = 5;
+                                        }
+
+                                        string textRender = string.Empty;
+                                        if (string.IsNullOrEmpty(textFieldData._textData))
+                                        {
+                                            if (string.IsNullOrEmpty(timelineChildrenNames[timelineArray[timelineIndex]]))
+                                            {
+                                                textRender = "Text1";
+                                            }
+                                            else
+                                            {
+                                                textRender = timelineChildrenNames[timelineArray[timelineIndex]];
+                                            }
+                                        }
+                                        else
+                                        {
+                                            textRender = textFieldData._textData;
+                                        }
+
+                                        GraphicsPath gp = new GraphicsPath();
+                                        Rectangle r = new Rectangle(0, 0, finalShape.Width, finalShape.Height);
+                                        gp.AddString(textRender, textFontFamily, (int)FontStyle.Regular, textFieldData._fontSize, r, sf);
+
+                                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                                        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                                        g.DrawPath(p, gp);
+                                        g.DrawString(textRender, (new Font(textFontFamily, textFieldData._fontSize, FontStyle.Regular, GraphicsUnit.Pixel)), (new SolidBrush(textFieldData._fontColor)), r, sf);
+
+                                        gp.Dispose();
+                                        g.Flush();
+                                    }
+                                } 
                             }
                             else
                             {
-                                newMatrix = new Matrix();
-                                newMatrix.Multiply(options.MatrixData);
+                                MessageBox.Show($"Movieclip {this.Id} contains children {childrenId} of unknown type.");
                             }
                         }
-                        
-                        extramovieClip.generatePointFList(newMatrix);
+                    }
 
-                        if (extramovieClip._lastPlayedFrame + 1 >= extramovieClip.Frames.Count || frameIndex == 0)
-                            extramovieClip._lastPlayedFrame = 0;
+                    Rectangle originalRectangle = new Rectangle(0, 0, temporaryBitmap.Width, temporaryBitmap.Height);
 
-                        int extraFrameIndex = extramovieClip._lastPlayedFrame;
+                    if (colorData != null)
+                    {
+                        ImageAttributes imageAttributes = new ImageAttributes();
+                        ColorMatrix matrix = new ColorMatrix();
 
-                        RenderingOptions newOptions = new RenderingOptions() { MatrixData = newMatrix, ViewPolygons = options.ViewPolygons };
+                        ColorMap colorMap = new ColorMap();
+                        ColorMap[] remapTable = { colorMap };
 
-                        extramovieClip.setFrame(extraFrameIndex, newOptions, xyBound);
-                        Bitmap frameData = extramovieClip.getFrame(extraFrameIndex);
-                        extramovieClip._lastPlayedFrame += 1;
+                        colorMap.OldColor = colorData.Item1;
+                        colorMap.NewColor = colorData.Item3;
 
-                        using (Graphics g = Graphics.FromImage(finalShape))
+                        matrix.Matrix33 = (float)(colorData.Item2 / 255); 
+
+                        imageAttributes.SetRemapTable(remapTable, ColorAdjustType.Bitmap);
+
+                        Bitmap tempBmp1 = new Bitmap(temporaryBitmap.Width, temporaryBitmap.Height);
+                        using (Graphics g = Graphics.FromImage(tempBmp1))
                         {
-                            g.DrawImage(frameData, 0, 0);
-
-                            g.Flush();
+                            g.DrawImage(temporaryBitmap, originalRectangle, 0, 0, temporaryBitmap.Width, temporaryBitmap.Height, GraphicsUnit.Pixel, imageAttributes);
                         }
 
-                        extramovieClip.destroyPointFList();
+                        imageAttributes = new ImageAttributes();
+                        imageAttributes.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+
+                        temporaryBitmap = new Bitmap(temporaryBitmap.Width, temporaryBitmap.Height);
+                        using (Graphics g = Graphics.FromImage(temporaryBitmap))
+                        {
+                            g.DrawImage(tempBmp1, originalRectangle, 0, 0, temporaryBitmap.Width, temporaryBitmap.Height, GraphicsUnit.Pixel, imageAttributes);
+                        }
                     }
-                    else
+
+                    using (Graphics g = Graphics.FromImage(finalShape))
                     {
-                        // implement
+                        g.DrawImage(temporaryBitmap, originalRectangle);
                     }
-                    
+
+                    timelineIndex += 3;
                 }
 
 
-                timelineIndex += 3;
-            }
-            
-
             ((MovieClipFrame)this.Frames[frameIndex]).setBitmap(finalShape);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message + $" in setFrame({frameIndex}) | " + ex.StackTrace);
+            }
+
         }
 
-        public List<PointF> getChildrensPointF(Matrix matrixIn)
+        public List<PointF> generateChildrensPointF(Matrix matrixIn)
         {
             List<PointF> A = new List<PointF>();
 
@@ -847,7 +922,7 @@ namespace SCEditor.ScOld
                     if (movieClipIndex != -1)
                     {
 
-                        A.AddRange(((MovieClip)_scFile.GetMovieClips()[movieClipIndex]).getChildrensPointF(matrixIn));
+                        A.AddRange(((MovieClip)_scFile.GetMovieClips()[movieClipIndex]).generateChildrensPointF(matrixIn));
                     }
                     else if (_scFile.getTextFields().FindIndex(t => t.Id == timelineChildrenId[timelineArray[(i * 3)]]) != -1)
                     {
@@ -898,9 +973,14 @@ namespace SCEditor.ScOld
             _timelineChildrenNames = temp.ToArray();
         }
 
-        public void generatePointFList(Matrix matrixIn)
+        public void initPointFList(Matrix matrixIn)
         {
-            _pointFList = getChildrensPointF(matrixIn);
+            _pointFList = generateChildrensPointF(matrixIn);
+        }
+
+        public List<PointF> getPointFList()
+        {
+            return _pointFList;
         }
 
         public void destroyPointFList()
@@ -984,5 +1064,12 @@ namespace SCEditor.ScOld
         }
 
         #endregion
+
+        public enum MovieClipState
+        {
+            Stopped,
+            Playing,
+            None
+        }
     }
 }

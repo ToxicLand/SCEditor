@@ -7,22 +7,23 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace SCEditor.ScOld
 {
     class TextField : ScObject
     {
-        private string _fontName;
+        public string _fontName;
         private ushort _leftCorner; // textFieldBounds 1 > float
         private ushort _topCorner; // textFieldBounds 2 > float
         private ushort _rightCorner; // textFieldBounds 3 > float
         private ushort _bottomCorner; // textFieldBounds 4 > float
-        private Color _fontColor; // numbertext > color transform related
-        private Color _fontOutlineColor; // numberValue
-        private string _textData; // stringObject - text
+        public Color _fontColor; // numbertext > color transform related
+        public Color _fontOutlineColor; // numberValue
+        public string _textData; // stringObject - text
         private byte _flag;
         private byte _fontWidth; // align > matrix related
-        private byte _fontSize; // characterScale - fontSize  > color transform related
+        public byte _fontSize; // characterScale - fontSize  > color transform related
         private ushort _transform1;
         private ushort _unk46;
         private ScFile _scFile;
@@ -341,8 +342,48 @@ namespace SCEditor.ScOld
 
         private Bitmap shapeRender()
         {
+            Bitmap finalShape = new Bitmap((this._fontSize + 100), (this._fontSize + 100));
 
-            return null;
+            using (Graphics g = Graphics.FromImage(finalShape))
+            {
+                StringFormat sf = new StringFormat();
+                sf.Alignment = StringAlignment.Center;
+                sf.LineAlignment = StringAlignment.Far;
+
+                InstalledFontCollection fonts = new InstalledFontCollection();
+                FontFamily textFontFamily = fonts.Families.Where(f => f.Name == this._fontName).FirstOrDefault();
+                if (textFontFamily == null)
+                {
+                    MessageBox.Show($"{this.Id} textfield font {this._fontName} not installed");
+                    textFontFamily = SystemFonts.DefaultFont.FontFamily;
+                }
+
+                var p = new Pen(this._fontOutlineColor, 0);
+                p.LineJoin = LineJoin.Round;
+                if (this._fontOutlineColor != (new Color()))
+                {
+                    p.Width = 5;
+                }
+
+                string textRender = (string.IsNullOrEmpty(this._textData) == true ? "ABC1" : this._textData);
+
+                GraphicsPath gp = new GraphicsPath();
+                Rectangle r = new Rectangle(0, 0, finalShape.Width, finalShape.Height);
+                gp.AddString(textRender, textFontFamily, (int)FontStyle.Regular, this._fontSize, r, sf);
+
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                g.DrawPath(p, gp);
+                g.DrawString(textRender, (new Font(textFontFamily, this._fontSize, FontStyle.Regular, GraphicsUnit.Pixel)), (new SolidBrush(this._fontColor)), r, sf);
+
+                gp.Dispose();
+                g.Flush();
+            }
+
+            return finalShape;
+
+            //return null;
 
             //Bitmap image = new Bitmap(120, 120);
             //RectangleF rectf = new RectangleF(0, 0, image.Width, image.Height);

@@ -46,7 +46,8 @@ namespace Test
             //{
             //    Console.WriteLine("WORKS!");
             //}
-            //Console.WriteLine("Done!");
+
+            Console.WriteLine("Done!");
         }
 
         static void jsontest()

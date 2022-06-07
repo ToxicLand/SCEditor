@@ -222,7 +222,7 @@ namespace SCEditor.ScOld
 
             UInt32 packetSize = (uint) ((_image.Width) * (_image.Height) * bytesForPXFormat) + 5;
 
-            _image.is32x32 = (this.PacketId - 27) < 3;
+            _image.is32x32 = Math.Abs((this.PacketId - 27)) < 3;
 
             if (_offset < 0) // New
             { 

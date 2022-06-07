@@ -63,7 +63,31 @@ namespace SCEditor.Prompts
                     options.editedMatrixs = _originalData;
                 }
 
-                pictureBox1.Image = selectedData.Render(options);
+                bool exportRendered = false;
+                if (selectedData.GetDataType() == 7)
+                {
+                    MovieClip mvData = ((MovieClip)((Export)selectedData).GetDataObject());
+
+                    if (mvData.Frames.Count > 0)
+                    {
+                        mvData.initPointFList(null);
+
+                        Bitmap mvBitmap = mvData.renderAnimation(new RenderingOptions(), 0);
+
+                        if (mvBitmap != null)
+                        {
+                            exportRendered = true;
+                            pictureBox1.Image = mvBitmap;
+                        }
+
+                        mvData.destroyPointFList();
+                    }
+                    
+                }
+
+                if (!exportRendered)
+                    pictureBox1.Image = selectedData.Render(options);
+
                 pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
 
                 if (selectedData.Children == null && selectedData.Bitmap != null)

@@ -223,54 +223,6 @@ namespace SCEditor.ScOld
 
             if (_pendingMatrixs.Count > 0)
             {
-                //input.Seek(0, SeekOrigin.Begin);
-
-                //using (MemoryStream newData = new MemoryStream())
-                //{
-                //    long offsetBefore = _eofMatrixOffset;
-
-                //    byte[] tillMatrixEndData = new byte[_eofMatrixOffset];
-                //    input.Read(tillMatrixEndData, 0, (int)_eofMatrixOffset);
-
-                //    newData.Write(tillMatrixEndData, 0, tillMatrixEndData.Length);
-
-                //    foreach (Matrix matrix in _pendingMatrixs)
-                //    {
-                //        newData.WriteByte(8);
-                //        newData.Write(BitConverter.GetBytes(24), 0, 4);
-
-                //        Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
-                //            matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
-
-                //        for (int i = 0; i < 6; i++)
-                //        {
-                //            newData.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
-                //        }
-
-                //        _eofMatrixOffset = newData.Position;
-
-                //        matrixAdd += 1;
-                //    }
-
-                //    byte[] restData = new byte[input.Length - offsetBefore];
-                //    input.Read(restData, 0, restData.Length);
-                //    newData.Write(restData, 0, restData.Length);
-
-                //    input.Seek(0, SeekOrigin.Begin);
-                //    newData.Seek(0, SeekOrigin.Begin);
-                //    newData.CopyTo(input);
-                //}
-
-                //_pendingMatrixs.Clear();
-
-                //input.Seek(8, SeekOrigin.Begin);
-                //this._matrixCount += matrixAdd;
-                //input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
-
-                //input.Close();
-                //reloadInfoFile();
-                //input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-
                 input.Seek(this._eofOffset, SeekOrigin.Begin);
                 foreach (Matrix matrix in _pendingMatrixs)
                 {
@@ -301,54 +253,6 @@ namespace SCEditor.ScOld
 
             if (_pendingColors.Count > 0)
             {
-                //input.Seek(0, SeekOrigin.Begin);
-
-                //using (MemoryStream newData = new MemoryStream())
-                //{
-                //    long offsetBefore = _eofColorsOffset;
-
-                //    byte[] tillColorEndData = new byte[_eofColorsOffset];
-                //    input.Read(tillColorEndData, 0, (int)_eofColorsOffset);
-
-                //    newData.Write(tillColorEndData, 0, tillColorEndData.Length);
-
-                //    foreach (Tuple<Color, byte, Color> color in _pendingColors)
-                //    {
-                //        newData.WriteByte(9);
-                //        newData.Write(BitConverter.GetBytes(7), 0, 4);
-
-                //        newData.WriteByte(color.Item1.R);
-                //        newData.WriteByte(color.Item1.G);
-                //        newData.WriteByte(color.Item1.B);
-                //        newData.WriteByte(color.Item2);
-                //        newData.WriteByte(color.Item1.R);
-                //        newData.WriteByte(color.Item1.G);
-                //        newData.WriteByte(color.Item1.B);
-
-                //        _eofColorsOffset = newData.Position;
-
-                //        colorsAdd += 1;
-                //    }
-
-                //    byte[] restData = new byte[input.Length - offsetBefore];
-                //    input.Read(restData, 0, restData.Length);
-                //    newData.Write(restData, 0, restData.Length);
-
-                //    input.Seek(0, SeekOrigin.Begin);
-                //    newData.Seek(0, SeekOrigin.Begin);
-                //    newData.CopyTo(input);
-                //}
-
-                //_pendingColors.Clear();
-
-                //input.Seek(10, SeekOrigin.Begin);
-                //this._colorsCount += colorsAdd;
-                //input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
-
-                //input.Close();
-                //reloadInfoFile();
-                //input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-
                 input.Seek(this._eofOffset, SeekOrigin.Begin);
                 foreach (Tuple<Color, byte, Color> color in _pendingColors)
                 {
@@ -402,7 +306,6 @@ namespace SCEditor.ScOld
                             input.Seek(4, SeekOrigin.Begin);
                             input.Write(BitConverter.GetBytes(this._textureCount), 0, 2);
                         }
-
                         break;
 
                     case 5: // TextFields
@@ -425,7 +328,7 @@ namespace SCEditor.ScOld
 
                     case 1: // MovieClip
                         data.Write(input);
-                        
+
                         if (data.customAdded == true)
                         {
                             movieClipAdd += 1;
@@ -457,14 +360,14 @@ namespace SCEditor.ScOld
                         {
                             resetOffsets(data);
                         }
-                        
+
                         break;
 
                     case 99: // ShapeChunk
                         throw new Exception("check");
-                        //data.Write(input);
-                        //shapeChunkAdd += 1;
-                        //break;
+                    //data.Write(input);
+                    //shapeChunkAdd += 1;
+                    //break;
 
                     case -256:
                         if (data.GetDataType() == -256)
@@ -739,7 +642,7 @@ namespace SCEditor.ScOld
                                 if (scCompressionType == "53-43-4C-5A")
                                 {
                                     Console.WriteLine("LZHAM Compression for " + Path.GetFileName(_infoFile));
-                                    Lzma.Decompress(_textureFile);
+                                    Lzma.Decompress(_infoFile);
                                 }
                                 else if (scCompressionType == "28-B5-2F-FD")
                                 {
@@ -1106,8 +1009,8 @@ namespace SCEditor.ScOld
 
                     foreach (ushort tcId in mv.timelineChildrenId)
                     {
-                        if (mv.getChildrens().FindIndex(obj => obj.Id == tcId) != -1)
-                            continue;
+                        /**if (mv.getChildrens().FindIndex(obj => obj.Id == tcId) != -1)
+                            continue;**/
 
                         int findIndex = this.GetShapes().FindIndex(shape => shape.Id == tcId);
                         if (findIndex != -1)

@@ -46,7 +46,7 @@ namespace SCEditor.ScOld
                         byte g = br.ReadByte();
                         byte b = br.ReadByte();
                         byte a = br.ReadByte();
-                        pixelArray[row, col] = Color.FromArgb((int) ((a << 24) | (r << 16) | (g << 8) | b));
+                        pixelArray[row, col] = Color.FromArgb((int)((a << 24) | (r << 16) | (g << 8) | b));
                     }
                 }
 
@@ -68,7 +68,7 @@ namespace SCEditor.ScOld
                 var length = data.Stride * data.Height;
                 var sourceBytes = br.ReadBytes(length);
 
-                byte* dst = (byte*) data.Scan0.ToPointer();
+                byte* dst = (byte*)data.Scan0.ToPointer();
                 fixed (byte* fixSrc = sourceBytes)
                 {
                     for (byte* src = fixSrc; src < fixSrc + length; src += 4)
@@ -104,8 +104,8 @@ namespace SCEditor.ScOld
                 int oWidth = _bitmap.Width;
                 for (int col = 0; col < oHeight; col++)
                 {
-                     for (int row = 0; row < oWidth; row++)
-                        {
+                    for (int row = 0; row < oWidth; row++)
+                    {
                         oldPixelArray[col, row] = _bitmap.GetPixel(row, col);
                     }
                 }
@@ -161,7 +161,7 @@ namespace SCEditor.ScOld
                         input.WriteByte(a);
                     }
                 }
-            }  
+            }
         }
 
         public override string GetImageTypeName()

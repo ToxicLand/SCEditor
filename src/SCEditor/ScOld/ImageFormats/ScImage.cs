@@ -20,7 +20,7 @@ namespace SCEditor.ScOld
         protected ushort _width;
         protected ushort _height;
         protected Bitmap _bitmap;
-        public bool is32x32 { get; set; }
+        public bool is32x32 { get; set; } = false;
 
         public ushort Width => _width;
         public ushort Height => _height;

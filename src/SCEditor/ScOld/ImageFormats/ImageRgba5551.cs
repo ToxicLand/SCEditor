@@ -51,6 +51,7 @@ namespace SCEditor.ScOld
                 }
 
             }
+
             if (Is32x32)
                 pixelArray = Utils.Solve32X32Blocks(_width, _height, pixelArray);
 

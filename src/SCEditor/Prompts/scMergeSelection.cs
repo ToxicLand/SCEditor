@@ -22,7 +22,12 @@ namespace SCEditor.Prompts
         public scMergeSelection(List<ScObject> exportsList)
         {
             InitializeComponent();
-            exportsToList = exportsList.OrderBy(ex => ex.GetName()).ToList();
+
+            if (MessageBox.Show("Sort exports by name in ascending order?", "Sort Export by Name", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                exportsToList = exportsList.OrderBy(ex => ex.GetName()).ToList();
+            else
+                exportsToList = exportsList;
+
             allChecked = false;
             newTextureChecked = false;
             populateListBox();
@@ -36,9 +41,14 @@ namespace SCEditor.Prompts
 
         private void populateListBox()
         {
+            bool afterThisChecked = false;
+
             foreach (object export in exportsToList)
             {
-                exportsListBox.Items.Add(new exportItemClass { exportName = ((Export)export).GetName(), exportData = export }, false);
+                if (((Export)export).GetName() == "icon_hero_crow")
+                    afterThisChecked = true;
+
+                exportsListBox.Items.Add(new exportItemClass { exportName = ((Export)export).GetName(), exportData = export }, afterThisChecked);
             }  
 
             exportsListBox.DisplayMember = "exportName";

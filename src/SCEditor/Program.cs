@@ -43,9 +43,9 @@ namespace SCEditor
             {
                 Application.Run(Program.Interface = new MainForm());
             }
-            catch
+            catch (Exception ex)
             {
-                throw;
+                MessageBox.Show(ex.Message);
             }
             #region Debug
             #if DEBUG

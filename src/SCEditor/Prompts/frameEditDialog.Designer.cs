@@ -41,12 +41,13 @@ namespace SCEditor.Prompts
             this.addFrameAfterSelectedButton = new System.Windows.Forms.Button();
             this.deleteSelectedButton = new System.Windows.Forms.Button();
             this.changeAllButton = new System.Windows.Forms.Button();
+            this.cloneFrameBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // FramesArrayBox
             // 
             this.FramesArrayBox.FormattingEnabled = true;
-            this.FramesArrayBox.Location = new System.Drawing.Point(26, 103);
+            this.FramesArrayBox.Location = new System.Drawing.Point(26, 154);
             this.FramesArrayBox.Name = "FramesArrayBox";
             this.FramesArrayBox.Size = new System.Drawing.Size(170, 23);
             this.FramesArrayBox.TabIndex = 0;
@@ -55,7 +56,7 @@ namespace SCEditor.Prompts
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(26, 85);
+            this.label1.Location = new System.Drawing.Point(26, 136);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(105, 15);
             this.label1.TabIndex = 1;
@@ -65,9 +66,9 @@ namespace SCEditor.Prompts
             // 
             this.saveButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(31)))), ((int)(((byte)(31)))), ((int)(((byte)(31)))));
             this.saveButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveButton.Location = new System.Drawing.Point(280, 224);
+            this.saveButton.Location = new System.Drawing.Point(256, 319);
             this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(117, 41);
+            this.saveButton.Size = new System.Drawing.Size(141, 41);
             this.saveButton.TabIndex = 2;
             this.saveButton.Text = "Save";
             this.saveButton.UseVisualStyleBackColor = false;
@@ -77,16 +78,16 @@ namespace SCEditor.Prompts
             // 
             this.frameTimelineDataBox.FormattingEnabled = true;
             this.frameTimelineDataBox.ItemHeight = 15;
-            this.frameTimelineDataBox.Location = new System.Drawing.Point(26, 155);
+            this.frameTimelineDataBox.Location = new System.Drawing.Point(26, 206);
             this.frameTimelineDataBox.Name = "frameTimelineDataBox";
-            this.frameTimelineDataBox.Size = new System.Drawing.Size(170, 109);
+            this.frameTimelineDataBox.Size = new System.Drawing.Size(170, 154);
             this.frameTimelineDataBox.TabIndex = 3;
             this.frameTimelineDataBox.SelectedIndexChanged += new System.EventHandler(this.frameTimelineDataBox_SelectedIndexChanged);
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(26, 137);
+            this.label2.Location = new System.Drawing.Point(26, 188);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(118, 15);
             this.label2.TabIndex = 1;
@@ -95,7 +96,7 @@ namespace SCEditor.Prompts
             // dataTypeTextBox
             // 
             this.dataTypeTextBox.Enabled = false;
-            this.dataTypeTextBox.Location = new System.Drawing.Point(256, 104);
+            this.dataTypeTextBox.Location = new System.Drawing.Point(256, 155);
             this.dataTypeTextBox.Name = "dataTypeTextBox";
             this.dataTypeTextBox.Size = new System.Drawing.Size(141, 23);
             this.dataTypeTextBox.TabIndex = 4;
@@ -104,7 +105,7 @@ namespace SCEditor.Prompts
             // editDataTypeLabel
             // 
             this.editDataTypeLabel.AutoSize = true;
-            this.editDataTypeLabel.Location = new System.Drawing.Point(256, 86);
+            this.editDataTypeLabel.Location = new System.Drawing.Point(256, 137);
             this.editDataTypeLabel.Name = "editDataTypeLabel";
             this.editDataTypeLabel.Size = new System.Drawing.Size(80, 15);
             this.editDataTypeLabel.TabIndex = 5;
@@ -115,7 +116,7 @@ namespace SCEditor.Prompts
             this.dataTypeEditSubmitButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(51)))), ((int)(((byte)(51)))));
             this.dataTypeEditSubmitButton.Enabled = false;
             this.dataTypeEditSubmitButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.dataTypeEditSubmitButton.Location = new System.Drawing.Point(256, 133);
+            this.dataTypeEditSubmitButton.Location = new System.Drawing.Point(256, 182);
             this.dataTypeEditSubmitButton.Margin = new System.Windows.Forms.Padding(1);
             this.dataTypeEditSubmitButton.Name = "dataTypeEditSubmitButton";
             this.dataTypeEditSubmitButton.Size = new System.Drawing.Size(141, 33);
@@ -152,9 +153,9 @@ namespace SCEditor.Prompts
             // 
             this.deleteSelectedButton.Enabled = false;
             this.deleteSelectedButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.deleteSelectedButton.Location = new System.Drawing.Point(290, 26);
+            this.deleteSelectedButton.Location = new System.Drawing.Point(292, 26);
             this.deleteSelectedButton.Name = "deleteSelectedButton";
-            this.deleteSelectedButton.Size = new System.Drawing.Size(107, 34);
+            this.deleteSelectedButton.Size = new System.Drawing.Size(118, 34);
             this.deleteSelectedButton.TabIndex = 8;
             this.deleteSelectedButton.Text = "Delete Frame";
             this.deleteSelectedButton.UseVisualStyleBackColor = true;
@@ -164,7 +165,7 @@ namespace SCEditor.Prompts
             // 
             this.changeAllButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(51)))), ((int)(((byte)(51)))));
             this.changeAllButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.changeAllButton.Location = new System.Drawing.Point(256, 168);
+            this.changeAllButton.Location = new System.Drawing.Point(256, 217);
             this.changeAllButton.Margin = new System.Windows.Forms.Padding(1);
             this.changeAllButton.Name = "changeAllButton";
             this.changeAllButton.Size = new System.Drawing.Size(141, 28);
@@ -173,14 +174,27 @@ namespace SCEditor.Prompts
             this.changeAllButton.UseVisualStyleBackColor = false;
             this.changeAllButton.Click += new System.EventHandler(this.changeAllButton_Click);
             // 
+            // cloneFrameBtn
+            // 
+            this.cloneFrameBtn.Enabled = false;
+            this.cloneFrameBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.cloneFrameBtn.Location = new System.Drawing.Point(292, 75);
+            this.cloneFrameBtn.Name = "cloneFrameBtn";
+            this.cloneFrameBtn.Size = new System.Drawing.Size(118, 34);
+            this.cloneFrameBtn.TabIndex = 8;
+            this.cloneFrameBtn.Text = "Clone Frame";
+            this.cloneFrameBtn.UseVisualStyleBackColor = true;
+            this.cloneFrameBtn.Click += new System.EventHandler(this.cloneFrameSelectedButton_Click);
+            // 
             // frameEditDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
-            this.ClientSize = new System.Drawing.Size(422, 294);
+            this.ClientSize = new System.Drawing.Size(422, 383);
             this.Controls.Add(this.addFrameAfterSelectedButton);
             this.Controls.Add(this.deleteSelectedButton);
+            this.Controls.Add(this.cloneFrameBtn);
             this.Controls.Add(this.addFrameBeforeSelectedButton);
             this.Controls.Add(this.changeAllButton);
             this.Controls.Add(this.dataTypeEditSubmitButton);
@@ -216,5 +230,6 @@ namespace SCEditor.Prompts
         private System.Windows.Forms.Button addFrameAfterSelectedButton;
         private System.Windows.Forms.Button deleteSelectedButton;
         private System.Windows.Forms.Button changeAllButton;
+        private System.Windows.Forms.Button cloneFrameBtn;
     }
 }

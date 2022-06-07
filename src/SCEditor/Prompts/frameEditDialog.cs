@@ -61,97 +61,51 @@ namespace SCEditor.Prompts
 
             if (!string.IsNullOrEmpty(dataTypeTextBox.Text) && ask == DialogResult.OK)
             {
-                int frameIndex = getSelectedFrameIndex();
-                int frameTimelineIndex = frameTimelineDataBox.SelectedIndex;
-                int frameTimelineTypeIndex = (frameIndex * 3) + frameTimelineIndex;
+                int currentIndex = frameTimelineDataBox.SelectedIndex;
+                ushort currentChildIndex = (ushort)currentIndex;
+                int type = -1;
 
-                int oldValue = _timelineArray[frameTimelineTypeIndex];
-                int newValue = int.Parse(dataTypeTextBox.Text);
-
-                if (frameTimelineIndex == 0 || frameTimelineIndex % 3 == 0)
+                if (!ushort.TryParse(dataTypeTextBox.Text, out ushort newValue))
                 {
-                    if (newValue >= ((MovieClip)_data).timelineChildrenId.Length)
-                    {
-                        MessageBox.Show($"Children with specified index {newValue} out of range.");
-                        return;
-                    }
-
-                    DialogResult changeAllSpecified = MessageBox.Show($"Change children index with choosen childiren index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
-                    int currentChildrenId = _timelineArray[frameTimelineTypeIndex];
-
-                    for (int i = 0; i < (_timelineArray.Length / 3); i++)
-                    {
-                        if (changeAllSpecified == DialogResult.Yes)
-                        {
-                            if (_timelineArray[i * 3] == currentChildrenId)
-                            {
-                                _timelineArray[i * 3] = (ushort)newValue;
-                            }
-
-                            continue;
-                        }
-
-                        _timelineArray[i * 3] = (ushort)newValue;
-                    }
-
+                    MessageBox.Show("Invalid enetered value");
                     return;
                 }
-                else if (frameTimelineIndex == 1 || (frameTimelineIndex - 1) % 3 == 0)
+
+                if (currentIndex == 0 || currentIndex == 1 || currentIndex == 2)
                 {
-                    if (newValue >= _scfile.GetMatrixs(((MovieClip)_data)._transformStorageId).Count && newValue != 65535)
-                    {
-                        MessageBox.Show($"Matrix with specified index {newValue} not found.");
-                        return;
-                    }
-
-                    DialogResult changeAllSpecified = MessageBox.Show($"Change matrix for only with specified children index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
-                    int currentChildrenId = _timelineArray[frameTimelineTypeIndex - 1];
-
-                    for (int i = 0; i < (_timelineArray.Length / 3); i++)
-                    {
-                        if (changeAllSpecified == DialogResult.Yes)
-                        {
-                            if (_timelineArray[i * 3] == currentChildrenId)
-                            {
-                                _timelineArray[(i * 3) + 1] = (ushort)newValue;
-                            }
-
-                            continue;
-                        }
-
-                        _timelineArray[(i * 3) + 1] = (ushort)newValue;
-                    }
-
-                }
-                else if (frameTimelineIndex == 2 || (frameTimelineIndex - 2) % 3 == 0)
-                {
-                    if (newValue >= _scfile.getColors(((MovieClip)_data)._transformStorageId).Count && newValue != 65535)
-                    {
-                        MessageBox.Show($"Color with specified index {newValue} not found.");
-                        return;
-                    }
-
-                    DialogResult changeAllSpecified = MessageBox.Show($"Change color for only with specified children index {frameTimelineTypeIndex} or all? (Yes for specified - no for all)", "Replace All or Only Children", MessageBoxButtons.YesNo);
-                    int currentChildrenId = _timelineArray[frameTimelineTypeIndex - 2];
-
-                    for (int i = 0; i < (_timelineArray.Length / 3); i++)
-                    {
-                        if (changeAllSpecified == DialogResult.Yes)
-                        {
-                            if (_timelineArray[i * 3] == currentChildrenId)
-                            {
-                                _timelineArray[(i * 3) + 2] = (ushort)newValue;
-                            }
-
-                            continue;
-                        }
-
-                        _timelineArray[(i * 3) + 2] = (ushort)newValue;
-                    }
-                }
+                    currentChildIndex = timelineArray[0];
+                    type = currentIndex;
+                } 
                 else
                 {
-                    throw new Exception("Not possible");
+                    if (currentIndex % 3 == 0)
+                    {
+                        currentChildIndex = timelineArray[currentIndex];
+                        type = 0;
+                    }
+
+                    if ((currentIndex - 1) % 3 == 0)
+                    {
+                        currentChildIndex = timelineArray[(currentIndex - 1)];
+                        type = 1;
+                    }
+
+                    if ((currentIndex - 2) % 3 == 0)
+                    {
+                        currentChildIndex = timelineArray[(currentIndex - 2)];
+                        type = 2;
+                    }
+                }
+
+                int i = 0;
+                while (i < _timelineArray.Length)
+                {
+                    if (timelineArray[i] == currentChildIndex)
+                    {
+                        timelineArray[i + type] = newValue;
+                    }
+
+                    i += 3;
                 }
 
                 _isEdited = true;
@@ -216,6 +170,63 @@ namespace SCEditor.Prompts
             }
         }
 
+        private void cloneFrameSelectedButton_Click(object sender, EventArgs e)
+        {
+            int frameIndex = FramesArrayBox.SelectedIndex;
+
+            if (frameIndex == -1)
+                return;
+
+            int timelineIndex = getSelectedFrameIndex() * 3;
+
+            inputDataDialog frameTimelineCountDialog = new inputDataDialog(1);
+            frameTimelineCountDialog.setLabelText("Clone Count");
+
+            while (true)
+            {
+                if (frameTimelineCountDialog.ShowDialog() == DialogResult.OK)
+                {
+                    if (frameTimelineCountDialog.inputTextBoxInt != 0)
+                        break;
+
+                    MessageBox.Show("Count can not be 0", "Error");
+                }
+            }
+
+            MovieClipFrame data = new MovieClipFrame(_scfile);
+            data.SetId((ushort)_frames[frameIndex].Id);
+            data.setCustomAdded(true);
+
+            ushort[] frameTimelineData = new ushort[data.Id * 3];
+
+            for (int ft = 0; ft < frameTimelineData.Length; ft++)
+            {
+                frameTimelineData[ft] = _timelineArray[timelineIndex + ft];
+            }
+
+            List<ushort> newList = new List<ushort>(_timelineArray.ToList());
+            List<ScObject> newFramesList = new List<ScObject>(_frames.ToList());
+
+            int timelineInsertIndex = timelineIndex + (_frames[FramesArrayBox.SelectedIndex].Id * 3);
+
+            for (int r = 0; r < frameTimelineCountDialog.inputTextBoxInt; r++)
+            {
+                newFramesList.Insert((FramesArrayBox.SelectedIndex + 1), data);
+
+                for (int i = 0; i < frameTimelineData.Length; i++)
+                {
+                    newList.Insert((timelineInsertIndex + i + (r * frameTimelineData.Length)), frameTimelineData[i]);
+                }
+            }
+                
+            _timelineArray = newList.ToArray();
+            _frames = newFramesList.ToArray();
+
+            _isEdited = true;
+
+            refreshMenu();
+        }
+
         private void addFrameBeforeSelectedButton_Click(object sender, EventArgs e)
         {
             addFrame(0);
@@ -265,6 +276,7 @@ namespace SCEditor.Prompts
         {
             addFrameAfterSelectedButton.Enabled = true;
             addFrameBeforeSelectedButton.Enabled = true;
+            cloneFrameBtn.Enabled = true;
             deleteSelectedButton.Enabled = true;
             dataTypeTextBox.Enabled = false;
             dataTypeEditSubmitButton.Enabled = false;
@@ -288,6 +300,7 @@ namespace SCEditor.Prompts
         {
             addFrameAfterSelectedButton.Enabled = false;
             addFrameBeforeSelectedButton.Enabled = false;
+            cloneFrameBtn.Enabled = false;
             deleteSelectedButton.Enabled = false;
             frameTimelineDataBox.Items.Clear();
             FramesArrayBox.Items.Clear();

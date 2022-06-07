@@ -14,6 +14,12 @@ using System.Reflection;
 using System.Drawing.Drawing2D;
 using SCEditor.Features;
 using System.Text;
+using System.Drawing.Imaging;
+using Encoder = System.Drawing.Imaging.Encoder;
+using System.Threading;
+using System.Threading.Tasks;
+using static SCEditor.ScOld.MovieClip;
+using System.Diagnostics;
 
 namespace SCEditor
 {
@@ -22,9 +28,6 @@ namespace SCEditor
         // SC file we're dealing with.
         internal ScFile _scFile;
         internal bool zoomed;
-        static System.Windows.Forms.Timer _animationTimer = new System.Windows.Forms.Timer();
-        static int frameCounter = 0;
-        static bool exitFlag = false;
         private MovieClipState animationState;
 
         public MainForm()
@@ -110,7 +113,7 @@ namespace SCEditor
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            killAnimationTimer(true);
+            stopAnimationPlaying(true);
 
             pictureBox1.Image = null;
             label1.Text = null;
@@ -156,6 +159,7 @@ namespace SCEditor
                     case 2:
                         textureToolStripMenuItem.Visible = true;
                         break;
+                    case 1:
                     case 7:
                         objectToolStripMenuItem.Visible = true;
                         break;
@@ -189,7 +193,8 @@ namespace SCEditor
             RefreshMenu();
 
             treeView1.Populate(_scFile.GetTextures());
-            treeView1.Populate(_scFile.GetExports().OrderBy(e => e.GetName()).ToList());
+            //treeView1.Populate(_scFile.GetExports().OrderBy(e => e.GetName()).ToList());
+            treeView1.Populate(_scFile.GetExports()); // this or above
             treeView1.Populate(_scFile.GetShapes());
             treeView1.Populate(_scFile.GetMovieClips());
             treeView1.Populate(_scFile.getTextFields());
@@ -197,12 +202,22 @@ namespace SCEditor
 
         private void Render()
         {
-            killAnimationTimer(true);
+            Stopwatch sw = Stopwatch.StartNew();
+            while (this.animationState == MovieClipState.Playing)
+            {
+                if (sw.Elapsed.Seconds >= 15)
+                {
+                    stopAnimationPlaying(true);
+                    break;
+                }
+            }
+
+            animationCancelToken = new CancellationTokenSource();
 
             RenderingOptions options = new RenderingOptions()
             {
                 ViewPolygons = viewPolygonsToolStripMenuItem.Checked
-            }; 
+            };
 
             if (treeView1.SelectedNode?.Tag != null)
             {
@@ -210,6 +225,7 @@ namespace SCEditor
                 pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
                 label1.Text = data.GetInfo();
 
+                // CHECK WHY SHAPE?? MIGHT BE WRONG
                 if (treeView1.SelectedNode?.Parent.Tag != null && (data.objectType == ScObject.SCObjectType.Shape || data.objectType == ScObject.SCObjectType.MovieClip))
                 {
                     ScObject parentData = (ScObject)treeView1.SelectedNode?.Parent.Tag;
@@ -259,7 +275,11 @@ namespace SCEditor
 
                 if (data.GetDataType() == 7 || data.GetDataType() == 1)
                 {
-                    renderAnimation(options, data);
+                    //if (!playAnimationByDefaultToolStripMenuItem.Checked)
+                    //    renderAnimation(options, data);
+
+                    if (!playAnimationByDefaultToolStripMenuItem.Checked)
+                        renderAnimationV2(options, data);
                 }
                 else
                 {
@@ -272,7 +292,7 @@ namespace SCEditor
         public void fixPoints()
         {
             ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
-            
+
             if (data == null)
                 return;
 
@@ -307,96 +327,96 @@ namespace SCEditor
             Render();
         }
 
-        public void renderAnimation(RenderingOptions options, ScObject data)
+        private static CancellationTokenSource animationCancelToken = new CancellationTokenSource();
+
+        private void renderAnimationV2(RenderingOptions options, ScObject inScData)
         {
+            ScObject data = inScData;
+
             if (data.GetDataType() == 7)
-                data = ((Export)data).GetDataObject();
+                data = ((Export)inScData).GetDataObject();
 
             if (data == null)
                 throw new Exception("MainForm:Render() datatype is 1 or 7 but dataobject is null");
 
-            ((MovieClip)data).generatePointFList(null);
+            ((MovieClip)data)._lastPlayedFrame = 0;
 
-            if (((MovieClip)data).Frames.Count <= 2)
-            {
-                pictureBox1.Image = ((MovieClip)data).renderAnimation(options, 0);
-                pictureBox1.Refresh();
-                return;
-            }
-
-            frameCounter = 0;
-            animationState = MovieClipState.Stopped;
-
-            _animationTimer.Interval = 500;
-            _animationTimer.Tick += new EventHandler(animationTimer_Tick);
-            _animationTimer.Start();
+            Task.Run(() => renderFrame(data), animationCancelToken.Token);
         }
 
-        public void animationTimer_Tick(Object myObject, EventArgs myEventArgs)
+        private async Task renderFrame(ScObject data)
         {
             try
             {
-                ScObject data = (ScObject)this.treeView1.SelectedNode?.Tag;
-
-                if (exitFlag == true && animationState == MovieClipState.Stopped)
+                int totalFrameTimelineCount = 0;
+                foreach (MovieClipFrame frame in ((MovieClip)data).GetFrames())
                 {
-                    _animationTimer.Enabled = false;
-                    exitFlag = false;
+                    totalFrameTimelineCount += (frame.Id * 3);
                 }
 
-                _animationTimer.Stop();
-
-                if (data == null || data.GetDataType() != 1 && data.GetDataType() != 7)
+                if (((MovieClip)data).timelineArray.Length % 3 != 0 || ((MovieClip)data).timelineArray.Length != totalFrameTimelineCount)
                 {
-                    killAnimationTimer(true);
+                    MessageBox.Show("MoveClip timeline array length is not set equal to total frames count.");
                     return;
                 }
 
-                if (data.GetDataType() == 7)
-                    data = ((Export)data).GetDataObject();
+                ((MovieClip)data).initPointFList(null);
 
-                _animationTimer.Interval = 1000 / ((MovieClip)data).FPS;
-                animationState = MovieClipState.Playing;
-
-                if (frameCounter + 1 < ((MovieClip)data).Frames.Count)
+                while (!animationCancelToken.IsCancellationRequested)
                 {
-                    Bitmap image = ((MovieClip)data).renderAnimation(new RenderingOptions() { ViewPolygons = viewPolygonsToolStripMenuItem.Checked }, frameCounter);
+                    animationState = MovieClipState.Playing;
 
-                    if (image == null)
-                        killAnimationTimer(false);
+                    int frameIndex = ((MovieClip)data)._lastPlayedFrame;
+                    if (!animationCancelToken.IsCancellationRequested)
+                    {
+                        Bitmap image = ((MovieClip)data).renderAnimation(new RenderingOptions() { ViewPolygons = viewPolygonsToolStripMenuItem.Checked }, frameIndex);
 
-                    pictureBox1.Image = image;
-                    pictureBox1.Refresh();
-                    frameCounter += 1;
-                    _animationTimer.Enabled = true;
-                    image.Dispose();
-                }
-                else
-                {
-                    frameCounter = 0;
-                    _animationTimer.Enabled = true;
-                    resetPreviousRendering(false);
+                        if (image == null)
+                        {
+                            stopAnimationPlaying(true);
+                            MessageBox.Show($"Frame Index {frameIndex} returned null image.");
+                            return;
+                        }
+
+                        pictureBox1.Invoke((Action)(delegate
+                        {
+                            pictureBox1.Image = image;
+                            pictureBox1.Refresh();
+                        }));
+
+                        image.Dispose();
+
+                        if ((frameIndex + 1) != ((MovieClip)data).GetFrames().Count)
+                            ((MovieClip)data)._lastPlayedFrame = frameIndex + 1;
+                        else
+                            ((MovieClip)data)._lastPlayedFrame = 0;
+
+                        await Task.Delay((1000 / ((MovieClip)data).FPS), animationCancelToken.Token);
+                    }
+                    else
+                    {
+                        stopAnimationPlaying(true);
+                        return;
+                    }
+
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Exception MainForm:animationTimer_Tick()");
-
-                killAnimationTimer(true);
+                if (ex.GetType() != typeof(TaskCanceledException))
+                {
+                    MessageBox.Show(ex.Message);
+                }
             }
+
+            stopAnimationPlaying(true);
+            return;
         }
 
-        private void killAnimationTimer(bool isEnd)
+        private void stopAnimationPlaying(bool isEnd)
         {
-            _animationTimer.Dispose();
-            _animationTimer = new System.Windows.Forms.Timer();
-            _animationTimer.Enabled = false;
-            animationState = MovieClipState.Stopped;
-            resetPreviousRendering(isEnd);
-        }
+            animationCancelToken.Cancel();
 
-        private void resetPreviousRendering(bool isEnd)
-        {
             if (_scFile != null)
             {
                 if (_scFile.CurrentRenderingMovieClips.Count > 0)
@@ -412,6 +432,8 @@ namespace SCEditor
                     _scFile.setRenderingItems(new List<ScObject>());
                 }
             }
+
+            animationState = MovieClipState.Stopped;
         }
 
         private void treeView1_BeforeSelect(object sender, TreeViewCancelEventArgs e)
@@ -714,6 +736,7 @@ namespace SCEditor
 
             editChildrenData editChildrenDialog = new editChildrenData(_scFile, scData);
 
+            stopAnimationPlaying(true);
             if (editChildrenDialog.ShowDialog() == DialogResult.OK)
             {
                 ushort[] newChildrenId = editChildrenDialog.ChildrenIds;
@@ -723,23 +746,25 @@ namespace SCEditor
                 if (newChildrenId.Length != newChildrenNames.Length)
                     throw new Exception($"new children id and name arrays length dont match up.");
 
-                int frameIndex = 0;
-                foreach (MovieClipFrame mvFrame in ((MovieClip)scData).GetFrames())
-                {
-                    for (int i = 0; i < mvFrame.Id; i++)
-                    {
-                        ushort childrenIndex = ((MovieClip)scData).timelineArray[frameIndex + (i * 3)];
+                //int frameIndex = 0;
+                //foreach (MovieClipFrame mvFrame in ((MovieClip)scData).GetFrames())
+                //{
+                //    for (int i = 0; i < mvFrame.Id; i++)
+                //    {
+                //        ushort childrenIndex = ((MovieClip)scData).timelineArray[frameIndex + (i * 3)];
 
-                        if (newChildrenId.Length <= childrenIndex)
-                            throw new Exception($"Timeline array has a children index {childrenIndex} at {frameIndex}");
-                    }
+                //        if (newChildrenId.Length <= childrenIndex)
+                //            throw new Exception($"Timeline array has a children index {childrenIndex} at {frameIndex}");
+                //    }
 
-                    frameIndex += mvFrame.Id * 3;
-                }
+                //    frameIndex += mvFrame.Id * 3;
+                //}
 
                 ((MovieClip)scData).setTimelineChildrenId(newChildrenId);
                 ((MovieClip)scData).setTimelineChildrenNames(newChildrenNames);
                 ((MovieClip)scData).setFlags(newFlags);
+                ((MovieClip)scData).SetFrames(editChildrenDialog.Frames.ToList());
+                ((MovieClip)scData).setTimelineOffsetArray(editChildrenDialog.TimelineArray);
 
                 List<ScObject> childrenItem = new List<ScObject>();
 
@@ -1163,6 +1188,13 @@ namespace SCEditor
                     dlg.FileName = GetFileName(_scFile.GetInfoFileName());
                     dlg.OverwritePrompt = false;
                     dlg.CreatePrompt = false;
+
+                    //bool scv4 = (MessageBox.Show("Compress file as SC Version 4? (By default it will be saved as SC Version 3", "Save as SC Version 4", MessageBoxButtons.YesNo) == DialogResult.Yes ? true : false);
+                    //if (scv4)
+                    //{
+                    //    MessageBox.Show("v4 saving not implemented yet.");
+                    //}
+
                     if (dlg.ShowDialog() == DialogResult.OK)
                     {
                         zstandard.Compress(_scFile.GetInfoFileName(), dlg.FileName);
@@ -1173,6 +1205,8 @@ namespace SCEditor
                         if (dlg.ShowDialog() == DialogResult.OK)
                             zstandard.Compress(_scFile.GetTextureFileName(), dlg.FileName);
                     }
+
+
                 }
 
                 saveToolStripMenuItem.Visible = false;
@@ -1319,13 +1353,6 @@ namespace SCEditor
                     return Color.FromArgb(31, 31, 31);
                 }
             }
-        }
-
-        public enum MovieClipState
-        {
-            Stopped,
-            Playing,
-            None
         }
 
         private void fixPointsChunkToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1540,6 +1567,71 @@ namespace SCEditor
                         fixBoomBeachBuildings(data2);
                 }
             }
+        }
+
+        private void exportFramesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stopAnimationPlaying(true);
+
+            RenderingOptions options = new RenderingOptions()
+            {
+                ViewPolygons = viewPolygonsToolStripMenuItem.Checked
+            };
+
+            if (treeView1.SelectedNode?.Tag != null)
+            {
+                ScObject data = (ScObject)treeView1.SelectedNode.Tag;
+
+                if (data.objectType == ScObject.SCObjectType.Export || data.objectType == ScObject.SCObjectType.MovieClip)
+                {
+                    if (data.objectType == ScObject.SCObjectType.Export)
+                        data = data.GetDataObject();
+
+                    FolderBrowserDialog saveFileDialog = new FolderBrowserDialog();
+                    if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        try
+                        {
+                            ((MovieClip)data).initPointFList(null);
+
+                            ImageCodecInfo myImageCodecInfo = GetEncoderInfo("image/png");
+                            Encoder myEncoder = Encoder.Quality;
+                            EncoderParameters myEncoderParameters = new EncoderParameters(1);
+                            EncoderParameter myEncoderParameter = new EncoderParameter(myEncoder, 100L);
+                            myEncoderParameters.Param[0] = myEncoderParameter;
+
+                            for (int frameIndex = 0; frameIndex < ((MovieClip)data).Frames.Count; frameIndex++)
+                            {
+                                ((MovieClip)data).renderAnimation(options, frameIndex).Save(saveFileDialog.SelectedPath + $"frame{(frameIndex + 1).ToString("D6")}.png", myImageCodecInfo, myEncoderParameters);
+                            }
+
+                            ((MovieClip)data).destroyPointFList();
+                            MessageBox.Show($"{((MovieClip)data).Frames.Count} Frames Successfully Exported at:\n{saveFileDialog.SelectedPath}", "Frames Exported");
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.ToString());
+                        }
+                    }
+                }
+            }
+        }
+        private static ImageCodecInfo GetEncoderInfo(String mimeType)
+        {
+            int j;
+            ImageCodecInfo[] encoders;
+            encoders = ImageCodecInfo.GetImageEncoders();
+            for (j = 0; j < encoders.Length; ++j)
+            {
+                if (encoders[j].MimeType == mimeType)
+                    return encoders[j];
+            }
+            return null;
+        }
+
+        private void disbleTextfieldRenderingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RenderingOptions.disableTextFieldRendering = this.disbleTextfieldRenderingToolStripMenuItem.Checked;
         }
     }
 }

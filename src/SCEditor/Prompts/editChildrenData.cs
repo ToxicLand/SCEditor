@@ -18,9 +18,13 @@ namespace SCEditor.Prompts
         private ScObject _data;
         private List<ushort> _childrenIds;
         private List<string> _childrenNames;
+        private List<ushort> _timelineArray;
+        private List<ScObject> _frames;
         private List<byte> _flags;
         public ushort[] ChildrenIds => _childrenIds.ToArray();
         public string[] ChildrenNames => _childrenNames.ToArray();
+        public ushort[] TimelineArray => _timelineArray.ToArray();
+        public ScObject[] Frames => _frames.ToArray();
         public byte[] Flags => _flags.ToArray();
 
         private bool _isEdited;
@@ -34,6 +38,8 @@ namespace SCEditor.Prompts
             _childrenIds = ((ushort[])((MovieClip)_data).timelineChildrenId.Clone()).ToList();
             _childrenNames = ((string[])((MovieClip)_data).timelineChildrenNames.Clone()).ToList();
             _flags = ((byte[])((MovieClip)_data).flags.Clone()).ToList();
+            _timelineArray = new List<ushort>((ushort[])((MovieClip)_data).timelineArray.Clone());
+            _frames = ((ScObject[])((MovieClip)_data).Frames.ToArray().Clone()).ToList();
 
             addDataToItems();
 
@@ -119,6 +125,40 @@ namespace SCEditor.Prompts
             _childrenIds.RemoveAt(currentIndex);
             _childrenNames.RemoveAt(currentIndex);
             _flags.RemoveAt(currentIndex);
+
+            int totalPassed = 0;
+            for (int frameIndex = 0; frameIndex < _frames.Count; frameIndex++)
+            {
+                MovieClipFrame mvFrame = (MovieClipFrame)_frames[frameIndex];
+
+                for (int i = 0; i < mvFrame.Id; i++)
+                {
+                    ushort childrenIndex = _timelineArray[(totalPassed * 3) + (i * 3)];
+
+                    if (childrenIndex == currentIndex)
+                    {
+                        mvFrame.SetId((ushort)(mvFrame.Id - 1));
+
+                        _timelineArray.RemoveRange(((totalPassed * 3) + (i * 3)), 3);
+
+                        i--;
+                    }
+
+                    if (childrenIndex > currentIndex)
+                    {
+                        _timelineArray[(totalPassed * 3) + (i * 3)] = (ushort)(childrenIndex - 1);
+                    }
+                }
+
+                if (mvFrame.Id == 0)
+                {
+                    _frames.RemoveAt(frameIndex);
+                    frameIndex--;
+                    continue;
+                }
+
+                totalPassed += mvFrame.Id;
+            }
 
             _isEdited = true;
             refreshMenu();

@@ -38,6 +38,7 @@ namespace SCEditor.Features
         private string _currentExportName;
         private Dictionary<string, Dictionary<string, Dictionary<string , float>>> _queriesToPerform; // Type, (keyword, ()) -> example = contains, (barbarian, (scale, value))
         private Dictionary<int, List<int>> _shapeChunksMultipleBlobs;
+        private Dictionary<ushort, ushort> _replaceNewChildrenWithOld;
 
         public ImportSCData(ScFile scFile)
         {
@@ -51,6 +52,7 @@ namespace SCEditor.Features
             _texturesToAdd = new List<(byte, int)>();
             _queriesToPerform = new Dictionary<string, Dictionary<string, Dictionary<string, float>>>();
             _shapeChunksMultipleBlobs = new Dictionary<int, List<int>>();
+            _replaceNewChildrenWithOld = new Dictionary<ushort, ushort>();
 
             try
             {
@@ -309,8 +311,10 @@ namespace SCEditor.Features
                 }
 
                 performQueries();
+                replaceAnyChildren();
 
-                exportsToImport = exportsToImport.OrderBy(ex => ex.GetName()).ToList();
+                exportsToImport =  exportsToImport.OrderBy(ex => ex.GetName()).ToList();
+
                 foreach (Export exportToAdd in exportsToImport)
                 {
                     MovieClip movieClipToAdd = (MovieClip)exportToAdd.GetDataObject();
@@ -502,90 +506,97 @@ namespace SCEditor.Features
             {
                 ushort childrenId = newTimelineChildrenId[idx];
 
-                if (scToImportFrom.GetShapes().FindIndex(s => s.Id == childrenId) != -1)
+                if (!_replaceNewChildrenWithOld.ContainsKey(childrenId))
                 {
-                    if (_shapesAlreadyAdded.ContainsKey(childrenId))
+                    if (scToImportFrom.GetShapes().FindIndex(s => s.Id == childrenId) != -1)
                     {
-                        newTimelineChildrenId[idx] = _shapesAlreadyAdded[childrenId];
-
-                        int alreadyShapeIdx = newShapes.FindIndex(s => s.Id == newTimelineChildrenId[idx]);
-                        if (alreadyShapeIdx == -1)
+                        if (_shapesAlreadyAdded.ContainsKey(childrenId))
                         {
-                            if (_scFile.GetShapes().Find(s => s.Id == newTimelineChildrenId[idx]) == null)
+                            newTimelineChildrenId[idx] = _shapesAlreadyAdded[childrenId];
+
+                            int alreadyShapeIdx = newShapes.FindIndex(s => s.Id == newTimelineChildrenId[idx]);
+                            if (alreadyShapeIdx == -1)
+                            {
+                                if (_scFile.GetShapes().Find(s => s.Id == newTimelineChildrenId[idx]) == null)
+                                    throw new Exception("Shape is not supposed to be null?");
+
+                                newShapes.Add(_scFile.GetShapes().Find(s => s.Id == newTimelineChildrenId[idx]));
+                            }
+                        }
+                        else
+                        {
+                            Shape shapeToAdd = (Shape)scToImportFrom.GetShapes().Find(s => s.Id == childrenId);
+                            Shape newShape = addImportedShape(ref maxId, shapeToAdd);
+
+                            if (newShape == null)
                                 throw new Exception("Shape is not supposed to be null?");
 
-                            newShapes.Add(_scFile.GetShapes().Find(s => s.Id == newTimelineChildrenId[idx]));
+                            if (_scFile.GetShapes().FindIndex(s => s.Id == newShape.Id) == -1)
+                            {
+                                _scFile.AddShape(newShape);
+                                _scFile.AddChange(newShape);
+                            }
+
+                            newShapes.Add(newShape);
+                            newTimelineChildrenId[idx] = maxId;
+                            _shapesAlreadyAdded.Add(childrenId, maxId);
                         }
                     }
-                    else
+                    else if (scToImportFrom.GetMovieClips().FindIndex(mv => mv.Id == childrenId) != -1)
                     {
-                        Shape shapeToAdd = (Shape)scToImportFrom.GetShapes().Find(s => s.Id == childrenId);
-                        Shape newShape = addImportedShape(ref maxId, shapeToAdd);
-
-                        if (newShape == null)
-                            throw new Exception("Shape is not supposed to be null?");
-
-                        if (_scFile.GetShapes().FindIndex(s => s.Id == newShape.Id) == -1)
+                        if (_movieClipsAlreadyAdded.ContainsKey(childrenId))
                         {
-                            _scFile.AddShape(newShape);
-                            _scFile.AddChange(newShape);
+                            newTimelineChildrenId[idx] = _movieClipsAlreadyAdded[childrenId];
                         }
-
-                        newShapes.Add(newShape);
-                        newTimelineChildrenId[idx] = maxId;
-                        _shapesAlreadyAdded.Add(childrenId, maxId);
-                    }
-                }
-                else if (scToImportFrom.GetMovieClips().FindIndex(mv => mv.Id == childrenId) != -1)
-                {
-                    if (_movieClipsAlreadyAdded.ContainsKey(childrenId))
-                    {
-                        newTimelineChildrenId[idx] = _movieClipsAlreadyAdded[childrenId];
-                    }
-                    else
-                    {
-                        maxId++;
-                        MovieClip extraMovieClip = (MovieClip)scToImportFrom.GetMovieClips().Find(mv => mv.Id == childrenId);
-                        MovieClip extraNewMovieClip = addImportedMovieClip(extraMovieClip, ref maxId, scToImportFrom, newExportName);
-
-                        _scFile.AddMovieClip(extraNewMovieClip);
-                        _scFile.AddChange(extraNewMovieClip);
-
-                        newTimelineChildrenId[idx] = extraNewMovieClip.Id;
-                    }
-                }
-                else if (scToImportFrom.getTextFields().FindIndex(n => n.Id == childrenId) != -1)
-                {
-                    if (_textFieldsAlreadyAdded.ContainsKey(childrenId))
-                    {
-                        newTimelineChildrenId[idx] = _textFieldsAlreadyAdded[childrenId];
-                    }
-                    else
-                    {
-                        maxId++;
-                        TextField extraTextField = (TextField)scToImportFrom.getTextFields().Find(tf => tf.Id == childrenId);
-                        TextField extraNewTextField = new TextField(_scFile, extraTextField, maxId);
-
-                        extraNewTextField.setId(maxId);
-                        extraNewTextField.setCustomAdded(true);
-
-                        _textFieldsAlreadyAdded.Add(childrenId, maxId);
-
-                        _scFile.addTextField(extraNewTextField);
-                        _scFile.AddChange(extraNewTextField);
-
-                        if (_scFile.getFontNames().FindIndex(fn => fn == extraNewTextField.fontName) == -1)
+                        else
                         {
-                            Console.WriteLine($"[Font Name Missing]: Imported {newExportName} has TextField with font name {extraNewTextField.fontName} missing in current SC File.");
-                            _scFile.addFontName(extraNewTextField.fontName);
-                        }
+                            maxId++;
+                            MovieClip extraMovieClip = (MovieClip)scToImportFrom.GetMovieClips().Find(mv => mv.Id == childrenId);
+                            MovieClip extraNewMovieClip = addImportedMovieClip(extraMovieClip, ref maxId, scToImportFrom, newExportName);
 
-                        newTimelineChildrenId[idx] = maxId;
+                            _scFile.AddMovieClip(extraNewMovieClip);
+                            _scFile.AddChange(extraNewMovieClip);
+
+                            newTimelineChildrenId[idx] = extraNewMovieClip.Id;
+                        }
+                    }
+                    else if (scToImportFrom.getTextFields().FindIndex(n => n.Id == childrenId) != -1)
+                    {
+                        if (_textFieldsAlreadyAdded.ContainsKey(childrenId))
+                        {
+                            newTimelineChildrenId[idx] = _textFieldsAlreadyAdded[childrenId];
+                        }
+                        else
+                        {
+                            maxId++;
+                            TextField extraTextField = (TextField)scToImportFrom.getTextFields().Find(tf => tf.Id == childrenId);
+                            TextField extraNewTextField = new TextField(_scFile, extraTextField, maxId);
+
+                            extraNewTextField.setId(maxId);
+                            extraNewTextField.setCustomAdded(true);
+
+                            _textFieldsAlreadyAdded.Add(childrenId, maxId);
+
+                            _scFile.addTextField(extraNewTextField);
+                            _scFile.AddChange(extraNewTextField);
+
+                            if (_scFile.getFontNames().FindIndex(fn => fn == extraNewTextField.fontName) == -1)
+                            {
+                                Console.WriteLine($"[Font Name Missing]: Imported {newExportName} has TextField with font name {extraNewTextField.fontName} missing in current SC File.");
+                                _scFile.addFontName(extraNewTextField.fontName);
+                            }
+
+                            newTimelineChildrenId[idx] = maxId;
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception($"{newExportName}: unknown type of children id {childrenId}");
                     }
                 }
                 else
                 {
-                    throw new Exception($"{newExportName}: unknown type of children id {childrenId}");
+                    newTimelineChildrenId[idx] = _replaceNewChildrenWithOld[childrenId];
                 }
 
                 idx++;
@@ -1089,6 +1100,71 @@ namespace SCEditor.Features
             var transformMatrix = matrixXY * inverseMatrixUV;
 
             return new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+        }
+
+        public void replaceAnyChildren()
+        {
+            DialogResult inputQuery = MessageBox.Show("Would you like to replace importing export's Children ID with the one in current file?", "Replace Importing Children IDs", MessageBoxButtons.YesNo);
+
+            if (inputQuery == DialogResult.Yes)
+            {
+                inputDataDialog queryDialog = new inputDataDialog(0);
+                queryDialog.setLabelText("Ids");
+
+                while (true)
+                {
+                    if (queryDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        string queryData = queryDialog.inputTextBoxString;
+
+                        if (!string.IsNullOrEmpty(queryData) && !string.IsNullOrWhiteSpace(queryData))
+                        {
+                            bool invalidFormat = false;
+
+                            string[] eachQuery = queryData.Split(';');
+
+                            foreach (string eachQueryItem in eachQuery)
+                            {
+                                string[] idsToReplace = eachQueryItem.Replace(" ", "").Split(',');
+
+                                if (idsToReplace.Length == 2)
+                                {
+                                    ushort importingID = 0;
+                                    ushort newID = 0;
+
+                                    if (ushort.TryParse(idsToReplace[0], out importingID) && ushort.TryParse(idsToReplace[1], out newID))
+                                    {
+                                        if (_replaceNewChildrenWithOld.TryAdd(importingID, newID))
+                                        {
+                                            continue;
+                                        }
+
+                                        MessageBox.Show($"ImportingID duplicate {idsToReplace[0]}", "Error");
+                                        invalidFormat = true;
+                                        break;
+                                    }
+
+                                    MessageBox.Show($"Unable to parse ulong ID {idsToReplace[0]} or {idsToReplace[1]}", "Error");
+                                    invalidFormat = true;
+                                    break;
+                                }
+
+                                MessageBox.Show($"Error occured while parsing one of the IDs data.\nFormat should be like <importingid>,<newid>;\nExample: 69,420;9339,42", "Error");
+                                invalidFormat = true;
+                                break;
+                            }
+
+                            if (invalidFormat)
+                                continue;
+
+                            break;
+                        }
+                    }
+
+                    if (MessageBox.Show($"Press cancel to skip replacing importing children id.", "Cancel Replacing Importing Children's IDs", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                        break;
+                }
+            }
         }
 
         public void performQueries()
