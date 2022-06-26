@@ -20,6 +20,8 @@ namespace SCEditor.Features
 
         public void initObject(ScObject data)
         {
+            return;
+
             legendDecoJuneFunction(data);
 
             bool performFunction = false;
@@ -138,7 +140,7 @@ namespace SCEditor.Features
             _scFile.AddChange(newShape);
             **/
 
-            bool performFunction = false;
+            bool performFunction = true;
             if (!performFunction)
                 return;
 
@@ -146,16 +148,21 @@ namespace SCEditor.Features
 
             if (true) // duplicate textfield for legend june deco position overlay on shield
             {
-                ScObject tx = _scFile.getTextFields().Where(tx => tx.Id == 7415).FirstOrDefault();
+                for (int i = 0; i < 3; i++)
+                {
+                    ScObject txX = _scFile.getTextFields().Where(tx => tx.Id == 57).FirstOrDefault();
 
-                ((TextField)tx).setId(_scFile.getMaxId());
-                ((TextField)tx)._textData = "1";
-                ((TextField)tx).customAdded = true;
+                    ScObject tx = new TextField(_scFile, (TextField)txX, _scFile.getMaxId());
 
-                _scFile.addTextField(tx);
-                _scFile.AddChange(tx);
+                    ((TextField)tx)._textData = (i + 1).ToString();
+                    ((TextField)tx).customAdded = true;
 
-                Console.WriteLine(tx.Id);
+                    _scFile.addTextField(tx);
+                    _scFile.AddChange(tx);
+
+                    Console.WriteLine(tx.Id);
+                }
+                
             }
 
             Console.WriteLine("Custom function performed!");
@@ -163,7 +170,8 @@ namespace SCEditor.Features
 
         private void legendDecoJuneFunction(ScObject data)
         {
-            data = data.GetDataObject();
+            if (data.objectType == ScObject.SCObjectType.Export)
+                data = data.GetDataObject();
 
             List<ushort> newTimelineArray = new List<ushort>();
             List<ScObject> newFramesArray = new List<ScObject>();
@@ -190,7 +198,7 @@ namespace SCEditor.Features
                 newTimelineArray.Add(ushort.MaxValue);
 
                 // red alpha
-                Tuple<Color, byte, Color> redAlpha = new Tuple<Color, byte, Color>(Color.FromArgb(255, 80, 80), (byte)alphaValueShape1, Color.FromArgb(255, 255, 255));
+                Tuple<Color, byte, Color> redAlpha = new Tuple<Color, byte, Color>(Color.FromArgb(255, 20, 20), (byte)alphaValueShape1, Color.FromArgb(0, 0, 0));
 
                 newTimelineArray.Add(1);
                 newTimelineArray.Add(ushort.MaxValue);
@@ -207,7 +215,7 @@ namespace SCEditor.Features
                 newTimelineArray.Add((ushort)redColorIdx);
 
                 // blue alpha
-                Tuple<Color, byte, Color> blueAlpha = new Tuple<Color, byte, Color>(Color.FromArgb(80, 80, 255), (byte)alphaValueShape1, Color.FromArgb(255, 255, 255));
+                Tuple<Color, byte, Color> blueAlpha = new Tuple<Color, byte, Color>(Color.FromArgb(20, 20, 255), (byte)alphaValueShape1, Color.FromArgb(0, 0, 0));
 
                 newTimelineArray.Add(2);
                 newTimelineArray.Add(ushort.MaxValue);

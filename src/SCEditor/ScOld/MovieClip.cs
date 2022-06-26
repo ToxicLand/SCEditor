@@ -71,7 +71,7 @@ namespace SCEditor.ScOld
         private ushort _timelineChildrenCount;
         private ushort[] _timelineChildrenId;
         private Rect _scalingGrid;
-        public byte _transformStorageId { get; set; } // change
+        public byte _transformStorageId { get; set; } = 0;
         private string[] _timelineChildrenNames;
         private int _timelineOffsetCount;
         private ushort[] _timelineOffsetArray;
@@ -576,7 +576,7 @@ namespace SCEditor.ScOld
                 var height = xyBound.Height;
                 height = height > 0 ? height : 1;
 
-                var finalShape = new Bitmap(width, height);
+                var finalShape = new Bitmap(width, height, PixelFormat.Format32bppArgb);
 
                 int frameTimelineCount = _frames[frameIndex].Id;
 
@@ -588,7 +588,7 @@ namespace SCEditor.ScOld
                         continue;
                     }
 
-                    Bitmap temporaryBitmap = new Bitmap(width, height);
+                    Bitmap temporaryBitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
                     ushort childrenId = timelineChildrenId[timelineArray[timelineIndex]];
 
                     Tuple<Color, byte, Color> colorData = timelineArray[timelineIndex + 2] != 0xFFFF ? this._scFile.getColors(_transformStorageId)[timelineArray[timelineIndex + 2]] : null;
@@ -849,6 +849,22 @@ namespace SCEditor.ScOld
 
                     if (colorData != null)
                     {
+                        Color originalColor = colorData.Item3;
+                        Color replacementColor = colorData.Item1;
+
+                        byte alphaByte = colorData.Item2;
+
+                        ChangeColour(temporaryBitmap, originalColor.A, originalColor.R, originalColor.G, originalColor.B, alphaByte, replacementColor.R, replacementColor.G, replacementColor.B);
+
+                        //var orgARGB = new byte[] { originalColor.A, originalColor.R, originalColor.G, originalColor.B };
+                        //var repARGB = new byte[] { replacementColor.A, replacementColor.R, replacementColor.G, replacementColor.B };
+
+                        //var orgBytes = orgARGB;
+                        //var repBytes = repARGB;
+
+                        //ReplaceColorUnsafe(temporaryBitmap, orgBytes, repBytes, alphaByte);
+
+                        /**
                         ImageAttributes imageAttributes = new ImageAttributes();
                         ColorMatrix matrix = new ColorMatrix();
 
@@ -876,6 +892,7 @@ namespace SCEditor.ScOld
                         {
                             g.DrawImage(tempBmp1, originalRectangle, 0, 0, temporaryBitmap.Width, temporaryBitmap.Height, GraphicsUnit.Pixel, imageAttributes);
                         }
+                        **/
                     }
 
                     using (Graphics g = Graphics.FromImage(finalShape))
@@ -901,6 +918,45 @@ namespace SCEditor.ScOld
                 }
             }
 
+        }
+
+        private static void ChangeColour(Bitmap bmp, byte inColourA, byte inColourR, byte inColourG, byte inColourB, byte outColourA, byte outColourR, byte outColourG, byte outColourB)
+        {
+            PixelFormat pxf = PixelFormat.Format32bppArgb;
+
+            Rectangle rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+            BitmapData bmpData =
+            bmp.LockBits(rect, ImageLockMode.ReadWrite,
+                         pxf);
+
+            IntPtr ptr = bmpData.Scan0;
+
+            int numBytes = bmpData.Stride * bmp.Height;
+            byte[] rgbValues = new byte[numBytes];
+
+            float alphaPercent = (float)(outColourA / 255F);
+
+            Marshal.Copy(ptr, rgbValues, 0, numBytes);
+
+            for (int counter = 0; counter < rgbValues.Length; counter += 4)
+            {
+                if ((inColourR == 255 && inColourG == 255 && inColourB == 255) && (outColourR == 0 && outColourG == 0 && outColourB == 0))
+                {
+                    rgbValues[counter + 3] = (byte)(rgbValues[counter + 3] * alphaPercent);
+                    continue;
+                }
+
+                if (rgbValues[counter] == inColourR && rgbValues[counter + 1] == inColourG && rgbValues[counter + 2] == inColourB && rgbValues[counter + 3] != 0)
+                {
+                    rgbValues[counter] = outColourR;
+                    rgbValues[counter + 1] = outColourG;
+                    rgbValues[counter + 2] = outColourB;
+                    rgbValues[counter + 3] = (byte)(rgbValues[counter + 3] * alphaPercent);
+                }
+            }
+
+            Marshal.Copy(rgbValues, 0, ptr, numBytes);
+            bmp.UnlockBits(bmpData);
         }
 
         public List<PointF> generateChildrensPointF(Matrix matrixIn, CancellationToken token = new CancellationToken())

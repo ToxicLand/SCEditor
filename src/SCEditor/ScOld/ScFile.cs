@@ -61,9 +61,7 @@ namespace SCEditor.ScOld
         private readonly string _infoFile;
         private readonly string _textureFile;
         private long _eofOffset;
-        private long _eofMatrixOffset;
         private long _eofTextFieldOffset;
-        private long _eofColorsOffset;
         private long _eofMovieClipOffset;
         private long _eofShapeOffset;
         private long _eofTexOffset;
@@ -417,8 +415,6 @@ namespace SCEditor.ScOld
                             input.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
                         }
 
-                        _eofMatrixOffset = input.Position; // check
-
                         if (isEndofOffset)
                         {
                             _eofOffset = input.Position;
@@ -435,7 +431,10 @@ namespace SCEditor.ScOld
                     if (this._transformStorage.Count != 0 && transformStorageID != 0)
                     {
                         input.Position = _transformStorageOffsets[transformStorageID] + 5;
-                        input.Write(BitConverter.GetBytes((ushort)_pendingMatrixs[transformStorageID].Count), 0, 2);
+                        var currentValueBytes = new byte[2];
+                        input.Read(currentValueBytes, 0, 2);
+                        ushort newValue = (ushort)(BitConverter.ToUInt16(currentValueBytes, 0) + _pendingMatrixs[transformStorageID].Count);
+                        input.Write(BitConverter.GetBytes(newValue), 0, 2);
                     }
                 }
 
@@ -482,11 +481,9 @@ namespace SCEditor.ScOld
                         input.WriteByte(color.Item1.G);
                         input.WriteByte(color.Item1.B);
                         input.WriteByte(color.Item2);
-                        input.WriteByte(color.Item1.R);
-                        input.WriteByte(color.Item1.G);
-                        input.WriteByte(color.Item1.B);
-
-                        _eofColorsOffset = input.Position; // check
+                        input.WriteByte(color.Item3.R);
+                        input.WriteByte(color.Item3.G);
+                        input.WriteByte(color.Item3.B);
 
                         if (isEndofOffset)
                         {
@@ -504,7 +501,10 @@ namespace SCEditor.ScOld
                     if (this._transformStorage.Count != 0 && transformStorageID != 0)
                     {
                         input.Position = _transformStorageOffsets[transformStorageID] + 7;
-                        input.Write(BitConverter.GetBytes((ushort)_pendingColors[transformStorageID].Count), 0, 2);
+                        var currentValueBytes = new byte[2];
+                        input.Read(currentValueBytes, 0, 2);
+                        ushort newValue = (ushort)(BitConverter.ToUInt16(currentValueBytes, 0) + _pendingColors[transformStorageID].Count);
+                        input.Write(BitConverter.GetBytes(newValue), 0, 2);
                     }
                 }
 
@@ -994,8 +994,6 @@ namespace SCEditor.ScOld
                                     Points[3] * 0.00097656f, Points[4] / 20f, Points[5] / 20f);
                                 this._transformStorage[_transformStorageID].Item1.Add(_Matrix);
 
-                                _eofMatrixOffset = reader.BaseStream.Position;
-
                                 matrixIndex++;
                                 break;
 
@@ -1009,7 +1007,6 @@ namespace SCEditor.ScOld
                                 var bm = reader.ReadByte();
                                 this._transformStorage[_transformStorageID].Item2.Add(new Tuple<Color, byte, Color>(Color.FromArgb(ra, ga, ba), am, Color.FromArgb(rm, gm, bm)));
 
-                                _eofColorsOffset = reader.BaseStream.Position;
                                 colorIndex += 1;
                                 break;
 
@@ -1054,8 +1051,6 @@ namespace SCEditor.ScOld
                                 Matrix _Matrix2 = new Matrix(Points2[0] / 65535f, Points2[1] / 65535f, Points2[2] / 65535f,
                                     Points2[3] / 65535f, Points2[4] / 20f, Points2[5] / 20f);
                                 this._transformStorage[_transformStorageID].Item1.Add(_Matrix2);
-
-                                _eofMatrixOffset = reader.BaseStream.Position;
 
                                 matrixIndex++;
                                 break;
@@ -1218,6 +1213,7 @@ namespace SCEditor.ScOld
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
             _pendingMatrixs = new Dictionary<int, List<Matrix>>();
+            _pendingColors = new Dictionary<int, List<Tuple<Color, byte, Color>>>();
             _exportCount = 0;
             _shapeCount = 0;
             _movieClipCount = 0;
@@ -1225,10 +1221,8 @@ namespace SCEditor.ScOld
             _matrixCount = 0;
             _colorsCount = 0;
             _eofOffset = 0;
-            _eofMatrixOffset = 0;
             _exportStartOffset = 0;
             _sofTagsOffset = 0;
-            _eofColorsOffset = 0;
             _eofTextFieldOffset = 0;
 
             this.loadInfoFile();

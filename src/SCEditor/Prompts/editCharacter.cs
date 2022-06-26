@@ -63,7 +63,7 @@ namespace SCEditor.Prompts
                 }
             }
 
-            stopAnimationPlaying(true); 
+            stopAnimationPlaying(true);
 
             if (treeView1.SelectedNode?.Tag != null)
             {
@@ -154,57 +154,65 @@ namespace SCEditor.Prompts
                     if (renderSingleFrameCheckBox.Checked)
                         frameIndex = int.Parse(renderSingleFrameTextBox.Text);
 
-                    if (!token.IsCancellationRequested)
-                    {
-                        Bitmap image = ((MovieClip)data).renderAnimation(rOptions, frameIndex);
+                    Bitmap image = ((MovieClip)data).renderAnimation(rOptions, frameIndex);
 
-                        if (image == null)
-                        {
-                            stopAnimationPlaying(true);
-                            MessageBox.Show($"Frame Index {frameIndex} returned null image.");
-                            return;
-                        }
-
-                        pictureBox1.Invoke((Action)(delegate
-                        {
-                            pictureBox1.Image = image;
-                            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-                            pictureBox1.Refresh();
-                        }));
-
-                        image.Dispose();
-                        image = null;
-
-                        if ((frameIndex + 1) != ((MovieClip)data).GetFrames().Count)
-                            ((MovieClip)data)._lastPlayedFrame = frameIndex + 1;
-                        else
-                            ((MovieClip)data)._lastPlayedFrame = 0;
-
-                        await Task.Delay((1000 / ((MovieClip)data).FPS), token.Token);
-                    }
-                    else
+                    if (image == null)
                     {
                         stopAnimationPlaying(true);
+                        MessageBox.Show($"Frame Index {frameIndex} returned null image.");
                         return;
                     }
 
+                    pictureBox1.Invoke((Action)(delegate
+                    {
+                        pictureBox1.Image = image;
+                        pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+                        pictureBox1.Refresh();
+                    }));
+
+                    image.Dispose();
+                    image = null;
+
+                    if ((frameIndex + 1) != ((MovieClip)data).GetFrames().Count)
+                        ((MovieClip)data)._lastPlayedFrame = frameIndex + 1;
+                    else
+                        ((MovieClip)data)._lastPlayedFrame = 0;
+
+                    await Task.Delay((1000 / ((MovieClip)data).FPS), token.Token);
+
+
+                    if (token.IsCancellationRequested)
+                    {
+                        animationState = MovieClipState.Stopped;
+                        return;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                if (ex.GetType() != typeof(TaskCanceledException))
+                if (ex.GetType() == typeof(OperationCanceledException) || ex.GetType() == typeof(TaskCanceledException))
+                {
+                    animationState = MovieClipState.Stopped;
+                    return;
+                }
+                else
                 {
                     MessageBox.Show(ex.Message);
                 }
             }
 
-            stopAnimationPlaying(true);
+            animationState = MovieClipState.Stopped;
             return;
         }
 
         private void stopAnimationPlaying(bool isEnd)
         {
             _renderingCancelToken.Cancel();
+
+            while (this.animationState == MovieClipState.Playing)
+            {
+                continue;
+            }
 
             pictureBox1.Image = null;
             pictureBox1.Refresh();
@@ -263,7 +271,7 @@ namespace SCEditor.Prompts
                         tempObject = tempObject.GetDataObject();
 
                     initChildsPointFEdit(tempObject, type);
-                } 
+                }
                 else if (childrenData.GetDataType() == 0)
                 {
                     int childIndex = _originalData.FindIndex(data => data.childrenId == childrenData.Id);
@@ -271,7 +279,7 @@ namespace SCEditor.Prompts
                     {
                         addShapeOriginalData((Shape)childrenData);
                     }
-                    
+
                     applyPointsEdit(type, (Shape)childrenData);
                 }
             }
@@ -886,7 +894,7 @@ namespace SCEditor.Prompts
                 {
                     if (sw.Elapsed.TotalSeconds > 30)
                     {
-                        DialogResult t =  MessageBox.Show($"Waited {sw.Elapsed.TotalSeconds} seconds but animation task is still running.\nPress yes to wait 30seconds more or no to close form right now.", "Error", MessageBoxButtons.YesNo);
+                        DialogResult t = MessageBox.Show($"Waited {sw.Elapsed.TotalSeconds} seconds but animation task is still running.\nPress yes to wait 30seconds more or no to close form right now.", "Error", MessageBoxButtons.YesNo);
 
                         if (t == DialogResult.No)
                         {
@@ -995,7 +1003,7 @@ namespace SCEditor.Prompts
                         MessageBox.Show($"Max frame value {((MovieClip)tempObj).GetFrames().Count}");
                     }
                 }
-            }          
+            }
 
             renderSingleFrameTextBox.Text = "0";
         }
