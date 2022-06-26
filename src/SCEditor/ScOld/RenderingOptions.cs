@@ -7,6 +7,7 @@ namespace SCEditor.ScOld
     public class RenderingOptions
     {
         public bool ViewPolygons { get; set; }
+        public bool LogConsole { get; set; } = true;
         public float polygonLineWidth { get; set; }
         public bool fillPolygon { get; set; }
         public bool InternalRendering { get; set; }
@@ -15,6 +16,7 @@ namespace SCEditor.ScOld
         public List<OriginalData> editedMatrixs { get; set;  }
         public bool isLooping { get; set; }
         public static bool disableTextFieldRendering { get; set; } = true;
+        public Dictionary<ushort, Matrix> editedMatrixPerChildren = new Dictionary<ushort, Matrix>();
 
         public RenderingOptions()
         {
@@ -26,6 +28,7 @@ namespace SCEditor.ScOld
             polygonLineWidth = 2;
             MatrixData = null;
             editedMatrixs = new List<OriginalData>();
+            editedMatrixPerChildren = new Dictionary<ushort, Matrix>();
         }
     }
 }

@@ -48,6 +48,7 @@
             this.scImportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.playAnimationByDefaultToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.disbleTextfieldRenderingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.customFunctionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.textureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createTextureStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addTextureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -78,6 +79,7 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.colorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -219,7 +221,8 @@
             this.exportAllAnimationToolStripMenuItem,
             this.scImportToolStripMenuItem,
             this.playAnimationByDefaultToolStripMenuItem,
-            this.disbleTextfieldRenderingToolStripMenuItem});
+            this.disbleTextfieldRenderingToolStripMenuItem,
+            this.customFunctionToolStripMenuItem});
             this.imageToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.imageToolStripMenuItem.Name = "imageToolStripMenuItem";
             this.imageToolStripMenuItem.Size = new System.Drawing.Size(55, 21);
@@ -295,6 +298,15 @@
             this.disbleTextfieldRenderingToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
             this.disbleTextfieldRenderingToolStripMenuItem.Text = "Disble Textfield Rendering";
             this.disbleTextfieldRenderingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.disbleTextfieldRenderingToolStripMenuItem_CheckedChanged);
+            // 
+            // customFunctionToolStripMenuItem
+            // 
+            this.customFunctionToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
+            this.customFunctionToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.customFunctionToolStripMenuItem.Name = "customFunctionToolStripMenuItem";
+            this.customFunctionToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
+            this.customFunctionToolStripMenuItem.Text = "Custom Function";
+            this.customFunctionToolStripMenuItem.Click += new System.EventHandler(this.customFunctionToolStripMenuItem_Click);
             // 
             // textureToolStripMenuItem
             // 
@@ -420,7 +432,8 @@
             this.addEditMatrixtoolStripMenuItem,
             this.editChildrenDataToolStripMenuItem,
             this.fixBoomBeachToolStripMenuItem,
-            this.exportFramesToolStripMenuItem});
+            this.exportFramesToolStripMenuItem,
+            this.colorsToolStripMenuItem});
             this.objectToolStripMenuItem.ForeColor = System.Drawing.Color.White;
             this.objectToolStripMenuItem.Name = "objectToolStripMenuItem";
             this.objectToolStripMenuItem.Size = new System.Drawing.Size(58, 21);
@@ -616,6 +629,15 @@
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
+            // colorsToolStripMenuItem
+            // 
+            this.colorsToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
+            this.colorsToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.colorsToolStripMenuItem.Name = "colorsToolStripMenuItem";
+            this.colorsToolStripMenuItem.Size = new System.Drawing.Size(191, 22);
+            this.colorsToolStripMenuItem.Text = "Colors";
+            this.colorsToolStripMenuItem.Click += new System.EventHandler(this.colorsToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -627,13 +649,13 @@
             this.Controls.Add(this.menuStrip1);
             this.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.ForeColor = System.Drawing.Color.White;
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "MainForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "SC Editor";
+            this.SizeChanged += new System.EventHandler(this.MainForm_SizeChanged);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.splitContainer1.Panel1.ResumeLayout(false);
@@ -697,6 +719,8 @@
         private System.Windows.Forms.ToolStripMenuItem exportFramesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem playAnimationByDefaultToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem disbleTextfieldRenderingToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem customFunctionToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem colorsToolStripMenuItem;
     }
 }
 

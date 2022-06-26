@@ -2,14 +2,17 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SCEditor.ScOld;
+using static SCEditor.ScOld.MovieClip;
 
 namespace SCEditor.Prompts
 {
@@ -22,6 +25,12 @@ namespace SCEditor.Prompts
         public List<OriginalData> _originalData;
         private List<TreeNode> _checkedNodes;
         private bool _saveAsMatrix = false;
+        private CancellationTokenSource _renderingCancelToken;
+        private MovieClipState animationState { get; set; }
+        private Task animationTask { get; set; }
+        private bool singleFrame { get; set; }
+        private int singleFrameIndex { get; set; } = 0;
+
 
         public bool saveAsMatrix => _saveAsMatrix;
 
@@ -32,74 +41,191 @@ namespace SCEditor.Prompts
 
             _originalData = new List<OriginalData>();
             _checkedNodes = new List<TreeNode>();
+            _renderingCancelToken = new CancellationTokenSource();
             scaleFactor = 0.25F;
+            singleFrame = false;
         }
 
         public void Render()
         {
-            RenderingOptions options = new RenderingOptions()
+            if (animationTask != null)
             {
-                ViewPolygons = false
-            };
+                Stopwatch sw = Stopwatch.StartNew();
+                while (!animationTask.IsCompleted && !(animationTask.Status == TaskStatus.WaitingForActivation || animationTask.Status == TaskStatus.WaitingToRun))
+                {
+                    if (sw.Elapsed.TotalSeconds > 30)
+                    {
+                        Console.WriteLine("Waited animation to stop for 30 seconds. Force stopping.");
+                        break;
+                    }
+
+                    continue;
+                }
+            }
+
+            stopAnimationPlaying(true); 
 
             if (treeView1.SelectedNode?.Tag != null)
             {
                 ScObject selectedData = (ScObject)treeView1.SelectedNode.Tag;
 
-                if (selectedData.GetDataType() != 0 && selectedData.GetDataType() != 7)
+                if (selectedData.GetDataType() != 0 && selectedData.GetDataType() != 7 && selectedData.GetDataType() != 1)
                     return;
 
-                if (selectedData.GetDataType() == 0)
+                RenderingOptions options = new RenderingOptions()
                 {
-                    int idx = _originalData.FindIndex(data => data.shapeId == selectedData.Id);
+                    ViewPolygons = false
+                };
 
+                if (selectedData.GetDataType() == 7)
+                    selectedData = selectedData.GetDataObject();
+
+                if (selectedData.GetDataType() == 1)
+                {
+                    MovieClip mvData = (MovieClip)selectedData;
+
+                    if (mvData.Frames.Count > 0)
+                    {
+                        Dictionary<ushort, Matrix> editedMatrix = new Dictionary<ushort, Matrix>();
+                        if (saveAsMatrix)
+                        {
+                            foreach (OriginalData data in _originalData)
+                            {
+                                editedMatrix.Add(data.childrenId, data.matrixData);
+                            }
+                        }
+
+                        options.editedMatrixPerChildren = editedMatrix;
+
+                        _renderingCancelToken = new CancellationTokenSource();
+
+                        ((MovieClip)mvData)._lastPlayedFrame = 0;
+                        animationTask = Task.Run(() => renderFrame(mvData, options, _renderingCancelToken));
+                    }
+
+                    return;
+                }
+                else
+                {
+                    int idx = _originalData.FindIndex(data => data.childrenId == selectedData.Id);
                     if (idx != -1)
                     {
                         options.MatrixData = _originalData[idx].matrixData;
                     }
+
+                    Bitmap shapeBMP = selectedData.Render(options);
+
+                    pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+                    pictureBox1.Size = new Size(shapeBMP.Width, shapeBMP.Height);
+                    pictureBox1.Image = shapeBMP;
+
+                    pictureBox1.Refresh();
+
+                    shapeBMP.Dispose();
+                    shapeBMP = null;
                 }
-                else if (selectedData.GetDataType() == 7)
+            }
+        }
+
+        private async Task renderFrame(ScObject data, RenderingOptions rOptions, CancellationTokenSource token)
+        {
+            try
+            {
+                int totalFrameTimelineCount = 0;
+                foreach (MovieClipFrame frame in ((MovieClip)data).GetFrames())
                 {
-                    options.editedMatrixs = _originalData;
+                    totalFrameTimelineCount += (frame.Id * 3);
                 }
 
-                bool exportRendered = false;
-                if (selectedData.GetDataType() == 7)
+                if (((MovieClip)data).timelineArray.Length % 3 != 0 || ((MovieClip)data).timelineArray.Length != totalFrameTimelineCount)
                 {
-                    MovieClip mvData = ((MovieClip)((Export)selectedData).GetDataObject());
+                    MessageBox.Show("MoveClip timeline array length is not set equal to total frames count.");
+                    return;
+                }
 
-                    if (mvData.Frames.Count > 0)
+                ((MovieClip)data).initPointFList(null, token.Token);
+
+                while (!token.IsCancellationRequested)
+                {
+                    animationState = MovieClipState.Playing;
+
+                    int frameIndex = ((MovieClip)data)._lastPlayedFrame;
+
+                    if (renderSingleFrameCheckBox.Checked)
+                        frameIndex = int.Parse(renderSingleFrameTextBox.Text);
+
+                    if (!token.IsCancellationRequested)
                     {
-                        mvData.initPointFList(null);
+                        Bitmap image = ((MovieClip)data).renderAnimation(rOptions, frameIndex);
 
-                        Bitmap mvBitmap = mvData.renderAnimation(new RenderingOptions(), 0);
-
-                        if (mvBitmap != null)
+                        if (image == null)
                         {
-                            exportRendered = true;
-                            pictureBox1.Image = mvBitmap;
+                            stopAnimationPlaying(true);
+                            MessageBox.Show($"Frame Index {frameIndex} returned null image.");
+                            return;
                         }
 
-                        mvData.destroyPointFList();
+                        pictureBox1.Invoke((Action)(delegate
+                        {
+                            pictureBox1.Image = image;
+                            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+                            pictureBox1.Refresh();
+                        }));
+
+                        image.Dispose();
+                        image = null;
+
+                        if ((frameIndex + 1) != ((MovieClip)data).GetFrames().Count)
+                            ((MovieClip)data)._lastPlayedFrame = frameIndex + 1;
+                        else
+                            ((MovieClip)data)._lastPlayedFrame = 0;
+
+                        await Task.Delay((1000 / ((MovieClip)data).FPS), token.Token);
                     }
-                    
+                    else
+                    {
+                        stopAnimationPlaying(true);
+                        return;
+                    }
+
                 }
-
-                if (!exportRendered)
-                    pictureBox1.Image = selectedData.Render(options);
-
-                pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-
-                if (selectedData.Children == null && selectedData.Bitmap != null)
-                {
-                    pictureBox1.Size = new Size(selectedData.Bitmap.Width, selectedData.Bitmap.Height);
-                }
-                else if (selectedData.Children != null)
-                {
-                }
-
-                pictureBox1.Refresh();
             }
+            catch (Exception ex)
+            {
+                if (ex.GetType() != typeof(TaskCanceledException))
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+
+            stopAnimationPlaying(true);
+            return;
+        }
+
+        private void stopAnimationPlaying(bool isEnd)
+        {
+            _renderingCancelToken.Cancel();
+
+            pictureBox1.Image = null;
+            pictureBox1.Refresh();
+
+            if (_scFile != null)
+            {
+                if (_scFile.CurrentRenderingMovieClips.Count > 0)
+                {
+                    foreach (MovieClip mv in this._scFile.CurrentRenderingMovieClips)
+                    {
+                        mv._lastPlayedFrame = 0;
+
+                        if (isEnd)
+                            mv.destroyPointFList();
+                    }
+
+                    _scFile.setRenderingItems(new List<ScObject>());
+                }
+            }
+
+            animationState = MovieClipState.Stopped;
         }
 
         private void editData(editType type)
@@ -108,51 +234,16 @@ namespace SCEditor.Prompts
 
             if (_checkedNodes.Count > 0)
             {
-                if (((ScObject)_checkedNodes[0].Tag).GetDataType() == 7)
+                foreach (TreeNode oData in _checkedNodes)
                 {
-                    if (_checkedNodes.Count > 1)
-                        throw new Exception("First node in _checkedNodes is export but the size is greater than 1");
-
-                    foreach (Shape shapeData in ((Export)_checkedNodes[0].Tag).getChildren())
+                    if (oData?.Tag != null)
                     {
-                        editShape(shapeData, type);
+                        editChildren((ScObject)oData.Tag, type);
                     }
-                }
-                else if (_checkedNodes.Count >= 1)
-                {
-                    foreach (TreeNode node in _checkedNodes)
+                    else
                     {
-                        if (((ScObject)_checkedNodes[0].Tag).GetDataType() != 0)
-                            throw new Exception($"CheckNode count is not 1 but selected nodes are not all shapes, {node.Text}");
+                        MessageBox.Show($"One of the tree node that is checked has a null tag... {oData.Text}");
                     }
-
-                    foreach (TreeNode node in _checkedNodes)
-                    {
-                        editShape((Shape)node.Tag, type);
-                    }
-                }
-            }
-            else
-            {
-                ScObject selectedData = (ScObject)treeView1.SelectedNode.Tag;
-
-                if (treeView1.SelectedNode?.Tag != null)
-                {
-                    if (selectedData.GetDataType() == 0)
-                    {
-                        editShape((Shape)selectedData, type);
-                    }
-                    else if (selectedData.GetDataType() == 7)
-                    {
-                        foreach (Shape shapeData in ((Export)selectedData).getChildren())
-                        {
-                            editShape(shapeData, type);
-                        }
-                    }
-                }
-                else
-                {
-                    isEdited = false;
                 }
             }
 
@@ -160,153 +251,205 @@ namespace SCEditor.Prompts
                 Render();
         }
 
-        private void editShape(Shape shapeData, editType type)
+        private void editChildren(ScObject childrenData, editType type)
         {
-            OriginalData data = null;
-
-            int originalIndex = _originalData.FindIndex(data => data.shapeId == shapeData.Id);
-            if (originalIndex == -1)
+            if (!saveAsMatrix)
             {
-                int addShapeId = shapeData.Id;
-                List<PointF[]> addPointF = new List<PointF[]>();
-
-                foreach (ShapeChunk chunk in shapeData.GetChunks())
+                if (childrenData.GetDataType() == 7 || childrenData.GetDataType() == 1)
                 {
-                    PointF[] pointFData = new PointF[chunk.XY.Length];
-                    for (int i = 0; i < chunk.XY.Length; i++)
-                    {
-                        pointFData[i].X = chunk.XY[i].X;
-                        pointFData[i].Y = chunk.XY[i].Y;
-                    }
-                    addPointF.Add(pointFData);
-                }
+                    ScObject tempObject = childrenData;
 
-                data = new OriginalData() { shapeId = addShapeId, chunkXYData = addPointF, matrixData = new Matrix(1, 0, 0, 1, 0, 0) };
-                _originalData.Add(data);
-            }
-            else
-            {
-                data = _originalData[originalIndex];
-            }
+                    if (tempObject.GetDataType() == 7)
+                        tempObject = tempObject.GetDataObject();
 
-            if (saveAsMatrix)
-            {
-                Matrix newMatrix = new Matrix();
-                switch (type)
+                    initChildsPointFEdit(tempObject, type);
+                } 
+                else if (childrenData.GetDataType() == 0)
                 {
-                    case editType.PositionUp:
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[5] + scaleFactor), 5);
-                        data.matrixData.Translate(0, -scaleFactor);
-                        break;
-
-                    case editType.PositionDown:
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[5] > 0 ? data.matrixData.Elements[5] - scaleFactor : ((Math.Abs(data.matrixData.Elements[5]) + scaleFactor) * -1)), 5);
-                        data.matrixData.Translate(0, scaleFactor);
-                        break;
-
-                    case editType.PositionLeft:
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[3] > 0 ? data.matrixData.Elements[3] -= scaleFactor : ((Math.Abs(data.matrixData.Elements[3]) + scaleFactor) * -1)), 3);
-                        data.matrixData.Translate(-scaleFactor, 0);
-                        break;
-
-                    case editType.PositionRight:
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[3] + scaleFactor), 3);
-
-                        data.matrixData.Translate(scaleFactor, 0);
-                        break;
-
-                    case editType.IncreaseSize:
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[1] + scaleFactor), 1);
-                        data.matrixData.Elements.SetValue((data.matrixData.Elements[4] + scaleFactor), 4);
-
-                        float scaleUp = scaleFactor < 1 ? 1 + scaleFactor : scaleFactor;
-                        data.matrixData.Scale(scaleUp, scaleUp);
-                        break;
-
-                    case editType.DecreaseSize:
-                        if (data.matrixData.Elements[1] >= 0)
-                            data.matrixData.Elements.SetValue((data.matrixData.Elements[1] - scaleFactor <= 0 ? 0 : data.matrixData.Elements[1] - scaleFactor), 1);
-
-                        if (data.matrixData.Elements[4] >= 0)
-                            data.matrixData.Elements.SetValue((data.matrixData.Elements[4] - scaleFactor <= 0 ? 0 : data.matrixData.Elements[4] - scaleFactor), 4);
-
-                        float scaleDown = scaleFactor > 1 ? 1 / scaleFactor : 1 - scaleFactor;
-                        data.matrixData.Scale(scaleDown, scaleDown);
-                        break;
-
-                    case editType.AngleAntiClockWise:
-                        data.matrixData.Rotate(-scaleFactor);
-                        break;
-
-                    case editType.AngleClockWise:
-                        data.matrixData.Rotate(scaleFactor);
-                        break;
-                }
-            }
-            else
-            {
-                for (int s = 0; s < shapeData.GetChunks().Count; s++)
-                {
-                    PointF[] xyData = ((ShapeChunk)shapeData.GetChunks()[s]).XY;
-
-                    if (type != editType.AngleClockWise && type != editType.AngleAntiClockWise)
+                    int childIndex = _originalData.FindIndex(data => data.childrenId == childrenData.Id);
+                    if (childIndex == -1)
                     {
-                        for (int i = 0; i < xyData.Length; i++)
-                        {
-                            switch (type)
-                            {
-                                case editType.PositionUp:
-                                    xyData[i].Y = xyData[i].Y > 0 ? xyData[i].Y - scaleFactor : ((Math.Abs(xyData[i].Y) + scaleFactor) * -1);
-                                    break;
-
-                                case editType.PositionDown:
-                                    xyData[i].Y += scaleFactor;
-                                    break;
-
-                                case editType.PositionLeft:
-                                    xyData[i].X = xyData[i].X > 0 ? xyData[i].X -= scaleFactor : ((Math.Abs(xyData[i].X) + scaleFactor) * -1);
-                                    break;
-
-                                case editType.PositionRight:
-                                    xyData[i].X += scaleFactor;
-                                    break;
-
-                                case editType.IncreaseSize:
-                                    xyData[i].X += xyData[i].X * scaleFactor;
-                                    xyData[i].Y += xyData[i].Y * scaleFactor;
-                                    break;
-
-                                case editType.DecreaseSize:
-                                    xyData[i].X -= xyData[i].X * scaleFactor;
-                                    xyData[i].Y -= xyData[i].Y * scaleFactor;
-                                    break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        GraphicsPath test = new GraphicsPath();
-                        test.AddPolygon(xyData);
-                        Matrix rotateMatrix = new Matrix(1, 0, 0, 1, 0, 0);
-                        PointF origin = findCenter(xyData);
-
-                        if (type == editType.AngleClockWise)
-                        {
-                            rotateMatrix.RotateAt(scaleFactor, origin);
-                        } 
-                        else if (type == editType.AngleAntiClockWise)
-                        {
-                            rotateMatrix.RotateAt(-scaleFactor, origin);
-                        }
-
-                        test.Transform(rotateMatrix);
-                        ((ShapeChunk)shapeData.GetChunks()[s]).SetXY(test.PathPoints);
-                        //xyData = test.PathPoints;
+                        addShapeOriginalData((Shape)childrenData);
                     }
                     
+                    applyPointsEdit(type, (Shape)childrenData);
                 }
             }
+            else
+            {
+                OriginalData childrenOriginalData = null;
+                int childIndex = _originalData.FindIndex(data => data.childrenId == childrenData.Id);
 
+                if (childIndex == -1)
+                {
+                    childrenOriginalData = new OriginalData() { childrenId = childrenData.Id, chunkXYData = null, matrixData = new Matrix(1, 0, 0, 1, 0, 0) };
+
+                    _originalData.Add(childrenOriginalData);
+                }
+                else
+                {
+                    childrenOriginalData = _originalData[childIndex];
+                }
+
+                applyMatrixEdit(type, childrenOriginalData);
+            }
+        }
+
+        private void initChildsPointFEdit(ScObject tempObject, editType type)
+        {
+            foreach (ScObject exChild in ((MovieClip)tempObject).getChildrensWithoutDuplicates())
+            {
+                if (exChild.GetDataType() == 0)
+                {
+                    int exShapeIndex = _originalData.FindIndex(data => data.childrenId == tempObject.Id);
+                    if (exShapeIndex == -1)
+                    {
+                        addShapeOriginalData((Shape)exChild);
+                    }
+
+                    applyPointsEdit(type, (Shape)exChild);
+                }
+                else if (exChild.GetDataType() == 7)
+                {
+                    initChildsPointFEdit(exChild, type);
+                }
+            }
+        }
+
+        private void addShapeOriginalData(Shape childrenData)
+        {
+            List<PointF[]> addPointF = new List<PointF[]>();
+
+            foreach (ShapeChunk chunk in (childrenData).GetChunks())
+            {
+                PointF[] pointFData = new PointF[chunk.XY.Length];
+                for (int i = 0; i < chunk.XY.Length; i++)
+                {
+                    pointFData[i].X = chunk.XY[i].X;
+                    pointFData[i].Y = chunk.XY[i].Y;
+                }
+                addPointF.Add(pointFData);
+            }
+
+            OriginalData childOriginalData = new OriginalData() { childrenId = childrenData.Id, chunkXYData = addPointF, matrixData = null };
+            _originalData.Add(childOriginalData);
+        }
+
+        private void applyMatrixEdit(editType type, OriginalData data)
+        {
+            switch (type)
+            {
+                case editType.PositionUp:
+                    data.matrixData.Elements.SetValue((data.matrixData.Elements[5] + scaleFactor), 5);
+                    data.matrixData.Translate(0, -scaleFactor);
+                    break;
+
+                case editType.PositionDown:
+                    data.matrixData.Elements.SetValue((data.matrixData.Elements[5] > 0 ? data.matrixData.Elements[5] - scaleFactor : ((Math.Abs(data.matrixData.Elements[5]) + scaleFactor) * -1)), 5);
+                    data.matrixData.Translate(0, scaleFactor);
+                    break;
+
+                case editType.PositionLeft:
+                    data.matrixData.Elements.SetValue((data.matrixData.Elements[3] > 0 ? data.matrixData.Elements[3] -= scaleFactor : ((Math.Abs(data.matrixData.Elements[3]) + scaleFactor) * -1)), 3);
+                    data.matrixData.Translate(-scaleFactor, 0);
+                    break;
+
+                case editType.PositionRight:
+                    data.matrixData.Elements.SetValue((data.matrixData.Elements[3] + scaleFactor), 3);
+
+                    data.matrixData.Translate(scaleFactor, 0);
+                    break;
+
+                case editType.IncreaseSize:
+                    data.matrixData.Elements.SetValue((data.matrixData.Elements[1] + scaleFactor), 1);
+                    data.matrixData.Elements.SetValue((data.matrixData.Elements[4] + scaleFactor), 4);
+
+                    float scaleUp = scaleFactor < 1 ? 1 + scaleFactor : scaleFactor;
+                    data.matrixData.Scale(scaleUp, scaleUp);
+                    break;
+
+                case editType.DecreaseSize:
+                    if (data.matrixData.Elements[1] >= 0)
+                        data.matrixData.Elements.SetValue((data.matrixData.Elements[1] - scaleFactor <= 0 ? 0 : data.matrixData.Elements[1] - scaleFactor), 1);
+
+                    if (data.matrixData.Elements[4] >= 0)
+                        data.matrixData.Elements.SetValue((data.matrixData.Elements[4] - scaleFactor <= 0 ? 0 : data.matrixData.Elements[4] - scaleFactor), 4);
+
+                    float scaleDown = scaleFactor > 1 ? 1 / scaleFactor : 1 - scaleFactor;
+                    data.matrixData.Scale(scaleDown, scaleDown);
+                    break;
+
+                case editType.AngleAntiClockWise:
+                    data.matrixData.Rotate(-scaleFactor);
+                    break;
+
+                case editType.AngleClockWise:
+                    data.matrixData.Rotate(scaleFactor);
+                    break;
+            }
+        }
+
+        private void applyPointsEdit(editType type, Shape childrenData)
+        {
+            for (int s = 0; s < childrenData.GetChunks().Count; s++)
+            {
+                PointF[] xyData = ((ShapeChunk)childrenData.GetChunks()[s]).XY;
+
+                if (type != editType.AngleClockWise && type != editType.AngleAntiClockWise)
+                {
+                    for (int i = 0; i < xyData.Length; i++)
+                    {
+                        switch (type)
+                        {
+                            case editType.PositionUp:
+                                xyData[i].Y = xyData[i].Y > 0 ? xyData[i].Y - scaleFactor : ((Math.Abs(xyData[i].Y) + scaleFactor) * -1);
+                                break;
+
+                            case editType.PositionDown:
+                                xyData[i].Y += scaleFactor;
+                                break;
+
+                            case editType.PositionLeft:
+                                xyData[i].X = xyData[i].X > 0 ? xyData[i].X -= scaleFactor : ((Math.Abs(xyData[i].X) + scaleFactor) * -1);
+                                break;
+
+                            case editType.PositionRight:
+                                xyData[i].X += scaleFactor;
+                                break;
+
+                            case editType.IncreaseSize:
+                                xyData[i].X += xyData[i].X * scaleFactor;
+                                xyData[i].Y += xyData[i].Y * scaleFactor;
+                                break;
+
+                            case editType.DecreaseSize:
+                                xyData[i].X -= xyData[i].X * scaleFactor;
+                                xyData[i].Y -= xyData[i].Y * scaleFactor;
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    GraphicsPath test = new GraphicsPath();
+                    test.AddPolygon(xyData);
+                    Matrix rotateMatrix = new Matrix(1, 0, 0, 1, 0, 0);
+                    PointF origin = findCenter(xyData);
+
+                    if (type == editType.AngleClockWise)
+                    {
+                        rotateMatrix.RotateAt(scaleFactor, origin);
+                    }
+                    else if (type == editType.AngleAntiClockWise)
+                    {
+                        rotateMatrix.RotateAt(-scaleFactor, origin);
+                    }
+
+                    test.Transform(rotateMatrix);
+                    ((ShapeChunk)childrenData.GetChunks()[s]).SetXY(test.PathPoints);
+                }
+
+            }
         }
 
         public PointF findCenter(PointF[] data)
@@ -340,6 +483,8 @@ namespace SCEditor.Prompts
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
+            stopAnimationPlaying(true);
+
             ScObject data = (ScObject)e.Node?.Tag;
 
             if (data != null)
@@ -369,13 +514,18 @@ namespace SCEditor.Prompts
             }
 
             pictureBox1.Image = null;
+            pictureBox1.Refresh();
             Render();
             zoomed = false;
         }
 
         private void pictureBox1_MouseWheel(object sender, MouseEventArgs e)
         {
+            return; // DISABLED
+
+#pragma warning disable CS0162 // Unreachable code detected
             ScObject node = (ScObject)treeView1.SelectedNode.Tag;
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (node == null)
                 return;
@@ -388,32 +538,10 @@ namespace SCEditor.Prompts
                 width = node.Bitmap.Width;
                 height = node.Bitmap.Height;
             }
-            else if (node.GetDataType() == 7 || node.GetDataType() == 0)
+            else
             {
-                List<PointF> A = new List<PointF>();
-
-                if (node.GetDataType() == 7)
-                {
-                    foreach (Shape s in node.Children)
-                    {
-                        PointF[] pointsXY = s.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
-                        A.AddRange(pointsXY.ToArray());
-                    }
-                }
-                else
-                {
-                    PointF[] pointsXY = ((Shape)node).GetChunks().SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
-                    A.AddRange(pointsXY.ToArray());
-                }
-
-                var xyPath = new GraphicsPath();
-
-                xyPath.AddPolygon(A.ToArray());
-
-                var xyBound = Rectangle.Round(xyPath.GetBounds());
-
-                width = xyBound.Width;
-                height = xyBound.Height;
+                width = pictureBox1.Width;
+                height = pictureBox1.Height;
             }
 
             if (zoomed != true)
@@ -448,12 +576,12 @@ namespace SCEditor.Prompts
 
         public void revertShape(Shape shapeData)
         {
-            int index = _originalData.FindIndex(data => data.shapeId == shapeData.Id);
+            int index = _originalData.FindIndex(data => data.childrenId == shapeData.Id);
 
             if (index == -1)
                 return;
 
-            int originalIndex = _scFile.GetShapes().FindIndex(Shape => Shape.Id == _originalData[index].shapeId);
+            int originalIndex = _scFile.GetShapes().FindIndex(Shape => Shape.Id == _originalData[index].childrenId);
 
             if (originalIndex == -1)
                 throw new Exception("originalShapeData index wrong");
@@ -656,10 +784,9 @@ namespace SCEditor.Prompts
                             node.Checked = false;
                         }
 
+                        if (node.Nodes.Count > 0 || ((ScObject)node?.Tag).GetDataType() != 0)
+                            removeChecked(node.Nodes, dataType);
                     }
-
-                    if (node.Nodes.Count > 0 || ((ScObject)node?.Tag).GetDataType() != 0)
-                        removeChecked(node.Nodes, dataType);
                 }
             }
         }
@@ -732,43 +859,12 @@ namespace SCEditor.Prompts
                                 }
                             }
                         }
-                        
+
                     }
                 }
 
                 Render();
             }
-        }
-
-        private void treeView1_DrawNode(object sender, DrawTreeNodeEventArgs e)
-        {
-            if (e.Node.Text != "Exports")
-            {
-                if ((ScObject)e.Node?.Tag != null)
-                {
-                    int type = ((ScObject)e.Node?.Tag).GetDataType();
-                    if (type == 0 || type == 7)
-                    {
-                        e.Graphics.DrawString(e.Node.Text, e.Node.TreeView.Font, Brushes.White, e.Node.Bounds.X, e.Node.Bounds.Y);
-                        return;
-                    }   
-                }
-            }
-
-            HideCheckBox(e.Node);
-            e.DrawDefault = true;
-        }
-
-        private void HideCheckBox(TreeNode node)
-        {
-            TVITEM tvi = new TVITEM();
-            tvi.hItem = node.Handle;
-            tvi.mask = TVIF_STATE;
-            tvi.stateMask = TVIS_STATEIMAGEMASK;
-            tvi.state = 0;
-            IntPtr lparam = Marshal.AllocHGlobal(Marshal.SizeOf(tvi));
-            Marshal.StructureToPtr(tvi, lparam, false);
-            SendMessage(node.TreeView.Handle, TVM_SETITEM, IntPtr.Zero, lparam);
         }
 
         private void editCharacter_FormClosing(object sender, FormClosingEventArgs e)
@@ -782,6 +878,32 @@ namespace SCEditor.Prompts
                     e.Cancel = (result == DialogResult.No);
                 }
             }
+
+            if (animationTask != null)
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                while (!animationTask.IsCompleted && !(animationTask.Status == TaskStatus.WaitingForActivation || animationTask.Status == TaskStatus.WaitingToRun))
+                {
+                    if (sw.Elapsed.TotalSeconds > 30)
+                    {
+                        DialogResult t =  MessageBox.Show($"Waited {sw.Elapsed.TotalSeconds} seconds but animation task is still running.\nPress yes to wait 30seconds more or no to close form right now.", "Error", MessageBoxButtons.YesNo);
+
+                        if (t == DialogResult.No)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            sw.Restart();
+                            continue;
+                        }
+                    }
+                }
+                sw.Stop();
+            }
+
+            pictureBox1.Image = null;
+            pictureBox1.Refresh();
         }
 
         private void editMatrixButton_Click(object sender, EventArgs e)
@@ -800,7 +922,7 @@ namespace SCEditor.Prompts
                     {
                         for (int i = 0; i < _originalData.Count; i++)
                         {
-                            Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(shape => shape.Id == _originalData[i].shapeId)];
+                            Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(shape => shape.Id == _originalData[i].childrenId)];
 
                             revertShape(shapeData);
                         }
@@ -826,11 +948,67 @@ namespace SCEditor.Prompts
             _saveAsMatrix = !_saveAsMatrix;
         }
 
+        private void treeView1_DrawNode(object sender, DrawTreeNodeEventArgs e)
+        {
+            if (e.Node.Text != "Exports")
+            {
+                if ((ScObject)e.Node?.Tag != null)
+                {
+                    int type = ((ScObject)e.Node?.Tag).GetDataType();
+                    if (type == 0 || type == 7 || type == 1)
+                    {
+                        e.Graphics.DrawString(e.Node.Text, e.Node.TreeView.Font, Brushes.White, e.Node.Bounds.X, e.Node.Bounds.Y);
+                        return;
+                    }
+                }
+            }
+
+            HideCheckBox(e.Node);
+            e.DrawDefault = true;
+        }
+
+        private void HideCheckBox(TreeNode node)
+        {
+            TVITEM tvi = new TVITEM();
+            tvi.hItem = node.Handle;
+            tvi.mask = TVIF_STATE;
+            tvi.stateMask = TVIS_STATEIMAGEMASK;
+            tvi.state = 0;
+            IntPtr lparam = Marshal.AllocHGlobal(Marshal.SizeOf(tvi));
+            Marshal.StructureToPtr(tvi, lparam, false);
+            SendMessage(node.TreeView.Handle, TVM_SETITEM, IntPtr.Zero, lparam);
+        }
+
+        private void renderSingleFrameTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (renderSingleFrameCheckBox.Checked)
+            {
+                if (int.TryParse(renderSingleFrameTextBox.Text, out int value))
+                {
+                    ScObject tempObj = _data;
+
+                    if (tempObj.GetDataType() == 7)
+                        tempObj = tempObj.GetDataObject();
+
+                    if (value >= ((MovieClip)tempObj).GetFrames().Count)
+                    {
+                        MessageBox.Show($"Max frame value {((MovieClip)tempObj).GetFrames().Count}");
+                    }
+                }
+            }          
+
+            renderSingleFrameTextBox.Text = "0";
+        }
+
+        private void renderSingleFrameCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            renderSingleFrameTextBox.Enabled = !renderSingleFrameCheckBox.Checked;
+        }
     }
 
     public class OriginalData
     {
-        public int shapeId { get; set; }
+        public ushort childrenId { get; set; }
         public List<PointF[]> chunkXYData { get; set; }
         public Matrix matrixData { get; set; }
     }

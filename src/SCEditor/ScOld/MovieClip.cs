@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SCEditor.ScOld
@@ -89,12 +90,12 @@ namespace SCEditor.ScOld
         private string _packetId;
 
         public int _lastPlayedFrame { get; set; }
-        private MovieClipState _animationState { get; set; }
-    #endregion
+        public MovieClipState _animationState { get; set; }
+        #endregion
 
-    #region Methods
+        #region Methods
 
-    public override int GetDataType()
+        public override int GetDataType()
         {
             return 1;
         }
@@ -112,6 +113,13 @@ namespace SCEditor.ScOld
         public List<ScObject> getChildrens()
         {
             return _childrens;
+        }
+
+        public List<ScObject> getChildrensWithoutDuplicates()
+        {
+            List<ScObject> list = _childrens.Distinct().ToList();
+
+            return list;
         }
 
         public ScFile GetStorageObject()
@@ -437,6 +445,14 @@ namespace SCEditor.ScOld
                 dataLength += 1;
             }
 
+            if (_transformStorageId > 0)
+            {
+                input.Write(BitConverter.GetBytes(41), 0, 1);
+                input.Write(BitConverter.GetBytes(0), 0, 4);
+                input.Write(new byte[1] { _transformStorageId }, 0, 1);
+                dataLength += 6;
+            }
+
             // Frames
             if (_frames != null)
             {
@@ -572,23 +588,41 @@ namespace SCEditor.ScOld
                         continue;
                     }
 
-                    Matrix childrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
-                    Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
-                    Tuple<Color, byte, Color> colorData = timelineArray[timelineIndex + 2] != 0xFFFF ? this._scFile.getColors(_transformStorageId)[timelineArray[timelineIndex + 2]] : null;
-
-                    if (options.MatrixData != null)
-                        matrixData.Multiply(options.MatrixData);
-
+                    Bitmap temporaryBitmap = new Bitmap(width, height);
                     ushort childrenId = timelineChildrenId[timelineArray[timelineIndex]];
 
-                    Bitmap temporaryBitmap = new Bitmap(width, height);
+                    Tuple<Color, byte, Color> colorData = timelineArray[timelineIndex + 2] != 0xFFFF ? this._scFile.getColors(_transformStorageId)[timelineArray[timelineIndex + 2]] : null;
 
+                    // SHAPE
                     int shapeIndex = _scFile.GetShapes().FindIndex(s => s.Id == childrenId);
                     if (shapeIndex != -1)
                     {
-                        /***
-                            - If children is shape
-                        ***/
+                        Matrix childrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
+                        //Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : null;
+                        Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix();
+
+                        if (options.MatrixData != null)
+                            matrixData.Multiply(options.MatrixData);
+
+                        if (options.editedMatrixPerChildren.ContainsKey(childrenId))
+                            matrixData.Multiply(options.editedMatrixPerChildren[childrenId]);
+
+                        /**
+                        temporaryBitmap = _scFile.GetShapes()[shapeIndex].Render(new RenderingOptions() {
+                            MatrixData = matrixData,
+                            ViewPolygons = options.ViewPolygons,
+                            LogConsole = false
+                        });
+
+                        if (temporaryBitmap == null)
+                        {
+                            Console.WriteLine($"Unable to render {childrenId} of frame {frameIndex}");
+                            timelineIndex += 3;
+                            continue;
+                        }
+                        **/
+
+
                         foreach (ShapeChunk chunk in ((Shape)_scFile.GetShapes()[shapeIndex]).Children)
                         {
                             var texture = (Texture)_scFile.GetTextures()[chunk.GetTextureId()];
@@ -603,28 +637,28 @@ namespace SCEditor.ScOld
                                     var gxyBound = Rectangle.Round(gpuv.GetBounds());
 
                                     int gpuvWidth = gxyBound.Width;
-                                    gpuvWidth = gpuvWidth > 0 ? gpuvWidth : 1;
-
                                     int gpuvHeight = gxyBound.Height;
-                                    gpuvHeight = gpuvHeight > 0 ? gpuvHeight : 1;
 
-                                    var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
-
-                                    var chunkX = gxyBound.X;
-                                    var chunkY = gxyBound.Y;
-
-                                    using (var g = Graphics.FromImage(shapeChunk))
+                                    if (gpuvWidth > 0 && gpuvHeight > 0)
                                     {
-                                        gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
-                                        g.SetClip(gpuv);
-                                        g.DrawImage(bitmap, -chunkX, -chunkY);
-                                    }
 
-                                    GraphicsPath gp = new GraphicsPath();
-                                    gp.AddPolygon(new[] { new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight) });
+                                        var shapeChunk = new Bitmap(gpuvWidth, gpuvHeight);
 
-                                    double[,] matrixArrayUV =
-                                    {
+                                        var chunkX = gxyBound.X;
+                                        var chunkY = gxyBound.Y;
+
+                                        using (var g = Graphics.FromImage(shapeChunk))
+                                        {
+                                            gpuv.Transform(new Matrix(1, 0, 0, 1, -chunkX, -chunkY));
+                                            g.SetClip(gpuv);
+                                            g.DrawImage(bitmap, -chunkX, -chunkY);
+                                        }
+
+                                        GraphicsPath gp = new GraphicsPath();
+                                        gp.AddPolygon(new[] { new Point(0, 0), new Point(gpuvWidth, 0), new Point(0, gpuvHeight) });
+
+                                        double[,] matrixArrayUV =
+                                        {
                                             {
                                                 gpuv.PathPoints[0].X, gpuv.PathPoints[1].X, gpuv.PathPoints[2].X
                                             },
@@ -636,18 +670,18 @@ namespace SCEditor.ScOld
                                             }
                                         };
 
-                                    PointF[] newXY = new PointF[chunk.XY.Length];
+                                        PointF[] newXY = new PointF[chunk.XY.Length];
 
-                                    for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
-                                    {
-                                        float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
-                                        float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
+                                        for (int xyIdx = 0; xyIdx < newXY.Length; xyIdx++)
+                                        {
+                                            float xNew = matrixData.Elements[4] + matrixData.Elements[0] * chunk.XY[xyIdx].X + matrixData.Elements[2] * chunk.XY[xyIdx].Y;
+                                            float yNew = matrixData.Elements[5] + matrixData.Elements[1] * chunk.XY[xyIdx].X + matrixData.Elements[3] * chunk.XY[xyIdx].Y;
 
-                                        newXY[xyIdx] = new PointF(xNew, yNew);
-                                    }
+                                            newXY[xyIdx] = new PointF(xNew, yNew);
+                                        }
 
-                                    double[,] matrixArrayXY =
-                                    {
+                                        double[,] matrixArrayXY =
+                                        {
                                             {
                                                 newXY[0].X, newXY[1].X, newXY[2].X
                                             },
@@ -659,71 +693,72 @@ namespace SCEditor.ScOld
                                             }
                                         };
 
-                                    var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
-                                    var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
-                                    var inverseMatrixUV = matrixUV.Inverse();
-                                    var transformMatrix = matrixXY * inverseMatrixUV;
-                                    var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
+                                        var matrixUV = Matrix<double>.Build.DenseOfArray(matrixArrayUV);
+                                        var matrixXY = Matrix<double>.Build.DenseOfArray(matrixArrayXY);
+                                        var inverseMatrixUV = matrixUV.Inverse();
+                                        var transformMatrix = matrixXY * inverseMatrixUV;
+                                        var m = new Matrix((float)transformMatrix[0, 0], (float)transformMatrix[1, 0], (float)transformMatrix[0, 1], (float)transformMatrix[1, 1], (float)transformMatrix[0, 2], (float)transformMatrix[1, 2]);
 
-                                    //Perform transformations
-                                    gp.Transform(m);
+                                        //Perform transformations
+                                        gp.Transform(m);
 
-                                    using (Graphics g = Graphics.FromImage(temporaryBitmap))
-                                    {
-                                        //Set origin
-                                        Matrix originTransform = new Matrix();
-                                        originTransform.Translate(-x, -y);
-                                        g.Transform = originTransform;
 
-                                        g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
-
-                                        if (options.ViewPolygons)
+                                        using (Graphics g = Graphics.FromImage(temporaryBitmap))
                                         {
-                                            gpuv.Transform(m);
-                                            g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                            //Set origin
+                                            Matrix originTransform = new Matrix();
+                                            originTransform.Translate(-x, -y);
+                                            g.Transform = originTransform;
+
+                                            g.DrawImage(shapeChunk, gp.PathPoints, gpuv.GetBounds(), GraphicsUnit.Pixel);
+
+                                            if (options.ViewPolygons)
+                                            {
+                                                gpuv.Transform(m);
+                                                g.DrawPath(new Pen(Color.DeepSkyBlue, 1), gpuv);
+                                            }
+                                            g.Flush();
                                         }
-                                        g.Flush();
+
                                     }
+
                                 }
                             }
                         }
+
                     }
                     else
                     {
+                        // Movieclip
                         int movieClipIndex = _scFile.GetMovieClips().FindIndex(s => s.Id == childrenId);
-
-                        /***
-                            - If children is movieclip
-                        ***/
                         if (movieClipIndex != -1)
                         {
                             MovieClip extramovieClip = (MovieClip)_scFile.GetMovieClips()[movieClipIndex];
 
                             Matrix newChildrenMatrixData = timelineArray[timelineIndex + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[timelineIndex + 1]] : null;
-                            Matrix newMatrix = newChildrenMatrixData != null ? newChildrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
+                            Matrix newMatrix = newChildrenMatrixData != null ? newChildrenMatrixData.Clone() : new Matrix();
 
                             if (options.MatrixData != null)
                             {
-                                if (newMatrix != null)
-                                {
-                                    newMatrix.Multiply(options.MatrixData);
-                                }
-                                else
-                                {
-                                    newMatrix = new Matrix();
-                                    newMatrix.Multiply(options.MatrixData);
-                                }
+                                newMatrix.Multiply(options.MatrixData);
                             }
 
-                            if (extramovieClip.getPointFList() == null || extramovieClip.getPointFList().Count == 0)
+                            if (options.editedMatrixPerChildren.ContainsKey(extramovieClip.Id))
+                            {
+                                newMatrix.Multiply(options.editedMatrixPerChildren[extramovieClip.Id]);
+                            }
+
+                            if ((extramovieClip.getPointFList() == null || extramovieClip.getPointFList().Count == 0) && extramovieClip._animationState == MovieClipState.Stopped)
                                 extramovieClip.initPointFList(newMatrix);
 
                             if (_scFile.CurrentRenderingMovieClips.FindIndex(s => s.Id == extramovieClip.Id) == -1)
-                                _scFile.CurrentRenderingMovieClips.Add(extramovieClip);                          
+                                _scFile.CurrentRenderingMovieClips.Add(extramovieClip);
 
                             int extraFrameIndex = extramovieClip._lastPlayedFrame;
 
-                            RenderingOptions newOptions = new RenderingOptions() { MatrixData = newMatrix, ViewPolygons = options.ViewPolygons };
+                            RenderingOptions newOptions = new RenderingOptions() { editedMatrixPerChildren = options.editedMatrixPerChildren, ViewPolygons = options.ViewPolygons };
+                            if (newChildrenMatrixData != new Matrix())
+                                newOptions.MatrixData = newMatrix; // confirm what to use here
 
                             extramovieClip.setFrame(extraFrameIndex, newOptions, xyBound);
 
@@ -737,17 +772,13 @@ namespace SCEditor.ScOld
                             using (Graphics g = Graphics.FromImage(temporaryBitmap))
                             {
                                 g.DrawImage(frameData, 0, 0);
-
                                 g.Flush();
                             }
                         }
                         else
                         {
+                            //Textfield
                             int textFieldIndex = _scFile.getTextFields().FindIndex(s => s.Id == childrenId);
-
-                            /***
-                                - If children is textfield
-                            ***/
                             if (textFieldIndex != -1)
                             {
                                 if (!RenderingOptions.disableTextFieldRendering)
@@ -805,7 +836,7 @@ namespace SCEditor.ScOld
                                         gp.Dispose();
                                         g.Flush();
                                     }
-                                } 
+                                }
                             }
                             else
                             {
@@ -824,10 +855,10 @@ namespace SCEditor.ScOld
                         ColorMap colorMap = new ColorMap();
                         ColorMap[] remapTable = { colorMap };
 
-                        colorMap.OldColor = colorData.Item1;
-                        colorMap.NewColor = colorData.Item3;
+                        colorMap.OldColor = colorData.Item3;
+                        colorMap.NewColor = colorData.Item1;
 
-                        matrix.Matrix33 = (float)(colorData.Item2 / 255); 
+                        matrix.Matrix33 = (float)(colorData.Item2 / 255F);
 
                         imageAttributes.SetRemapTable(remapTable, ColorAdjustType.Bitmap);
 
@@ -855,41 +886,43 @@ namespace SCEditor.ScOld
                     timelineIndex += 3;
                 }
 
-
-            ((MovieClipFrame)this.Frames[frameIndex]).setBitmap(finalShape);
+                ((MovieClipFrame)this.Frames[frameIndex]).setBitmap(finalShape);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + $" in setFrame({frameIndex}) | " + ex.StackTrace);
+                if (ex.GetType() != typeof(OverflowException))
+                {
+                    MessageBox.Show(ex.Message + $" in setFrame({frameIndex}) | " + ex.StackTrace);
+                }
+                else
+                {
+                    Console.WriteLine(ex.Message + $" in setFrame({frameIndex}) | " + ex.StackTrace);
+                    Task.Delay(2000);
+                }
             }
 
         }
 
-        public List<PointF> generateChildrensPointF(Matrix matrixIn)
+        public List<PointF> generateChildrensPointF(Matrix matrixIn, CancellationToken token = new CancellationToken())
         {
             List<PointF> A = new List<PointF>();
 
             for (int i = 0; i < (timelineArray.Length / 3); i++)
             {
+                if (token.IsCancellationRequested)
+                    return null;
+
                 int shapeIndex = _scFile.GetShapes().FindIndex(s => s.Id == timelineChildrenId[timelineArray[(i * 3)]]);
                 if (shapeIndex != -1)
                 {
                     Shape shapeToRender = (Shape)_scFile.GetShapes()[shapeIndex];
 
                     Matrix childrenMatrixData = timelineArray[(i * 3) + 1] != 0xFFFF ? this._scFile.GetMatrixs(_transformStorageId)[timelineArray[(i * 3) + 1]] : null;
-                    Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix(1, 0, 0, 1, 0, 0);
+                    Matrix matrixData = childrenMatrixData != null ? childrenMatrixData.Clone() : new Matrix();
 
                     if (matrixIn != null)
                     {
-                        if (matrixData != null)
-                        {
-                            matrixData.Multiply(matrixIn);
-                        }
-                        else
-                        {
-                            matrixData = new Matrix(1, 0, 0, 1, 0, 0);
-                            matrixData.Multiply(matrixIn);
-                        }
+                        matrixData.Multiply(matrixIn);
                     }
 
                     if (matrixData != null)
@@ -912,7 +945,7 @@ namespace SCEditor.ScOld
                     else
                     {
                         PointF[] pointsXY = shapeToRender.Children.SelectMany(chunk => ((ShapeChunk)chunk).XY).ToArray();
-                        A.AddRange(pointsXY.ToArray());
+                        A.AddRange(pointsXY);
                     }
                 }
                 else
@@ -921,8 +954,12 @@ namespace SCEditor.ScOld
 
                     if (movieClipIndex != -1)
                     {
+                        List<PointF> templist = ((MovieClip)_scFile.GetMovieClips()[movieClipIndex]).generateChildrensPointF(matrixIn, token);
 
-                        A.AddRange(((MovieClip)_scFile.GetMovieClips()[movieClipIndex]).generateChildrensPointF(matrixIn));
+                        if (templist == null || token.IsCancellationRequested)
+                            return null;
+
+                        A.AddRange(templist);
                     }
                     else if (_scFile.getTextFields().FindIndex(t => t.Id == timelineChildrenId[timelineArray[(i * 3)]]) != -1)
                     {
@@ -930,7 +967,6 @@ namespace SCEditor.ScOld
                     }
                     else
                     {
-                        this.GetName();
                         throw new Exception($"Unknown type of children with id {timelineChildrenId[timelineArray[(i * 3)]]} for movieclip id {this.Id}");
                     }
                 }
@@ -973,9 +1009,9 @@ namespace SCEditor.ScOld
             _timelineChildrenNames = temp.ToArray();
         }
 
-        public void initPointFList(Matrix matrixIn)
+        public void initPointFList(Matrix matrixIn, CancellationToken token = new CancellationToken())
         {
-            _pointFList = generateChildrensPointF(matrixIn);
+            _pointFList = generateChildrensPointF(matrixIn, token);
         }
 
         public List<PointF> getPointFList()

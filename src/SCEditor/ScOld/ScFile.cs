@@ -24,10 +24,10 @@ namespace SCEditor.ScOld
             _movieClips = new List<ScObject>();
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
-            _pendingMatrixs = new List<Matrix>();
+            _pendingMatrixs = new Dictionary<int, List<Matrix>>();
             _infoFile = infoFile;
             _textureFile = textureFile;
-            _pendingColors = new List<Tuple<Color, byte, Color>>();
+            _pendingColors = new Dictionary<int, List<Tuple<Color, byte, Color>>>();
             _fontNames = new List<string>();
             _textFields = new List<ScObject>();
             _currentRenderingMovieClips = new List<ScObject>();
@@ -50,12 +50,13 @@ namespace SCEditor.ScOld
         private List<ScObject> _movieClips;
         private List<ScObject> _pendingChanges;
         private List<ScObject> _movieClipsModifier;
-        private List<Matrix> _pendingMatrixs;
-        private List<Tuple<Color, byte, Color>> _pendingColors;
+        private Dictionary<int, List<Matrix>> _pendingMatrixs;
+        private Dictionary<int, List<Tuple<Color, byte, Color>>>  _pendingColors;
         private List<string> _fontNames;
         private List<ScObject> _textFields;
         private List<ScObject> _currentRenderingMovieClips;
         private List<(List<Matrix>, List<Tuple<Color, byte, Color>>)> _transformStorage;
+        private Dictionary<int, long> _transformStorageOffsets;
 
         private readonly string _infoFile;
         private readonly string _textureFile;
@@ -86,6 +87,11 @@ namespace SCEditor.ScOld
         public void AddShape(Shape shape)
         {
             _shapes.Add(shape);
+        }
+
+        public List<(List<Matrix>, List<Tuple<Color, byte, Color>>)> GetTransformStorage()
+        {
+            return _transformStorage;
         }
 
         public void AddTexture(Texture texture)
@@ -142,12 +148,15 @@ namespace SCEditor.ScOld
             return _transformStorage[storageID].Item1;
         }
 
-        public void addMatrix(Matrix matrix)
+        public void addMatrix(Matrix matrix, int TransformStorageID)
         {
-            if (_transformStorage[0].Item1.Count == 65535)
-                throw new Exception("Not implemented");
+            if (_transformStorage[TransformStorageID].Item1.Count >= ushort.MaxValue)
+            {
+                MessageBox.Show($"StorageBox {TransformStorageID} matrix has already exceeded max array size. Skipping.");
+                return;
+            }
 
-            _transformStorage[0].Item1.Add(matrix);
+            _transformStorage[TransformStorageID].Item1.Add(matrix);
         }
         public List<ScObject> GetShapes()
         {
@@ -158,7 +167,7 @@ namespace SCEditor.ScOld
             return _pendingChanges;
         }
 
-        public List<Matrix> GetPendingMatrixChanges()
+        public Dictionary<int, List<Matrix>> GetPendingMatrixChanges()
         {
             return _pendingMatrixs;
         }
@@ -194,9 +203,16 @@ namespace SCEditor.ScOld
             _eofTexOffset = offset;
         }
 
-        public void addPendingMatrix(Matrix data)
+        public void addPendingMatrix(Matrix data, int TransformStorageID)
         {
-            _pendingMatrixs.Add(data);
+            if (_pendingMatrixs.ContainsKey(TransformStorageID))
+            {
+                _pendingMatrixs[TransformStorageID].Add(data);
+            }
+            else
+            {
+                _pendingMatrixs.Add(TransformStorageID, new List<Matrix>() { data });
+            }
         }
 
         public void SetSofTagsOffset(long offset)
@@ -207,6 +223,27 @@ namespace SCEditor.ScOld
         public void SetStartExportsOffset(long offset)
         {
             _exportStartOffset = offset;
+        }
+
+        private void ExpandFile(FileStream stream, long offset, int extraBytes)
+        {
+            // http://stackoverflow.com/questions/3033771/file-io-with-streams-best-memory-buffer-size
+            const int SIZE = 4096;
+            var buffer = new byte[SIZE];
+            var length = stream.Length;
+            // Expand file
+            stream.SetLength(length + extraBytes);
+            var pos = length;
+            int to_read;
+            while (pos > offset)
+            {
+                to_read = pos - SIZE >= offset ? SIZE : (int)(pos - offset);
+                pos -= to_read;
+                stream.Position = pos;
+                stream.Read(buffer, 0, to_read);
+                stream.Position = pos + extraBytes;
+                stream.Write(buffer, 0, to_read);
+            }
         }
 
         public void Save(FileStream input, FileStream texinput)
@@ -220,66 +257,6 @@ namespace SCEditor.ScOld
             int matrixAdd = 0;
             int colorsAdd = 0;
             int textFieldsAdd = 0;
-
-            if (_pendingMatrixs.Count > 0)
-            {
-                input.Seek(this._eofOffset, SeekOrigin.Begin);
-                foreach (Matrix matrix in _pendingMatrixs)
-                {
-                    input.WriteByte(8);
-                    input.Write(BitConverter.GetBytes(24), 0, 4);
-
-                    Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
-                        matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
-
-                    for (int i = 0; i < 6; i++)
-                    {
-                        input.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
-                    }
-
-                    _eofMatrixOffset = input.Position;
-                    _eofOffset = input.Position;
-
-                    matrixAdd += 1;
-                }
-                input.Write(new byte[] { 0, 0, 0, 0, 0 });
-
-                _pendingMatrixs.Clear();
-
-                input.Seek(8, SeekOrigin.Begin);
-                this._matrixCount += matrixAdd;
-                input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
-            }
-
-            if (_pendingColors.Count > 0)
-            {
-                input.Seek(this._eofOffset, SeekOrigin.Begin);
-                foreach (Tuple<Color, byte, Color> color in _pendingColors)
-                {
-                    input.WriteByte(9);
-                    input.Write(BitConverter.GetBytes(7), 0, 4);
-
-                    input.WriteByte(color.Item1.R);
-                    input.WriteByte(color.Item1.G);
-                    input.WriteByte(color.Item1.B);
-                    input.WriteByte(color.Item2);
-                    input.WriteByte(color.Item1.R);
-                    input.WriteByte(color.Item1.G);
-                    input.WriteByte(color.Item1.B);
-
-                    _eofColorsOffset = input.Position;
-                    _eofOffset = input.Position;
-
-                    colorsAdd += 1;
-                }
-                input.Write(new byte[] { 0, 0, 0, 0, 0 });
-
-                _pendingColors.Clear();
-
-                input.Seek(10, SeekOrigin.Begin);
-                this._colorsCount += colorsAdd;
-                input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
-            }
 
             input.Seek(0, SeekOrigin.Begin);
 
@@ -383,7 +360,6 @@ namespace SCEditor.ScOld
                         break;
                 }
             }
-
             _pendingChanges.Clear();
 
             input.Close();
@@ -397,9 +373,151 @@ namespace SCEditor.ScOld
                     data.Write(input);
                 }
             }
-            input.Close();
 
+            input.Close();
             reloadInfoFile();
+            input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+
+            if (_pendingMatrixs.Count > 0)
+            {
+                input.Seek(this._eofOffset, SeekOrigin.Begin);
+
+                foreach (var matrixesPerStorage in _pendingMatrixs)
+                {
+                    int transformStorageID = matrixesPerStorage.Key;
+                    bool isEndofOffset = false;
+
+                    long postition = _eofOffset;
+
+                    if (transformStorageID != (this._transformStorage.Count - 1))
+                    {
+                        postition = _transformStorageOffsets[transformStorageID + 1];
+                    }
+                    else
+                    {
+                        isEndofOffset = true;
+                    }
+
+                    if (!isEndofOffset)
+                    {
+                        ExpandFile(input, postition, (matrixesPerStorage.Value.Count * 29));
+                    }
+
+                    input.Position = postition;
+                    foreach (Matrix matrix in matrixesPerStorage.Value)
+                    {
+                        input.WriteByte(8);
+                        input.Write(BitConverter.GetBytes(24), 0, 4);
+
+                        Matrix newMatrix = new Matrix(matrix.Elements[0] / 0.00097656f, matrix.Elements[1] / 0.00097656f, matrix.Elements[2] / 0.00097656f,
+                            matrix.Elements[3] / 0.00097656f, matrix.Elements[4] * 20f, matrix.Elements[5] * 20f);
+
+                        for (int i = 0; i < 6; i++)
+                        {
+                            input.Write(BitConverter.GetBytes((int)newMatrix.Elements[i]), 0, 4);
+                        }
+
+                        _eofMatrixOffset = input.Position; // check
+
+                        if (isEndofOffset)
+                        {
+                            _eofOffset = input.Position;
+                        }
+
+                        matrixAdd += 1;
+                    }
+
+                    if (isEndofOffset)
+                    {
+                        input.Write(new byte[] { 0, 0, 0, 0, 0 });
+                    }
+
+                    if (this._transformStorage.Count != 0 && transformStorageID != 0)
+                    {
+                        input.Position = _transformStorageOffsets[transformStorageID] + 5;
+                        input.Write(BitConverter.GetBytes((ushort)_pendingMatrixs[transformStorageID].Count), 0, 2);
+                    }
+                }
+
+                _pendingMatrixs.Clear();
+
+                input.Seek(8, SeekOrigin.Begin);
+                this._matrixCount += matrixAdd;
+                input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
+            }
+
+            if (_pendingColors.Count > 0)
+            {
+                input.Seek(this._eofOffset, SeekOrigin.Begin);
+
+                foreach (var colorsPerStorage in _pendingColors)
+                {
+                    int transformStorageID = colorsPerStorage.Key;
+                    bool isEndofOffset = false;
+
+                    long postition = _eofOffset;
+
+                    if (transformStorageID != (this._transformStorage.Count - 1))
+                    {
+                        postition = _transformStorageOffsets[transformStorageID + 1];
+                    }
+                    else
+                    {
+                        isEndofOffset = true;
+                    }
+
+                    if (!isEndofOffset)
+                    {
+                        ExpandFile(input, postition, (colorsPerStorage.Value.Count * 12));
+                    }
+
+                    input.Position = postition;
+
+                    foreach (Tuple<Color, byte, Color> color in colorsPerStorage.Value)
+                    {
+                        input.WriteByte(9);
+                        input.Write(BitConverter.GetBytes(7), 0, 4);
+
+                        input.WriteByte(color.Item1.R);
+                        input.WriteByte(color.Item1.G);
+                        input.WriteByte(color.Item1.B);
+                        input.WriteByte(color.Item2);
+                        input.WriteByte(color.Item1.R);
+                        input.WriteByte(color.Item1.G);
+                        input.WriteByte(color.Item1.B);
+
+                        _eofColorsOffset = input.Position; // check
+
+                        if (isEndofOffset)
+                        {
+                            _eofOffset = input.Position;
+                        }
+
+                        colorsAdd += 1;
+                    }
+
+                    if (isEndofOffset)
+                    {
+                        input.Write(new byte[] { 0, 0, 0, 0, 0 });
+                    }
+
+                    if (this._transformStorage.Count != 0 && transformStorageID != 0)
+                    {
+                        input.Position = _transformStorageOffsets[transformStorageID] + 7;
+                        input.Write(BitConverter.GetBytes((ushort)_pendingColors[transformStorageID].Count), 0, 2);
+                    }
+                }
+
+                _pendingColors.Clear();
+
+                input.Seek(10, SeekOrigin.Begin);
+                this._colorsCount += colorsAdd;
+                input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
+            }
+
+            input.Close();
+            reloadInfoFile();
+            
 
             Console.WriteLine($"SaveSC: Done saving (Add/Edit) Exports: {exportAdd} | MovieClips: {movieClipAdd}/{movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd} | TextFields {textFieldsAdd}");
         }
@@ -673,6 +791,7 @@ namespace SCEditor.ScOld
                     _transformStorageID = 0;
                     _transformStorage = new List<(List<Matrix>, List<Tuple<Color, byte, Color>>)>();
                     _transformStorage.Add((new List<Matrix>(), new List<Tuple<Color, byte, Color>>()));
+                    _transformStorageOffsets = new Dictionary<int, long>();
 
                     for (int i = 0; i < _shapeCount; i++)
                     {
@@ -962,11 +1081,14 @@ namespace SCEditor.ScOld
                                 break;
 
                             case "2A": //42
+                                _transformStorageID += 1;
+
+                                _transformStorageOffsets.Add(_transformStorageID, offset);
+
                                 ushort mCount = reader.ReadUInt16();
                                 ushort cCount = reader.ReadUInt16();
 
                                 _transformStorage.Add((new List<Matrix>(), new List<Tuple<Color, byte, Color>>()));
-                                _transformStorageID += 1;
                                 break;
 
                             default:
@@ -1059,12 +1181,35 @@ namespace SCEditor.ScOld
             }
         }
 
+        private static Dictionary<TKey, TValue> CloneDictionaryCloningValues<TKey, TValue> (Dictionary<TKey, TValue> original) where TValue : List<Matrix>
+        {
+            Dictionary<TKey, TValue> ret = new Dictionary<TKey, TValue>();
+
+            foreach (KeyValuePair<TKey, TValue> entry in original)
+            {
+                ret.Add(entry.Key, (TValue)((Matrix[])entry.Value.ToArray().Clone()).ToList());
+            }
+            return ret;
+        }
+
+        private static Dictionary<TKey, TValue> CloneDictionaryCloningValuesColor<TKey, TValue>(Dictionary<TKey, TValue> original) where TValue : List<Tuple<Color, byte, Color>>
+        {
+            Dictionary<TKey, TValue> ret = new Dictionary<TKey, TValue>();
+
+            foreach (KeyValuePair<TKey, TValue> entry in original)
+            {
+                ret.Add(entry.Key, (TValue)((Tuple<Color, byte, Color>[])entry.Value.ToArray().Clone()).ToList());
+            }
+            return ret;
+        }
+
         public void reloadInfoFile()
         {
             ScObject[] previousPendingChanges = (ScObject[])_pendingChanges.ToArray().Clone();
-            Matrix[] previousPendingMatrix = (Matrix[])_pendingMatrixs.ToArray().Clone();
             ScObject[] previousTextureData = (ScObject[])_textures.ToArray().Clone();
-            Tuple<Color, byte, Color>[] previousPendingColor = (Tuple<Color, byte, Color>[])_pendingColors.ToArray().Clone();
+
+            Dictionary<int, List<Matrix>> previousPendingMatrix = CloneDictionaryCloningValues(_pendingMatrixs);
+            Dictionary<int, List<Tuple<Color, byte, Color>>> previousPendingColor = CloneDictionaryCloningValuesColor(_pendingColors);
 
             _shapes = new List<ScObject>();
             _exports = new List<ScObject>();
@@ -1072,7 +1217,7 @@ namespace SCEditor.ScOld
             _textFields = new List<ScObject>();
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
-            _pendingMatrixs = new List<Matrix>();
+            _pendingMatrixs = new Dictionary<int, List<Matrix>>();
             _exportCount = 0;
             _shapeCount = 0;
             _movieClipCount = 0;
@@ -1138,14 +1283,14 @@ namespace SCEditor.ScOld
                 _pendingChanges.Add(pendingData);
             }
 
-            foreach (Matrix pendingMatrix in previousPendingMatrix)
+            foreach (var mdata in previousPendingMatrix)
             {
-                _pendingMatrixs.Add(pendingMatrix);
+                _pendingMatrixs.Add(mdata.Key, mdata.Value);
             }
 
-            foreach (Tuple<Color, byte, Color> color in previousPendingColor)
+            foreach (var cdata in previousPendingColor)
             {
-                _pendingColors.Add(color);
+                _pendingColors.Add(cdata.Key, cdata.Value);
             }
         }
 
@@ -1181,12 +1326,15 @@ namespace SCEditor.ScOld
             _textFields.Add(data);
         }
 
-        public void addColor(Tuple<Color, byte, Color> color)
+        public void addColor(Tuple<Color, byte, Color> color, int TransformStorageID)
         {
-            if (_transformStorage[0].Item2.Count == 65535)
-                throw new Exception("Not implemented");
+            if (_transformStorage[TransformStorageID].Item2.Count >= ushort.MaxValue)
+            {
+                MessageBox.Show($"StorageBox {TransformStorageID} colors has already exceeded max array size. Skipping.");
+                return;
+            }
 
-            _transformStorage[0].Item2.Add(color);
+            _transformStorage[TransformStorageID].Item2.Add(color);
         }
 
         public void addRenderingItem(ScObject item)
@@ -1206,9 +1354,16 @@ namespace SCEditor.ScOld
             _currentRenderingMovieClips = data;
         }
 
-        public void addPendingColor(Tuple<Color, byte, Color> color)
+        public void addPendingColor(Tuple<Color, byte, Color> color, int TransformStorageID)
         {
-            _pendingColors.Add(color);
+            if (_pendingColors.ContainsKey(TransformStorageID))
+            {
+                _pendingColors[TransformStorageID].Add(color);
+            }
+            else 
+            {
+                _pendingColors.Add(TransformStorageID, new List<Tuple<Color, byte, Color>>() { color });
+            } 
         }
 
         public ushort getMaxId()
@@ -1247,7 +1402,50 @@ namespace SCEditor.ScOld
                 }
             }
 
-            return (maxId += 100); // change to 1
+            ushort incVal = 1;
+            while (idExists((ushort)(maxId + incVal)))
+            {
+                incVal = (ushort)(incVal * 2);
+            }
+
+            return (ushort)(maxId + incVal);
+        }
+
+        private bool idExists(ushort id)
+        {
+            foreach (Export ex in _exports)
+            {
+                if (ex.Id == id)
+                {
+                    return true;
+                }
+            }
+
+            foreach (Shape s in _shapes)
+            {
+                if (s.Id == id)
+                {
+                    return true;
+                }
+            }
+
+            foreach (MovieClip mv in _movieClips)
+            {
+                if (mv.Id == id)
+                {
+                    return true;
+                }
+            }
+
+            foreach (TextField tx in _textFields)
+            {
+                if (tx.Id == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

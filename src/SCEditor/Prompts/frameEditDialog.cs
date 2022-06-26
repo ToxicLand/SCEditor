@@ -294,6 +294,16 @@ namespace SCEditor.Prompts
             int frameIndex = getSelectedFrameIndex();
 
             dataTypeTextBox.Text = _timelineArray[(frameIndex * 3) + frameTimelineDataBox.SelectedIndex].ToString();
+
+            if (frameTimelineDataBox.SelectedIndex == 2 || (frameTimelineDataBox.SelectedIndex - 2) % 3 == 0)
+            {
+                if (dataTypeTextBox.Text == ushort.MaxValue.ToString())
+                    return;
+
+                Tuple<Color, byte, Color> color = _scfile.getColors(((MovieClip)_data)._transformStorageId)[(int)_timelineArray[(frameIndex * 3) + frameTimelineDataBox.SelectedIndex]];
+
+            Console.WriteLine();
+            }
         }
 
         private void refreshMenu()
@@ -403,7 +413,7 @@ namespace SCEditor.Prompts
         private int getSelectedFrameIndex()
         {
             int frameIndex = 0;
-            for (int i = 0; i < _frames.Count(); i++)
+            for (int i = 0; i < _frames.Length; i++)
             {
                 if (FramesArrayBox.SelectedIndex == i)
                     break;

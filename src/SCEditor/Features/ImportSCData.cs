@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using SCEditor.Prompts;
 using SCEditor.ScOld;
+using SCEditor.ScOld.ImageFormats;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,6 +21,16 @@ namespace SCEditor.Features
 {
     public class ImportSCData
     {
+        private static Dictionary<byte, Type> textureImageType = new Dictionary<byte, Type>{
+                {0, typeof(ImageRgba8888)},
+                {1, typeof(ImageRgba8888)},
+                { 2, typeof(ImageRgba4444)},
+                { 3, typeof(ImageRgba5551)},
+                { 4, typeof(ImageRgb565)},
+                { 6, typeof(ImageLuminance8Alpha8)},
+                { 9, typeof(ImageRgba4444)},
+                { 10, typeof(ImageLuminance8)}};
+
         private ScFile _scFile;
         private ScFile scToImportFrom;
         private Dictionary<ushort, ushort> _shapesAlreadyAdded;
@@ -36,7 +47,7 @@ namespace SCEditor.Features
         private List<(ushort, List<Matrix>)> _shapeChunksTMatrix;
         private List<(byte, int)> _texturesToAdd;
         private string _currentExportName;
-        private Dictionary<string, Dictionary<string, Dictionary<string , float>>> _queriesToPerform; // Type, (keyword, ()) -> example = contains, (barbarian, (scale, value))
+        private Dictionary<string, Dictionary<string, Dictionary<string, float>>> _queriesToPerform; // Type, (keyword, ()) -> example = contains, (barbarian, (scale, value))
         private Dictionary<int, List<int>> _shapeChunksMultipleBlobs;
         private Dictionary<ushort, ushort> _replaceNewChildrenWithOld;
 
@@ -155,7 +166,7 @@ namespace SCEditor.Features
                             break;
                         }
                     }
-                    
+
                     if (!_newTextureImport)
                     {
                         _textureToImportToID = (byte)_scFile.GetTextures().Count;
@@ -313,7 +324,7 @@ namespace SCEditor.Features
                 performQueries();
                 replaceAnyChildren();
 
-                exportsToImport =  exportsToImport.OrderBy(ex => ex.GetName()).ToList();
+                exportsToImport = exportsToImport.OrderBy(ex => ex.GetName()).ToList();
 
                 foreach (Export exportToAdd in exportsToImport)
                 {
@@ -377,8 +388,8 @@ namespace SCEditor.Features
                         continue;
                     }
 
-                    _scFile.addMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID]);
-                    _scFile.addPendingMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID]);
+                    _scFile.addMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID], (_scFile.GetTransformStorage().Count - 1));
+                    _scFile.addPendingMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID], (_scFile.GetTransformStorage().Count - 1));
                 }
 
                 for (int i = 0; i < _colorTransformToAdd.Count; i++)
@@ -392,8 +403,8 @@ namespace SCEditor.Features
                         continue;
                     }
 
-                    _scFile.addColor(scToImportFrom.getColors(storageID)[colorID]);
-                    _scFile.addPendingColor(scToImportFrom.getColors(storageID)[colorID]);
+                    _scFile.addColor(scToImportFrom.getColors(storageID)[colorID],(_scFile.GetTransformStorage().Count - 1));
+                    _scFile.addPendingColor(scToImportFrom.getColors(storageID)[colorID], (_scFile.GetTransformStorage().Count - 1));
                 }
 
                 if (_createNewTexture)
@@ -420,6 +431,7 @@ namespace SCEditor.Features
             newMovieClip.SetFrames(movieClipToAdd.Frames);
             newMovieClip.setScalingGrid(movieClipToAdd.scalingGrid);
             newMovieClip.setLength(movieClipToAdd.length);
+            newMovieClip._transformStorageId = (byte)(_scFile.GetTransformStorage().Count - 1);
 
             _movieClipsAlreadyAdded.Add(movieClipToAdd.Id, maxId);
 
@@ -452,7 +464,7 @@ namespace SCEditor.Features
                         newMatrixId = _matricesToAdd.IndexOf((movieClipToAdd._transformStorageId, movieClipToAdd.timelineArray[3 * i + 1]));
                     }
 
-                    newTimelineArray[3 * i + 1] = (ushort)(_scFile.GetMatrixs(0).Count + newMatrixId);
+                    newTimelineArray[3 * i + 1] = (ushort)(_scFile.GetMatrixs((_scFile.GetTransformStorage().Count - 1)).Count + newMatrixId);
                 }
 
                 if (movieClipToAdd.timelineArray[3 * i + 2] == 65535)
@@ -473,7 +485,7 @@ namespace SCEditor.Features
                         newcolorTransformId = _colorTransformToAdd.IndexOf((movieClipToAdd._transformStorageId, movieClipToAdd.timelineArray[3 * i + 2]));
                     }
 
-                    newTimelineArray[3 * i + 2] = (ushort)(_scFile.getColors(0).Count + newcolorTransformId);
+                    newTimelineArray[3 * i + 2] = (ushort)(_scFile.getColors((_scFile.GetTransformStorage().Count - 1)).Count + newcolorTransformId);
                 }
 
                 i++;
@@ -708,7 +720,7 @@ namespace SCEditor.Features
                     }
                 }
             }
-            
+
             bool useScaleFactor = false;
             shapeChunkBitmap = generateScaledBitmap(shapeChunkBitmap, scaleFactor, ref useScaleFactor);
 
@@ -819,7 +831,7 @@ namespace SCEditor.Features
             {
                 string textureTypeName = ((Texture)_scFile.GetTextures()[_textureToImportToID])._image.GetImageTypeName();
                 isGeneratedTextureRGBA4444 = textureTypeName == "RGB4444" ? true : (textureTypeName == "RGB8888" ? false : throw new Exception("Not added"));
-            } 
+            }
 
             int generatedTextureScale = 1;
             int generatedSpritesExtrude = 0;

@@ -152,7 +152,7 @@ namespace SCEditor.ScOld
 
                         if (options.editedMatrixs.Count > 0)
                         {
-                            matrixIdx = options.editedMatrixs.FindIndex(data => data.shapeId == shapeToRender.Id);
+                            matrixIdx = options.editedMatrixs.FindIndex(data => data.childrenId == shapeToRender.Id);
                         }    
 
                         if (matrixIdx != -1)
@@ -208,7 +208,7 @@ namespace SCEditor.ScOld
 
                             if (options.editedMatrixs.Count > 0)
                             {
-                                matrixIdx = options.editedMatrixs.FindIndex(data => data.shapeId == shape.Id);
+                                matrixIdx = options.editedMatrixs.FindIndex(data => data.childrenId == shape.Id);
                                 
                                 if (matrixIdx != -1)
                                     matrixData = options.editedMatrixs[matrixIdx].matrixData;

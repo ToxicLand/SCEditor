@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SCEditor.ScOld;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,131 +14,190 @@ namespace SCEditor.Prompts
 {
     public partial class editMatrixes : Form
     {
-        private List<Matrix> matrixes;
-        private List<Matrix> newMatrixes;
-        public List<Matrix> addedMatrixes => newMatrixes;
+        private AddState addMatrixState { get; set; } = AddState.Add;
+        private Dictionary<int, List<Matrix>> addedMatrixes;
 
-        public editMatrixes(List<Matrix> mL)
+        private readonly ScFile _scfile;
+
+        public editMatrixes(ScFile scFile)
         {
             InitializeComponent();
-            matrixes = mL;
-            newMatrixes = new List<Matrix>();
 
-            populateMatrixList();
+            _scfile = scFile;
+
+            addedMatrixes = new Dictionary<int, List<Matrix>>();
+
+            this.transformIDNum.Maximum = _scfile.GetTransformStorage().Count - 1;
+            this.transformIDNum.Value = 0;
+
+            this.numericUpDown1.Enabled = false;
+            this.numericUpDown2.Enabled = false;
+            this.numericUpDown3.Enabled = false;
+            this.numericUpDown4.Enabled = false;
+            this.numericUpDown5.Enabled = false;
+            this.numericUpDown6.Enabled = false;
+
+            this.numericUpDown1.DecimalPlaces = 6;
+            this.numericUpDown2.DecimalPlaces = 6;
+            this.numericUpDown3.DecimalPlaces = 6;
+            this.numericUpDown4.DecimalPlaces = 6;
+            this.numericUpDown5.DecimalPlaces = 6;
+            this.numericUpDown6.DecimalPlaces = 6;
+
+            refreshListBox();
         }
 
-        private void populateMatrixList()
+        private void transformIDNum_ValueChanged(object sender, EventArgs e)
         {
-            matrixList.Items.Clear();
-
-            for (int i = 0; i < matrixes.Count; i++)
+            if (this.transformIDNum.Value < _scfile.GetTransformStorage().Count)
             {
-                matrixList.Items.Add(i.ToString());
+                refreshListBox();
+            }
+            else
+            {
+                this.transformIDNum.Value = 0;
             }
         }
 
         private void matrixList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Matrix data = matrixList.SelectedIndex + 1 <= matrixes.Count ? matrixes[matrixList.SelectedIndex] : newMatrixes[(matrixList.SelectedIndex - matrixes.Count)];
-            textBox1.Text = data.Elements[0].ToString();
-            textBox2.Text = data.Elements[1].ToString();
-            textBox3.Text = data.Elements[2].ToString();
-            textBox4.Text = data.Elements[3].ToString();
-            textBox5.Text = data.Elements[4].ToString();
-            textBox6.Text = data.Elements[5].ToString();
+            int totalCount = _scfile.GetMatrixs((int)this.transformIDNum.Value).Count;
+
+            if (this.addedMatrixes.ContainsKey((int)this.transformIDNum.Value))
+                totalCount += this.addedMatrixes[(int)this.transformIDNum.Value].Count;
+
+            if (this.matrixList.SelectedIndex < totalCount)
+            {
+                this.matrixIdNum.Value = this.matrixList.SelectedIndex;
+
+                Matrix matrixData = null;
+
+                if (this.matrixList.SelectedIndex < _scfile.GetMatrixs((int)this.transformIDNum.Value).Count)
+                {
+                    matrixData = _scfile.GetMatrixs((int)this.transformIDNum.Value)[this.matrixList.SelectedIndex];
+                }
+                else
+                {
+                    matrixData = addedMatrixes[(int)this.transformIDNum.Value][(totalCount - _scfile.GetMatrixs((int)this.transformIDNum.Value).Count) - 1];
+                }
+
+                this.numericUpDown1.Value = (decimal)matrixData.Elements[0];
+                this.numericUpDown2.Value = (decimal)matrixData.Elements[1];
+                this.numericUpDown3.Value = (decimal)matrixData.Elements[2];
+                this.numericUpDown4.Value = (decimal)matrixData.Elements[3];
+                this.numericUpDown5.Value = (decimal)matrixData.Elements[4];
+                this.numericUpDown6.Value = (decimal)matrixData.Elements[5];
+            }
         }
 
-        private void addMatrixButton_Click(object sender, EventArgs e)
+        private void selectId_Click(object sender, EventArgs e)
         {
-            textBox1.Text = string.Empty;
-            textBox2.Text = string.Empty;
-            textBox3.Text = string.Empty;
-            textBox4.Text = string.Empty;
-            textBox5.Text = string.Empty;
-            textBox6.Text = string.Empty;
-
-            textBox1.Enabled = true;
-            textBox2.Enabled = true;
-            textBox3.Enabled = true;
-            textBox4.Enabled = true;
-            textBox5.Enabled = true;
-            textBox6.Enabled = true;
+            if (this.matrixIdNum.Value < _scfile.GetMatrixs((int)this.transformIDNum.Value).Count) // fix add saved ids too
+            {
+                this.matrixList.SelectedIndex = (int)this.matrixIdNum.Value;
+                this.matrixList.SelectedIndexChanged += null;
+            }
         }
 
         private void saveMatrixButton_Click(object sender, EventArgs e)
         {
-            try
+            if (this.addMatrixState == AddState.Add)
             {
-                float value1 = float.Parse(textBox1.Text);
-                float value2 = float.Parse(textBox2.Text);
-                float value3 = float.Parse(textBox3.Text);
-                float value4 = float.Parse(textBox4.Text);
-                float value5 = float.Parse(textBox5.Text);
-                float value6 = float.Parse(textBox6.Text);
+                this.numericUpDown1.Enabled = true;
+                this.numericUpDown2.Enabled = true;
+                this.numericUpDown3.Enabled = true;
+                this.numericUpDown4.Enabled = true;
+                this.numericUpDown5.Enabled = true;
+                this.numericUpDown6.Enabled = true;
 
-                Matrix newMatrix = new Matrix(value1, value2, value3, value4, value5, value6);
+                this.saveMatrixButton.Text = "Confirm";
 
-                newMatrixes.Add(newMatrix);
-
-                MessageBox.Show($"Matrix with ID {matrixes.Count + newMatrixes.Count - 1} added", "New Matrix Added", MessageBoxButtons.OK);
-
-                refreshMenu();
+                this.addMatrixState = AddState.Confirm;
             }
-            catch (Exception ex)
+            else if (this.addMatrixState == AddState.Confirm)
             {
-                MessageBox.Show("Exception", ex.ToString());
+                Matrix matrixData = new Matrix(
+                    (float)this.numericUpDown1.Value,
+                    (float)this.numericUpDown2.Value,
+                    (float)this.numericUpDown3.Value,
+                    (float)this.numericUpDown4.Value,
+                    (float)this.numericUpDown5.Value,
+                    (float)this.numericUpDown6.Value
+                    );
+
+                if (addedMatrixes.ContainsKey((int)this.transformIDNum.Value))
+                {
+                    addedMatrixes[(int)this.transformIDNum.Value].Add(matrixData);
+                }
+                else
+                {
+                    addedMatrixes.Add((int)this.transformIDNum.Value, new List<Matrix>() { matrixData });
+                }
+
+                this.numericUpDown1.Enabled = false;
+                this.numericUpDown2.Enabled = false;
+                this.numericUpDown3.Enabled = false;
+                this.numericUpDown4.Enabled = false;
+                this.numericUpDown5.Enabled = false;
+                this.numericUpDown6.Enabled = false;
+
+                this.saveMatrixButton.Text = "Add Matrix";
+
+                this.matrixList.Items.Add(this.matrixList.Items.Count.ToString());
+
+                this.matrixIdNum.Maximum = this.matrixList.Items.Count - 1;
+
+                this.matrixList.SelectedIndex = (this.matrixList.Items.Count - 1);
+                this.matrixList.SelectedIndexChanged += null;
+
+                this.addMatrixState = AddState.Add;
             }
         }
 
-        private void refreshMenu()
+        private void refreshListBox()
         {
-            textBox1.Text = string.Empty;
-            textBox2.Text = string.Empty;
-            textBox3.Text = string.Empty;
-            textBox4.Text = string.Empty;
-            textBox5.Text = string.Empty;
-            textBox6.Text = string.Empty;
-
-            textBox1.Enabled = false;
-            textBox2.Enabled = false;
-            textBox3.Enabled = false;
-            textBox4.Enabled = false;
-            textBox5.Enabled = false;
-            textBox6.Enabled = false;
-
             matrixList.Items.Clear();
 
-            for (int i = 0; i < matrixes.Count; i++)
+            this.matrixList.Items.Clear();
+
+            this.matrixIdNum.Maximum = (_scfile.GetMatrixs((int)this.transformIDNum.Value).Count - 1);
+
+            for (int i = 0; i < _scfile.GetMatrixs((int)this.transformIDNum.Value).Count; i++)
             {
-                matrixList.Items.Add(i.ToString());
+                this.matrixList.Items.Add(i.ToString());
             }
 
-            if (newMatrixes.Count > 0)
+            if (addedMatrixes.ContainsKey((int)this.transformIDNum.Value))
             {
-                for (int i = 0; i < newMatrixes.Count; i++)
+                this.matrixIdNum.Maximum += addedMatrixes[(int)this.transformIDNum.Value].Count;
+
+                for (int i = 0; i < addedMatrixes[(int)this.transformIDNum.Value].Count; i++)
                 {
-                    matrixList.Items.Add((i + matrixes.Count).ToString());
+                    this.matrixList.Items.Add((i + this.matrixList.Items.Count).ToString());
                 }
             }
+        }
 
-            saveMatrixButton.Enabled = false;
+        public Dictionary<int, List<Matrix>> getAddedMatrixes()
+        {
+            return this.addedMatrixes;
         }
 
         private void editMatrixes_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (newMatrixes.Count > 0)
+            if (addedMatrixes.Count > 0)
             {
-                DialogResult closing = MessageBox.Show("You have made changes. Save them?", $"{newMatrixes.Count} newly added Matrixes", MessageBoxButtons.YesNoCancel);
+                DialogResult msgBox = MessageBox.Show("You have made changes to matrix array. Are you sure you want to save the changes?", "Confirm Matrixes Changes", MessageBoxButtons.YesNoCancel);
 
-                if (closing == DialogResult.Cancel)
+                if (msgBox != DialogResult.Cancel)
                 {
-                    e.Cancel = true;
+                    this.DialogResult = msgBox;
+                    return;
                 }
-                else
-                {
-                    this.DialogResult = closing;
-                }
+
+                e.Cancel = true;
             }
         }
+
     }
 }

@@ -29,6 +29,9 @@ namespace SCEditor
         internal ScFile _scFile;
         internal bool zoomed;
         private MovieClipState animationState;
+        private Task _timerTask;
+        private PeriodicTimer _timer;
+        private CancellationTokenSource animationCancelToken = new CancellationTokenSource();
 
         public MainForm()
         {
@@ -75,7 +78,7 @@ namespace SCEditor
             }
         }
 
-        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var dialog = new OpenFileDialog()
             {
@@ -96,6 +99,11 @@ namespace SCEditor
                 {
                     try
                     {
+                        if (_scFile != null)
+                        {
+                            await stopRendering();
+                        }
+
                         LoadSc(dialog.FileName, dialog2.FileName);
                     }
                     catch (Exception ex)
@@ -111,9 +119,9 @@ namespace SCEditor
             Application.Exit();
         }
 
-        private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
+        private async void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            stopAnimationPlaying(true);
+            await stopRendering();
 
             pictureBox1.Image = null;
             label1.Text = null;
@@ -200,17 +208,9 @@ namespace SCEditor
             treeView1.Populate(_scFile.getTextFields());
         }
 
-        private void Render()
+        private async void Render()
         {
-            Stopwatch sw = Stopwatch.StartNew();
-            while (this.animationState == MovieClipState.Playing)
-            {
-                if (sw.Elapsed.Seconds >= 15)
-                {
-                    stopAnimationPlaying(true);
-                    break;
-                }
-            }
+            await stopRendering();
 
             animationCancelToken = new CancellationTokenSource();
 
@@ -275,11 +275,8 @@ namespace SCEditor
 
                 if (data.GetDataType() == 7 || data.GetDataType() == 1)
                 {
-                    //if (!playAnimationByDefaultToolStripMenuItem.Checked)
-                    //    renderAnimation(options, data);
-
                     if (!playAnimationByDefaultToolStripMenuItem.Checked)
-                        renderAnimationV2(options, data);
+                        startRendering(options, data);
                 }
                 else
                 {
@@ -327,9 +324,7 @@ namespace SCEditor
             Render();
         }
 
-        private static CancellationTokenSource animationCancelToken = new CancellationTokenSource();
-
-        private void renderAnimationV2(RenderingOptions options, ScObject inScData)
+        private void startRendering(RenderingOptions options, ScObject inScData)
         {
             ScObject data = inScData;
 
@@ -341,81 +336,109 @@ namespace SCEditor
 
             ((MovieClip)data)._lastPlayedFrame = 0;
 
-            Task.Run(() => renderFrame(data), animationCancelToken.Token);
+            TimeSpan interval = TimeSpan.FromMilliseconds((1000 / ((MovieClip)data).FPS));
+            _timer = new PeriodicTimer(interval);
+
+            _timerTask = Task.Run(async () => {
+                await renderAnimation(options, (MovieClip)data).ConfigureAwait(true);
+            }, animationCancelToken.Token);
         }
 
-        private async Task renderFrame(ScObject data)
+        private async Task renderAnimation(RenderingOptions options, MovieClip data)
         {
             try
             {
                 int totalFrameTimelineCount = 0;
-                foreach (MovieClipFrame frame in ((MovieClip)data).GetFrames())
+                foreach (MovieClipFrame frame in (data).GetFrames())
                 {
                     totalFrameTimelineCount += (frame.Id * 3);
                 }
 
-                if (((MovieClip)data).timelineArray.Length % 3 != 0 || ((MovieClip)data).timelineArray.Length != totalFrameTimelineCount)
+                if ((data).timelineArray.Length % 3 != 0 || (data).timelineArray.Length != totalFrameTimelineCount)
                 {
+                    await stopRendering();
                     MessageBox.Show("MoveClip timeline array length is not set equal to total frames count.");
                     return;
                 }
 
-                ((MovieClip)data).initPointFList(null);
+                (data).initPointFList(null, animationCancelToken.Token);
 
-                while (!animationCancelToken.IsCancellationRequested)
+                Console.WriteLine("Started Playing!");
+
+                while (await _timer.WaitForNextTickAsync(animationCancelToken.Token))
                 {
                     animationState = MovieClipState.Playing;
 
-                    int frameIndex = ((MovieClip)data)._lastPlayedFrame;
-                    if (!animationCancelToken.IsCancellationRequested)
+                    int frameIndex = (data)._lastPlayedFrame;
+
+                    Bitmap image = (data).renderAnimation(new RenderingOptions() { ViewPolygons = viewPolygonsToolStripMenuItem.Checked }, frameIndex);
+
+                    if (image == null)
                     {
-                        Bitmap image = ((MovieClip)data).renderAnimation(new RenderingOptions() { ViewPolygons = viewPolygonsToolStripMenuItem.Checked }, frameIndex);
-
-                        if (image == null)
-                        {
-                            stopAnimationPlaying(true);
-                            MessageBox.Show($"Frame Index {frameIndex} returned null image.");
-                            return;
-                        }
-
-                        pictureBox1.Invoke((Action)(delegate
-                        {
-                            pictureBox1.Image = image;
-                            pictureBox1.Refresh();
-                        }));
-
-                        image.Dispose();
-
-                        if ((frameIndex + 1) != ((MovieClip)data).GetFrames().Count)
-                            ((MovieClip)data)._lastPlayedFrame = frameIndex + 1;
-                        else
-                            ((MovieClip)data)._lastPlayedFrame = 0;
-
-                        await Task.Delay((1000 / ((MovieClip)data).FPS), animationCancelToken.Token);
-                    }
-                    else
-                    {
-                        stopAnimationPlaying(true);
+                        animationState = MovieClipState.Stopped;
+                        await stopRendering();
+                        MessageBox.Show($"Frame Index {frameIndex} returned null image.");
                         return;
                     }
 
+                    pictureBox1.Invoke((Action)(delegate
+                    {
+                        pictureBox1.Size = image.Size;
+                        pictureBox1.SizeMode = PictureBoxSizeMode.CenterImage;
+                        pictureBox1.Image = image;
+                        pictureBox1.Refresh();
+                    }));
+
+                    image.Dispose();
+
+                    if ((frameIndex + 1) != (data).GetFrames().Count)
+                        (data)._lastPlayedFrame = frameIndex + 1;
+                    else
+                        (data)._lastPlayedFrame = 0;
                 }
+
+                if (animationCancelToken.IsCancellationRequested)
+                {
+                    animationState = MovieClipState.Stopped;
+                    return;
+                }       
+
             }
             catch (Exception ex)
             {
-                if (ex.GetType() != typeof(TaskCanceledException))
+                if (ex.GetType() == typeof(OperationCanceledException) || ex.GetType() == typeof(TaskCanceledException))
+                {
+                    animationState = MovieClipState.Stopped;
+                    return;
+                }
+                else
                 {
                     MessageBox.Show(ex.Message);
                 }
             }
 
-            stopAnimationPlaying(true);
-            return;
+            animationState = MovieClipState.Stopped;
+            await stopRendering();
         }
 
-        private void stopAnimationPlaying(bool isEnd)
+        private async Task stopRendering()
         {
+            if (_timerTask is null)
+            {
+                return;
+            }
+
             animationCancelToken.Cancel();
+
+            await Task.Run(() =>
+            {
+                while (animationState != MovieClipState.Stopped)
+                {
+                    continue;
+                }
+            });
+
+            _timerTask = null;
 
             if (_scFile != null)
             {
@@ -423,18 +446,20 @@ namespace SCEditor
                 {
                     foreach (MovieClip mv in this._scFile.CurrentRenderingMovieClips)
                     {
+                        mv._animationState = MovieClipState.Stopped;
                         mv._lastPlayedFrame = 0;
-
-                        if (isEnd)
-                            mv.destroyPointFList();
+                        mv.destroyPointFList();
                     }
 
                     _scFile.setRenderingItems(new List<ScObject>());
                 }
             }
 
-            animationState = MovieClipState.Stopped;
-        }
+            if (animationState == MovieClipState.Playing)
+                animationState = MovieClipState.Stopped;      
+
+            Console.WriteLine("Animation Stopped!");
+        }   
 
         private void treeView1_BeforeSelect(object sender, TreeViewCancelEventArgs e)
         {
@@ -708,8 +733,19 @@ namespace SCEditor
                 if (treeView1.SelectedNode?.Tag != null)
                 {
                     ShapeChunk data = (ShapeChunk)treeView1.SelectedNode.Tag;
-                    data.SetTextureId(Convert.ToByte(((ComboBox)form.Controls["comboBox1"]).SelectedItem));
-                    _scFile.AddChange(data);
+
+                    if (treeView1.SelectedNode.Parent?.Tag != null)
+                    {
+                        Shape sdata = (Shape)treeView1.SelectedNode.Parent.Tag;
+                        data.SetTextureId(Convert.ToByte(((ComboBox)form.Controls["comboBox1"]).SelectedItem));
+
+                        _scFile.AddChange(sdata);
+                    }
+                    else
+                    {
+                        return;
+                    }
+
                     Render();
                 }
             }
@@ -721,7 +757,7 @@ namespace SCEditor
 
         }
 
-        private void editChildrenDataToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void editChildrenDataToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ScObject scData = (ScObject)treeView1.SelectedNode?.Tag;
 
@@ -736,7 +772,8 @@ namespace SCEditor
 
             editChildrenData editChildrenDialog = new editChildrenData(_scFile, scData);
 
-            stopAnimationPlaying(true);
+            await stopRendering();
+
             if (editChildrenDialog.ShowDialog() == DialogResult.OK)
             {
                 ushort[] newChildrenId = editChildrenDialog.ChildrenIds;
@@ -812,124 +849,136 @@ namespace SCEditor
         {
             ScObject scData = (ScObject)treeView1.SelectedNode?.Tag;
 
-            using (editCharacter form = new editCharacter())
+            try
             {
-                if (scData != null)
+                using (editCharacter form = new editCharacter())
                 {
-                    form.setScData(scData, _scFile);
-                    form.addData();
-                    if (form.ShowDialog() == DialogResult.OK)
+                    if (scData != null)
                     {
-                        if (form.saveAsMatrix != true)
+                        form.setScData(scData, _scFile);
+                        form.addData();
+                        if (form.ShowDialog() == DialogResult.OK)
                         {
-                            List<OriginalData> saveChanges = form._originalData.ToList();
-
-                            foreach (OriginalData data in saveChanges)
+                            if (form.saveAsMatrix != true)
                             {
-                                Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
-                                _scFile.AddChange(shapeData);
-                            }
-                        }
-                        else
-                        {
-                            List<OriginalData> saveChanges = form._originalData.ToList();
+                                List<OriginalData> saveChanges = form._originalData.ToList();
 
-                            DialogResult matrixReplaceAll = MessageBox.Show("Replace all matrix within the chosen export if timeline includes specified edited shape?\nYes to replace all automatically\nNo to ask for each edit\nCancel if you want to edit manually", "Replace Matrix in Timeline", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
-
-                            bool matrixEdit = false;
-
-                            ScObject eachData = scData;
-
-                            if (eachData.GetDataType() == 7)
-                                eachData = scData.GetDataObject();
-
-                            foreach (OriginalData data in saveChanges)
-                            {
-                                int matrixId = _scFile.GetMatrixs(((MovieClip)eachData)._transformStorageId).Count;
-                                Console.WriteLine($"Saved Matrix with id {matrixId} for Shape id {data.shapeId}");
-
-                                _scFile.addMatrix(data.matrixData);
-                                _scFile.addPendingMatrix(data.matrixData);
-
-                                if (matrixReplaceAll != DialogResult.Cancel)
+                                foreach (OriginalData data in saveChanges)
                                 {
-                                    bool replaceCurrent = false;
+                                    Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.childrenId)];
+                                    _scFile.AddChange(shapeData);
+                                }
+                            }
+                            else
+                            {
+                                List<OriginalData> saveChanges = form._originalData.ToList();
 
-                                    if (matrixReplaceAll == DialogResult.No)
+                                DialogResult matrixReplaceAll = MessageBox.Show("Replace all matrix within the chosen export if timeline includes specified edited shape?\nYes to replace all automatically\nNo to ask for each edit\nCancel if you want to edit manually", "Replace Matrix in Timeline", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                                bool matrixEdit = false;
+
+                                ScObject eachData = scData;
+
+                                if (eachData.GetDataType() == 7)
+                                    eachData = scData.GetDataObject();
+
+                                foreach (OriginalData data in saveChanges)
+                                {
+                                    int matrixId = _scFile.GetMatrixs(((MovieClip)eachData)._transformStorageId).Count;
+                                    Console.WriteLine($"Saved Matrix with id {matrixId} for Shape id {data.childrenId}");
+
+                                    _scFile.addMatrix(data.matrixData, ((MovieClip)eachData)._transformStorageId);
+                                    _scFile.addPendingMatrix(data.matrixData, ((MovieClip)eachData)._transformStorageId);
+
+                                    if (matrixReplaceAll != DialogResult.Cancel)
                                     {
-                                        DialogResult matrixReplace = MessageBox.Show($"Replace edited matrix for all shapes with ID: {data.shapeId}?\nYes to replace matrix for specified shape id\nNo to skip editing matrix for specified shape ID\nCancel to not ask again for any shape edited", $"Replace Matrix in Timeline for Shape {data.shapeId}", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+                                        bool replaceCurrent = false;
 
-                                        if (matrixReplace == DialogResult.Cancel)
-                                            matrixReplaceAll = DialogResult.Cancel;
-
-                                        replaceCurrent = matrixReplace == DialogResult.Yes ? true : false;
-                                    }
-
-                                    bool replaceForAll = matrixReplaceAll == DialogResult.Yes ? true : false;
-
-                                    if (replaceForAll || replaceCurrent)
-                                    {
-                                        ushort[] newArray = ((MovieClip)eachData).timelineArray;
-
-                                        int shapeIdx = eachData.Children.FindIndex(shape => shape.Id == data.shapeId);
-
-                                        if (shapeIdx != -1)
+                                        if (matrixReplaceAll == DialogResult.No)
                                         {
-                                            for (int i = 0; i < newArray.Length / 3; i++)
+                                            DialogResult matrixReplace = MessageBox.Show($"Replace edited matrix for all shapes with ID: {data.childrenId}?\nYes to replace matrix for specified shape id\nNo to skip editing matrix for specified shape ID\nCancel to not ask again for any shape edited", $"Replace Matrix in Timeline for Shape {data.childrenId}", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                                            if (matrixReplace == DialogResult.Cancel)
+                                                matrixReplaceAll = DialogResult.Cancel;
+
+                                            replaceCurrent = matrixReplace == DialogResult.Yes ? true : false;
+                                        }
+
+                                        bool replaceForAll = matrixReplaceAll == DialogResult.Yes ? true : false;
+
+                                        if (replaceForAll || replaceCurrent)
+                                        {
+                                            ushort[] newArray = ((MovieClip)eachData).timelineArray;
+
+                                            int shapeIdx = eachData.Children.FindIndex(shape => shape.Id == data.childrenId);
+
+                                            if (shapeIdx != -1)
                                             {
-                                                int index = i * 3;
-
-                                                if (newArray[index] == (ushort)shapeIdx)
+                                                for (int i = 0; i < newArray.Length / 3; i++)
                                                 {
-                                                    newArray[index + 1] = (ushort)matrixId;
-                                                }
-                                            }
+                                                    int index = i * 3;
 
-                                            matrixEdit = true;
+                                                    if (newArray[index] == (ushort)shapeIdx)
+                                                    {
+                                                        newArray[index + 1] = (ushort)matrixId;
+                                                    }
+                                                }
+
+                                                matrixEdit = true;
+                                            }
                                         }
                                     }
                                 }
+
+                                if (matrixEdit == true)
+                                    _scFile.AddChange(eachData);
                             }
 
-                            if (matrixEdit == true)
-                                _scFile.AddChange(eachData);
+                            Render();
                         }
-
-                        Render();
-                    }
-                    else
-                    {
-                        List<OriginalData> revertData = form._originalData.ToList();
-
-                        if (revertData.Count > 0)
+                        else
                         {
-                            foreach (OriginalData data in revertData)
-                            {
-                                Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.shapeId)];
+                            List<OriginalData> revertData = form._originalData.ToList();
 
-                                form.revertShape(shapeData);
+                            if (revertData.Count > 0)
+                            {
+                                foreach (OriginalData data in revertData)
+                                {
+                                    Shape shapeData = (Shape)_scFile.GetShapes()[_scFile.GetShapes().FindIndex(s => s.Id == data.childrenId)];
+
+                                    form.revertShape(shapeData);
+                                }
                             }
                         }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
         }
 
         private void addEditMatrixtoolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (_scFile.GetMatrixs(0).Count == 65535)
-                throw new Exception("Not Implemented");
-
-            List<Matrix> matrixList = _scFile.GetMatrixs(0);
-
-            using (editMatrixes form = new editMatrixes(matrixList))
+            using (editMatrixes form = new editMatrixes(_scFile))
             {
                 if (form.ShowDialog() == DialogResult.Yes)
                 {
-                    foreach (Matrix m in form.addedMatrixes)
+                    Console.WriteLine("Matrix changes");
+
+                    foreach (var data in form.getAddedMatrixes())
                     {
-                        _scFile.addMatrix(m);
-                        _scFile.addPendingMatrix(m);
+                        int transformStorageId = data.Key;
+
+                        foreach (var matrixData in data.Value)
+                        {
+                            Console.WriteLine($"Added Matrix with ID: {_scFile.GetMatrixs(transformStorageId).Count - 1} in Transform Storage ID: {transformStorageId}");
+
+                            _scFile.addMatrix(matrixData, transformStorageId);
+                            _scFile.addPendingMatrix(matrixData, transformStorageId);
+                        }
                     }
                 }
             }
@@ -1131,7 +1180,7 @@ namespace SCEditor
         }
 
 
-        private void LZMAToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void LZMAToolStripMenuItem_Click(object sender, EventArgs e)
         {
             DialogResult warning = MessageBox.Show(
                 "After the SC file has been compressed, the tool will clear all previous data to prevent reading errors.\nContinue?",
@@ -1167,6 +1216,8 @@ namespace SCEditor
 
                 treeView1.Nodes.Clear();
 
+                await stopRendering();
+
                 pictureBox1.Image = null;
                 label1.Text = null;
                 _scFile = null;
@@ -1174,7 +1225,7 @@ namespace SCEditor
         }
 
 
-        private void ZstandardToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void ZstandardToolStripMenuItem_Click(object sender, EventArgs e)
         {
             DialogResult warning = MessageBox.Show(
                 "After the SC file has been compressed, the tool will clear all previous data to prevent reading errors.\nContinue?",
@@ -1218,6 +1269,8 @@ namespace SCEditor
                 addTextureToolStripMenuItem.Visible = false;
 
                 treeView1.Nodes.Clear();
+
+                await stopRendering();
 
                 pictureBox1.Image = null;
                 label1.Text = null;
@@ -1569,9 +1622,9 @@ namespace SCEditor
             }
         }
 
-        private void exportFramesToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void exportFramesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            stopAnimationPlaying(true);
+            await stopRendering();
 
             RenderingOptions options = new RenderingOptions()
             {
@@ -1632,6 +1685,47 @@ namespace SCEditor
         private void disbleTextfieldRenderingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             RenderingOptions.disableTextFieldRendering = this.disbleTextfieldRenderingToolStripMenuItem.Checked;
+        }
+
+        private void customFunctionToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (treeView1.SelectedNode?.Tag != null)
+            {
+                ScObject data = (ScObject)treeView1.SelectedNode.Tag;
+
+                customFunctions cF = new customFunctions(_scFile);
+
+                cF.initObject(data);
+                cF.initNonObject();
+            }
+        }
+
+        private void MainForm_SizeChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void colorsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            editColors form = new editColors(this._scFile);
+
+            if (form.ShowDialog() == DialogResult.Yes)
+            {
+                Console.WriteLine("Colors changes");
+
+                foreach (var data in form.getAddedColors())
+                {
+                    int transformStorageId = data.Key;
+
+                    foreach (var colorData in data.Value)
+                    {
+                        Console.WriteLine($"Added Color with ID: {_scFile.getColors(transformStorageId).Count - 1} in Transform Storage ID: {transformStorageId}");
+
+                        _scFile.addColor(colorData, transformStorageId);
+                        _scFile.addPendingColor(colorData, transformStorageId);
+                    }
+                }
+            }
         }
     }
 }

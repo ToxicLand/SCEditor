@@ -74,10 +74,12 @@ namespace SCEditor.Prompts
             this.scaleFactorTextBox = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.renderSingleFrameTextBox = new System.Windows.Forms.TextBox();
             this.editMatrixButton = new System.Windows.Forms.Button();
             this.rotateAntiClockWiseButton = new System.Windows.Forms.Button();
             this.rotateClockWiseButton = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
+            this.renderSingleFrameCheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
@@ -86,7 +88,7 @@ namespace SCEditor.Prompts
             // 
             this.pictureBox1.Location = new System.Drawing.Point(242, 60);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(546, 396);
+            this.pictureBox1.Size = new System.Drawing.Size(673, 536);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
@@ -202,7 +204,7 @@ namespace SCEditor.Prompts
             this.saveButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.saveButton.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.saveButton.ForeColor = System.Drawing.Color.LawnGreen;
-            this.saveButton.Location = new System.Drawing.Point(695, 485);
+            this.saveButton.Location = new System.Drawing.Point(822, 627);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(93, 31);
             this.saveButton.TabIndex = 6;
@@ -215,7 +217,7 @@ namespace SCEditor.Prompts
             this.revertButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.revertButton.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.revertButton.ForeColor = System.Drawing.Color.LightCoral;
-            this.revertButton.Location = new System.Drawing.Point(552, 485);
+            this.revertButton.Location = new System.Drawing.Point(679, 627);
             this.revertButton.Name = "revertButton";
             this.revertButton.Size = new System.Drawing.Size(93, 31);
             this.revertButton.TabIndex = 7;
@@ -225,7 +227,7 @@ namespace SCEditor.Prompts
             // 
             // scaleFactorTextBox
             // 
-            this.scaleFactorTextBox.Location = new System.Drawing.Point(258, 492);
+            this.scaleFactorTextBox.Location = new System.Drawing.Point(246, 635);
             this.scaleFactorTextBox.Name = "scaleFactorTextBox";
             this.scaleFactorTextBox.Size = new System.Drawing.Size(100, 23);
             this.scaleFactorTextBox.TabIndex = 8;
@@ -237,7 +239,7 @@ namespace SCEditor.Prompts
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label3.Location = new System.Drawing.Point(265, 470);
+            this.label3.Location = new System.Drawing.Point(253, 613);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(81, 19);
             this.label3.TabIndex = 5;
@@ -245,11 +247,21 @@ namespace SCEditor.Prompts
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.renderSingleFrameCheckBox);
+            this.panel1.Controls.Add(this.renderSingleFrameTextBox);
             this.panel1.Controls.Add(this.editMatrixButton);
             this.panel1.Location = new System.Drawing.Point(242, 12);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(546, 42);
+            this.panel1.Size = new System.Drawing.Size(673, 42);
             this.panel1.TabIndex = 9;
+            // 
+            // renderSingleFrameTextBox
+            // 
+            this.renderSingleFrameTextBox.Location = new System.Drawing.Point(539, 16);
+            this.renderSingleFrameTextBox.Name = "renderSingleFrameTextBox";
+            this.renderSingleFrameTextBox.Size = new System.Drawing.Size(134, 23);
+            this.renderSingleFrameTextBox.TabIndex = 1;
+            this.renderSingleFrameTextBox.TextChanged += new System.EventHandler(this.renderSingleFrameTextBox_TextChanged);
             // 
             // editMatrixButton
             // 
@@ -298,12 +310,23 @@ namespace SCEditor.Prompts
             this.label4.TabIndex = 5;
             this.label4.Text = "Rotate";
             // 
+            // renderSingleFrameCheckBox
+            // 
+            this.renderSingleFrameCheckBox.AutoSize = true;
+            this.renderSingleFrameCheckBox.Location = new System.Drawing.Point(539, 0);
+            this.renderSingleFrameCheckBox.Name = "renderSingleFrameCheckBox";
+            this.renderSingleFrameCheckBox.Size = new System.Drawing.Size(134, 19);
+            this.renderSingleFrameCheckBox.TabIndex = 4;
+            this.renderSingleFrameCheckBox.Text = "Render Single Frame";
+            this.renderSingleFrameCheckBox.UseVisualStyleBackColor = true;
+            this.renderSingleFrameCheckBox.CheckedChanged += new System.EventHandler(this.renderSingleFrameCheckBox_CheckedChanged);
+            // 
             // editCharacter
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(26)))), ((int)(((byte)(26)))));
-            this.ClientSize = new System.Drawing.Size(800, 527);
+            this.ClientSize = new System.Drawing.Size(927, 670);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.scaleFactorTextBox);
             this.Controls.Add(this.revertButton);
@@ -329,6 +352,7 @@ namespace SCEditor.Prompts
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.editCharacter_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.panel1.ResumeLayout(false);
+            this.panel1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -355,5 +379,7 @@ namespace SCEditor.Prompts
         internal System.Windows.Forms.Button rotateAntiClockWiseButton;
         internal System.Windows.Forms.Button rotateClockWiseButton;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.TextBox renderSingleFrameTextBox;
+        private System.Windows.Forms.CheckBox renderSingleFrameCheckBox;
     }
 }
