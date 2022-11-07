@@ -38,19 +38,19 @@ namespace SCEditor.ScOld
         {
             _scFile = mv.GetStorageObject();
 
-            _offset = mv.offset;
+            _offset = -1;
             _clipId = _scFile.getMaxId();
             customAdded = true;
 
             _dataType = mv.GetMovieClipDataType();
-            _childrens = mv._childrens;
+            _childrens = ((ScObject[])mv._childrens.ToArray().Clone()).ToList();
 
             _framePerSeconds = mv._framePerSeconds;
             _frames = mv._frames;
 
-            _timelineOffsetArray = mv.timelineArray;
-            _timelineChildrenId = mv._timelineChildrenId;
-            _timelineChildrenNames = mv.timelineChildrenNames;
+            _timelineOffsetArray = (ushort[])mv.timelineArray.Clone();
+            _timelineChildrenId = (ushort[])mv._timelineChildrenId.Clone();
+            _timelineChildrenNames = (string[])mv.timelineChildrenNames.Clone();
             _flags = mv.flags;
 
             _transformStorageId = mv._transformStorageId;

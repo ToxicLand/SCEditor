@@ -835,7 +835,7 @@ namespace SCEditor.Features
 
             int generatedTextureScale = 1;
             int generatedSpritesExtrude = 0;
-            int generatedSpritesPadding = 8;
+            int generatedSpritesPadding = 9;
             int generatedTextureMaxWidth = 4096;
             int generatedTextureMaxHeight = 4096;
             int generatedTexturePolygonTolerance = 100;

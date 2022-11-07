@@ -45,7 +45,7 @@ namespace SCEditor.Prompts
 
             foreach (object export in exportsToList)
             {
-                if (((Export)export).GetName() == "icon_hero_crow")
+                if (((Export)export).GetName() == "assault_troop_lvl1_attack1_1" && false)
                     afterThisChecked = true;
 
                 exportsListBox.Items.Add(new exportItemClass { exportName = ((Export)export).GetName(), exportData = export }, afterThisChecked);

@@ -1071,33 +1071,62 @@ namespace SCEditor
         {
             if (treeView1.SelectedNode?.Tag != null)
             {
-                Export data = (Export)treeView1.SelectedNode.Tag;
-                CloneExport form = new CloneExport();
-                ((TextBox)form.Controls["textBox1"]).Text = data.GetName();
-                if (form.ShowDialog() == DialogResult.OK)
+                ScObject data = (ScObject)treeView1.SelectedNode.Tag;
+
+                if (data.objectType == ScObject.SCObjectType.Export)
                 {
-                    var result = ((TextBox)form.Controls["textBox1"]).Text;
-                    if (!string.IsNullOrEmpty(result) && _scFile.GetExports().FindIndex(exp => exp.GetName() == result) == -1)
+                    CloneExport form = new CloneExport();
+                    ((TextBox)form.Controls["textBox1"]).Text = data.GetName();
+                    if (form.ShowDialog() == DialogResult.OK)
                     {
-                        MovieClip mv = new MovieClip((MovieClip)data.GetDataObject());
-                        _scFile.AddMovieClip(mv);
-                        _scFile.AddChange(mv);
 
-                        Export ex = new Export(_scFile);
-                        ex.SetId(mv.Id);
-                        ex.SetExportName(result);
-                        ex.SetDataObject(mv);
+                        var result = ((TextBox)form.Controls["textBox1"]).Text;
+                        if (!string.IsNullOrEmpty(result) && _scFile.GetExports().FindIndex(exp => exp.GetName() == result) == -1)
+                        {
+                            MovieClip mv = new MovieClip((MovieClip)data.GetDataObject());
+                            _scFile.AddMovieClip(mv);
+                            _scFile.AddChange(mv);
 
-                        _scFile.AddExport(ex);
-                        _scFile.AddChange(ex);
-                        treeView1.Populate(new List<ScObject>() { ex });
+                            Export ex = new Export(_scFile);
+                            ex.SetId(mv.Id);
+                            ex.SetExportName(result);
+                            ex.SetDataObject(mv);
+
+                            _scFile.AddExport(ex);
+                            _scFile.AddChange(ex);
+                            treeView1.Populate(new List<ScObject>() { ex });
+                        }
+                        else
+                        {
+                            MessageBox.Show("Cloning failed. Invalid ExportName.");
+                        }
                     }
-                    else
-                    {
-                        MessageBox.Show("Cloning failed. Invalid ExportName.");
-                    }
+
+                    form.Dispose();
+
                 }
-                form.Dispose();
+                else if (data.objectType == ScObject.SCObjectType.MovieClip)
+                {
+                    MovieClip mv = new MovieClip((MovieClip)data);
+                    _scFile.AddMovieClip(mv);
+                    _scFile.AddChange(mv);
+
+                    Console.WriteLine($"Cloned MovieClip with id {mv.Id}");
+                }
+                else if (data.objectType == ScObject.SCObjectType.TextField)
+                {
+                    TextField tx = new TextField(_scFile, (TextField)data, _scFile.getMaxId());
+                    tx.customAdded = true;
+
+                    _scFile.addTextField(tx);
+                    _scFile.AddChange(tx);
+
+                    Console.WriteLine($"Cloned TextField with id {tx.Id}");
+                }
+                else
+                {
+                    MessageBox.Show("Not implemented for specific type.");
+                }
             }
         }
 
@@ -1689,14 +1718,17 @@ namespace SCEditor
 
         private void customFunctionToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            customFunctions cF = new customFunctions(_scFile);
+            cF.initNonObject();
+
             if (treeView1.SelectedNode?.Tag != null)
             {
                 ScObject data = (ScObject)treeView1.SelectedNode.Tag;
 
-                customFunctions cF = new customFunctions(_scFile);
+                if (data is null)
+                    return;    
 
                 cF.initObject(data);
-                cF.initNonObject();
             }
         }
 
@@ -1724,6 +1756,73 @@ namespace SCEditor
                         _scFile.addColor(colorData, transformStorageId);
                         _scFile.addPendingColor(colorData, transformStorageId);
                     }
+                }
+            }
+        }
+
+        private async void exportFrameImageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ScObject data = (ScObject)treeView1.SelectedNode?.Tag;
+
+            if (data is null)
+                return;
+
+            if (data.objectType != ScObject.SCObjectType.MovieClip && data.objectType != ScObject.SCObjectType.Export)
+                return;
+
+            if (data.objectType == ScObject.SCObjectType.Export)
+                data = data.GetDataObject();
+
+            DialogResult currentFrame = MessageBox.Show("Export current frame? Yes for current, No to select custom Frame.", "Export Current Frame?", MessageBoxButtons.YesNo);
+
+            int currentFrameIndex = ((MovieClip)data)._lastPlayedFrame;
+
+            if (currentFrame == DialogResult.No)
+            {
+                inputDataDialog dialog = new inputDataDialog(1);
+                dialog.setLabelText($"Frame Index: 0/{((MovieClip)data).Frames.Count}");
+
+                while (true)
+                {
+                    break;
+                }
+            }
+
+            await stopRendering();
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                ((MovieClip)data).initPointFList(null);
+                Bitmap bmp = ((MovieClip)data).renderAnimation(new RenderingOptions(), 0);
+
+                if (bmp != null)
+                    bmp.Save(saveFileDialog.FileName);
+
+                ((MovieClip)data).destroyPointFList();
+            }
+            
+        }
+
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            if (treeView1.SelectedNode?.Tag != null)
+            {
+                ScObject data = (ScObject)treeView1.SelectedNode.Tag;
+
+                if (data.objectType == ScObject.SCObjectType.Shape)
+                {
+                    Shape cloneShape = new Shape((Shape)data);
+                    cloneShape.SetId((ushort)(_scFile.getMaxId() + 1));
+                    cloneShape.setCustomAdded(true);
+
+                    _scFile.AddShape(cloneShape);
+                    _scFile.AddChange(cloneShape);
+                    treeView1.Populate(new List<ScObject>() { cloneShape });
+                }
+                else
+                {
+                    return;
                 }
             }
         }

@@ -6,13 +6,14 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
+	<LangVersion>latest</LangVersion>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>Builds\Debug\</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseVSHostingProcess>true</UseVSHostingProcess>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <Prefer32Bit>true</Prefer32Bit>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
@@ -20,7 +21,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>Builds\Release\</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <Optimize>False</Optimize>
   </PropertyGroup>
   <PropertyGroup>
@@ -75,7 +76,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <Authors />
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <Import Project="..\..\packages\ZstdNet.1.4.5\build\ZstdNet.targets" Condition="Exists('..\..\packages\ZstdNet.1.4.5\build\ZstdNet.targets')" />
 </Project>

@@ -879,11 +879,15 @@ namespace SCEditor.ScOld
                             case "00": //0
                                 if (_shapeCount != shapeIndex ||
                                 _movieClipCount != movieClipIndex ||
-                                _matrixCount != matrixIndex ||
-                                _textFieldCount != textFieldIndex ||
-                                _colorsCount != colorIndex)
+                                _textFieldCount != textFieldIndex)
                                 {
                                     throw new Exception("Didn't load whole .sc properly.");
+                                }
+
+                                if (_matrixCount != matrixIndex ||
+                                _colorsCount != colorIndex)
+                                {
+                                    MessageBox.Show("Didn't load whole .sc properly. Martix count or colors count do not match to how many were loaded.\n\nWill proceed to open the file but proceed at your own risk.");
                                 }
 
                                 _eofOffset = offset;
@@ -1084,6 +1088,9 @@ namespace SCEditor.ScOld
                                 ushort cCount = reader.ReadUInt16();
 
                                 _transformStorage.Add((new List<Matrix>(), new List<Tuple<Color, byte, Color>>()));
+
+                                _matrixCount += mCount;
+                                _colorsCount += cCount;
                                 break;
 
                             default:
@@ -1396,6 +1403,14 @@ namespace SCEditor.ScOld
                 }
             }
 
+            foreach (ScObject obj in _pendingChanges)
+            {
+                if (obj.Id > maxId)
+                {
+                    maxId = obj.Id;
+                }
+            }
+
             ushort incVal = 1;
             while (idExists((ushort)(maxId + incVal)))
             {
@@ -1434,6 +1449,14 @@ namespace SCEditor.ScOld
             foreach (TextField tx in _textFields)
             {
                 if (tx.Id == id)
+                {
+                    return true;
+                }
+            }
+
+            foreach (ScObject obj in _pendingChanges)
+            {
+                if (obj.Id == id)
                 {
                     return true;
                 }

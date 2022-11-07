@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SCEditor.Features
@@ -20,13 +21,19 @@ namespace SCEditor.Features
 
         public void initObject(ScObject data)
         {
-            return;
-
-            legendDecoJuneFunction(data);
-
             bool performFunction = false;
             if (!performFunction)
                 return;
+
+            TextField tx = new TextField(_scFile, (TextField)data, _scFile.getMaxId());
+            tx.customAdded = true;
+
+            _scFile.addTextField(tx);
+            _scFile.AddChange(tx);
+
+            Console.WriteLine($"Cloned TextField with id {tx.Id}");
+
+            legendDecoJuneFunction(data);
 
             legendJuneBloomMovieclip(data);
 
@@ -131,6 +138,10 @@ namespace SCEditor.Features
 
         public void initNonObject()
         {
+            //fixBoomBeachTanks();
+
+            //makeFlagExports();
+
             /**
             ScObject newShape = _scFile.GetShapes().Where(s => s.Id == 6).FirstOrDefault();
             newShape.setCustomAdded(true);
@@ -140,7 +151,7 @@ namespace SCEditor.Features
             _scFile.AddChange(newShape);
             **/
 
-            bool performFunction = true;
+            bool performFunction = false;
             if (!performFunction)
                 return;
 
@@ -168,6 +179,206 @@ namespace SCEditor.Features
             Console.WriteLine("Custom function performed!");
         }
 
+        private void fixBoomBeachTanks()
+        {
+            Dictionary<string, Dictionary<string, List<Export>>> allTanksExports = new Dictionary<string, Dictionary<string, List<Export>>>();
+
+            foreach (Export export in _scFile.GetExports())
+            {
+                if (export.GetName().Contains("tank_"))
+                {
+                    string[] splitName = export.GetName().Split('_');
+                    string directionValue = splitName[splitName.Length - 1];
+
+                    if (!allTanksExports.ContainsKey(splitName[0]))
+                    {
+                        allTanksExports.Add(splitName[0], new Dictionary<string, List<Export>>());
+                    }
+
+                    if (!allTanksExports[splitName[0]].ContainsKey(splitName[splitName.Length - 2]))
+                    {
+                        allTanksExports[splitName[0]].Add(splitName[splitName.Length - 2], new List<Export>());
+                    }
+
+                    allTanksExports[splitName[0]][splitName[splitName.Length - 2]].Add(export);
+                }
+            }
+            
+            foreach (var (tankName, tankTypesData) in allTanksExports)
+            {
+                
+
+                foreach (var (animTypeName, animTypesList) in tankTypesData)
+                {
+                    List<Export> orderedList = animTypesList.OrderBy(x => Regex.Replace(x.GetName(), @"\d+", i => i.Value.PadLeft(2, '0'))).ToList();
+
+                    int lastDirectionIndexUsed = 0;
+                    foreach (Export eachDirectionAnimation in orderedList)
+                    {
+                        MovieClip mainMV = (MovieClip)eachDirectionAnimation.GetDataObject();
+
+                        int barrelIndex = mainMV.timelineChildrenNames.ToList().FindIndex(x => x.ToLower() == "barrel");
+                        int turretIndex = mainMV.timelineChildrenNames.ToList().FindIndex(x => x.ToLower() == "turret");
+
+                        MovieClip turretMV = ((MovieClip)_scFile.GetMovieClips()[mainMV.timelineChildrenId[turretIndex]]);
+                        MovieClip barrelMV = null;
+
+                        if (barrelIndex != -1)
+                            barrelMV = ((MovieClip)_scFile.GetMovieClips()[mainMV.timelineChildrenId[barrelIndex]]);
+
+                        MovieClip turretMovieClip = new MovieClip(_scFile, mainMV.GetMovieClipDataType());
+                        turretMovieClip.customAdded = true;
+                        turretMovieClip.SetFramePerSecond(turretMV.FPS);
+                        turretMovieClip._transformStorageId = turretMV._transformStorageId;
+
+                        List<MovieClipFrame> framesArray = ((MovieClipFrame[])turretMV.Frames.ToArray().Clone()).ToList();
+                        List<ushort> timelineOffsetArray = ((ushort[])turretMV.timelineArray.Clone()).ToList();
+                        List<ushort> timelineChildrenIdsArray = ((ushort[])turretMV.timelineChildrenId.Clone()).ToList();
+                        List<string> timelineChildrenNamesArray = ((string[])turretMV.timelineChildrenNames.Clone()).ToList();
+
+                        for (int i = 0; i < timelineChildrenIdsArray.Count; i++)
+                        {
+                            ushort childId = timelineChildrenIdsArray[i];
+
+                            // looping through each child id - remove extra ones and keep the shape and extra movieclips needed
+                        }
+
+                       byte[] flagsArray =  new byte[timelineChildrenIdsArray.Count];
+
+                    }
+                }
+            }
+        }
+
+        private void removeChildrenData(int currentIndex, List<ushort> _timelineArray, List<ushort> _childrenIds, List<string> _childrenNames, List<MovieClipFrame> _frames)
+        {
+            _childrenIds.RemoveAt(currentIndex);
+            _childrenNames.RemoveAt(currentIndex);
+
+            int totalPassed = 0;
+            for (int frameIndex = 0; frameIndex < _frames.Count; frameIndex++)
+            {
+                MovieClipFrame mvFrame = (MovieClipFrame)_frames[frameIndex];
+
+                for (int i = 0; i < mvFrame.Id; i++)
+                {
+                    ushort childrenIndex = _timelineArray[(totalPassed * 3) + (i * 3)];
+
+                    if (childrenIndex == currentIndex)
+                    {
+                        mvFrame.SetId((ushort)(mvFrame.Id - 1));
+
+                        _timelineArray.RemoveRange(((totalPassed * 3) + (i * 3)), 3);
+
+                        i--;
+                    }
+
+                    if (childrenIndex > currentIndex)
+                    {
+                        _timelineArray[(totalPassed * 3) + (i * 3)] = (ushort)(childrenIndex - 1);
+                    }
+                }
+
+                if (mvFrame.Id == 0)
+                {
+                    _frames.RemoveAt(frameIndex);
+                    frameIndex--;
+                    continue;
+                }
+
+                totalPassed += mvFrame.Id;
+            }
+        }
+
+        private void makeFlagExports()
+        {
+            ushort matrixId = (ushort)_scFile.GetMatrixs(0).Count;
+            Matrix oldM = _scFile.GetMatrixs(0)[2984];
+
+            oldM.Multiply(new Matrix(1f, 0f, 0f, 1f, 0.8f, 1.2f));
+            _scFile.addPendingMatrix(oldM, 0);
+            _scFile.addMatrix(oldM, 0);
+
+            foreach (ScObject scObject in _scFile.GetExports())
+            {
+                if (scObject.GetName().StartsWith("deco_") && scObject.GetName().EndsWith("_flag"))
+                {
+                    MovieClip mv = (MovieClip)scObject.GetDataObject();
+
+                    ushort[] tarr = mv.timelineArray;
+                    tarr[4] = matrixId;
+
+                    mv.setTimelineOffsetArray(tarr);
+
+                    _scFile.AddChange(mv);
+                }
+            }
+
+
+            return;
+            Dictionary<string, List<ScObject>> flagExports = new Dictionary<string, List<ScObject>>();
+
+            Export sample = (Export)_scFile.GetExports().Where(x => x.GetName() == "deco_turkey_flag").FirstOrDefault();
+            MovieClip wavingFlag = (MovieClip)_scFile.GetMovieClips().Where(x => x.Id == 48).FirstOrDefault();
+
+            if (sample is null || wavingFlag is null)
+                return;
+
+            foreach (ScObject scObject in _scFile.GetExports())
+            {
+                if (scObject.GetName().Contains("deco_flag"))
+                {
+                    string flagCountry = scObject.GetName().Replace("deco_flag_", "");
+                    flagCountry = flagCountry.Substring(0, flagCountry.Length - 2);
+
+                    if (!flagExports.ContainsKey(flagCountry))
+                        flagExports.Add(flagCountry, new List<ScObject>());
+
+                    flagExports[flagCountry].Add(scObject);
+                }
+            }
+
+            Matrix flagMatrix = new Matrix(0.624f, -0.0322f, 0.0322f, 0.624f, -0.412f, -36.377f);
+            _scFile.addMatrix(flagMatrix, 0);
+            _scFile.addPendingMatrix(flagMatrix, 0);
+
+            foreach (var (name, data) in flagExports)
+            {
+                MovieClip flagMV = new MovieClip((MovieClip)sample.GetDataObject());
+
+                _scFile.AddMovieClip(flagMV);
+                _scFile.AddChange(flagMV);
+
+                ushort[] flagMVTimeline = flagMV.timelineArray;
+                flagMVTimeline[4] = (ushort)(_scFile.GetMatrixs(0).Count - 1);
+
+                Export flagExport = new Export(_scFile);
+                flagExport.Rename($"deco_{name}_flag");
+                flagExport.SetId(flagMV.Id);
+                flagExport.setCustomAdded(true);
+                flagExport.SetDataObject(flagMV);
+
+                _scFile.AddExport(flagExport);
+                _scFile.AddChange(flagExport);
+
+                MovieClip newWavingFlag = new MovieClip(wavingFlag);
+
+                _scFile.AddMovieClip(newWavingFlag);
+                _scFile.AddChange(newWavingFlag);
+
+                ushort[] childrenID = new ushort[5];
+                foreach (ScObject eachFlagFrame in data)
+                {
+                    childrenID[int.Parse(eachFlagFrame.GetName().Substring(eachFlagFrame.GetName().Length - 1, 1))] = eachFlagFrame.GetDataObject().Children[0].Id;
+                }
+                newWavingFlag.setTimelineChildrenId(childrenID);
+
+                ushort[] childrenIDMain = new ushort[2] { flagMV.timelineChildrenId[0], newWavingFlag.Id };
+                flagMV.setTimelineChildrenId(childrenIDMain);
+            }
+
+            Console.WriteLine("flag done");
+        }
         private void legendDecoJuneFunction(ScObject data)
         {
             if (data.objectType == ScObject.SCObjectType.Export)
