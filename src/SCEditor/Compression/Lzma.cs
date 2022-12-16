@@ -121,13 +121,46 @@
 
                     if (properties[0] == 0x53 && properties[1] == 0x43 && properties[2] == 0x4C && properties[3] == 0x5A && BitConverter.ToInt32(fileLengthBytes) < 0x10000000)
                     {
-                        using (LzhamStream stream = new LzhamStream(input, new DecompressionParameters { DictionarySize = properties[4] }))
+                        long endOffset = -1;
+                        MemoryStream v4Stream = null;
+                        if (version[3] == 4)
                         {
-                            stream.CopyTo(output);
+                            endOffset = Seek(input, "START", Encoding.UTF8);
 
-                            stream.Close();
-                            stream.Dispose();
+                            if (endOffset == -1)
+                                throw new Exception("SC Version 4 but could not find START of exports");
+
+                            int v4BufferSize = (int)(endOffset - 39);
+                            input.Position = 39;
+
+                            v4Stream = new MemoryStream(v4BufferSize);
+
+                            while (input.Position < endOffset)
+                            {
+                                v4Stream.WriteByte((byte)input.ReadByte());
+                            }
+
+                            int test = v4Stream.GetBuffer()[v4Stream.Length - 1];
+                            v4Stream.Position = 0;
+
+                            using (LzhamStream stream = new LzhamStream(v4Stream, new DecompressionParameters { DictionarySize = properties[4] }))
+                            {
+                                stream.CopyTo(output);
+                            }
+
+                            v4Stream.Close();
+                            v4Stream.Dispose();
                         }
+                        else
+                        {
+                            using (LzhamStream stream = new LzhamStream(input, new DecompressionParameters { DictionarySize = properties[4] }))
+                            {
+                                stream.CopyTo(output);
+
+                                stream.Dispose();
+                            }
+                        }
+                        
                     } 
                     else
                     {
@@ -141,6 +174,55 @@
                 input.Close();
             }
             File.Delete(clone);
+        }
+
+        public static long Seek(Stream stream, string str, Encoding encoding)
+        {
+            var search = encoding.GetBytes(str);
+            return Seek(stream, search);
+        }
+
+        public static long Seek(Stream stream, byte[] search)
+        {
+            int bufferSize = 1024;
+            if (bufferSize < search.Length * 2) bufferSize = search.Length * 2;
+
+            var buffer = new byte[bufferSize];
+            var size = bufferSize;
+            var offset = 0;
+            var position = stream.Position;
+
+            while (true)
+            {
+                var r = stream.Read(buffer, offset, size);
+
+                // when no bytes are read -- the string could not be found
+                if (r <= 0) return -1;
+
+                // when less then size bytes are read, we need to slice
+                // the buffer to prevent reading of "previous" bytes
+                ReadOnlySpan<byte> ro = buffer;
+                if (r < size)
+                {
+                    ro = ro.Slice(0, offset + size);
+                }
+
+                // check if we can find our search bytes in the buffer
+                var i = ro.IndexOf(search);
+                if (i > -1) return position + i;
+
+                // when less then size was read, we are done and found nothing
+                if (r < size) return -1;
+
+                // we still have bytes to read, so copy the last search
+                // length to the beginning of the buffer. It might contain
+                // a part of the bytes we need to search for
+
+                offset = search.Length;
+                size = bufferSize - offset;
+                Array.Copy(buffer, buffer.Length - offset, buffer, 0, offset);
+                position += bufferSize - offset;
+            }
         }
     }
 }
