@@ -261,6 +261,17 @@ namespace SCEditor.ScOld
             // Flushing depending edits.
             List<ScObject> exports = new List<ScObject>();
             _pendingChanges = _pendingChanges.OrderBy(obj => obj.objectType).ToList();
+
+            /**
+            foreach (ScObject scobjex in _pendingChanges)
+            {
+                if (scobjex.GetDataType() == 7)
+                {
+                    Console.Write(((Export)scobjex).GetName() + ';');
+                }
+            }
+            **/
+
             for (int i = 0; i < _pendingChanges.Count; i++)
             {
                 ScObject data = _pendingChanges[i];
@@ -433,6 +444,7 @@ namespace SCEditor.ScOld
                         input.Position = _transformStorageOffsets[transformStorageID] + 5;
                         var currentValueBytes = new byte[2];
                         input.Read(currentValueBytes, 0, 2);
+                        input.Seek(-2, SeekOrigin.Current);
                         ushort newValue = (ushort)(BitConverter.ToUInt16(currentValueBytes, 0) + _pendingMatrixs[transformStorageID].Count);
                         input.Write(BitConverter.GetBytes(newValue), 0, 2);
                     }
@@ -444,6 +456,8 @@ namespace SCEditor.ScOld
                 this._matrixCount += matrixAdd;
                 input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
             }
+
+            input.Flush();
 
             if (_pendingColors.Count > 0)
             {
@@ -503,6 +517,7 @@ namespace SCEditor.ScOld
                         input.Position = _transformStorageOffsets[transformStorageID] + 7;
                         var currentValueBytes = new byte[2];
                         input.Read(currentValueBytes, 0, 2);
+                        input.Seek(-2, SeekOrigin.Current);
                         ushort newValue = (ushort)(BitConverter.ToUInt16(currentValueBytes, 0) + _pendingColors[transformStorageID].Count);
                         input.Write(BitConverter.GetBytes(newValue), 0, 2);
                     }

@@ -1116,7 +1116,7 @@ namespace SCEditor.Features
 
         public void replaceAnyChildren()
         {
-            DialogResult inputQuery = MessageBox.Show("Would you like to replace importing export's Children ID with the one in current file?", "Replace Importing Children IDs", MessageBoxButtons.YesNo);
+            DialogResult inputQuery = MessageBox.Show("Would you like to replace importing export's Children ID with the one in current file?\n<importingid>,<newid>;", "Replace Importing Children IDs", MessageBoxButtons.YesNo);
 
             if (inputQuery == DialogResult.Yes)
             {
