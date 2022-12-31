@@ -393,6 +393,8 @@ namespace SCEditor.ScOld
 
                 foreach (var matrixesPerStorage in _pendingMatrixs)
                 {
+                    int currentMatrixAdd = 0;
+
                     int transformStorageID = matrixesPerStorage.Key;
                     bool isEndofOffset = false;
 
@@ -431,7 +433,7 @@ namespace SCEditor.ScOld
                             _eofOffset = input.Position;
                         }
 
-                        matrixAdd += 1;
+                        currentMatrixAdd += 1;
                     }
 
                     if (isEndofOffset)
@@ -448,13 +450,18 @@ namespace SCEditor.ScOld
                         ushort newValue = (ushort)(BitConverter.ToUInt16(currentValueBytes, 0) + _pendingMatrixs[transformStorageID].Count);
                         input.Write(BitConverter.GetBytes(newValue), 0, 2);
                     }
+
+                    if (isEndofOffset && transformStorageID == 0)
+                    {
+                        input.Seek(8, SeekOrigin.Begin);
+                        this._matrixCount += currentMatrixAdd;
+                        input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
+                    }
+
+                    matrixAdd += currentMatrixAdd;
                 }
 
                 _pendingMatrixs.Clear();
-
-                input.Seek(8, SeekOrigin.Begin);
-                this._matrixCount += matrixAdd;
-                input.Write(BitConverter.GetBytes((ushort)this._matrixCount), 0, 2);
             }
 
             input.Flush();
@@ -465,6 +472,8 @@ namespace SCEditor.ScOld
 
                 foreach (var colorsPerStorage in _pendingColors)
                 {
+                    int currentColorsAdd = 0;
+
                     int transformStorageID = colorsPerStorage.Key;
                     bool isEndofOffset = false;
 
@@ -504,7 +513,7 @@ namespace SCEditor.ScOld
                             _eofOffset = input.Position;
                         }
 
-                        colorsAdd += 1;
+                        currentColorsAdd += 1;
                     }
 
                     if (isEndofOffset)
@@ -521,13 +530,18 @@ namespace SCEditor.ScOld
                         ushort newValue = (ushort)(BitConverter.ToUInt16(currentValueBytes, 0) + _pendingColors[transformStorageID].Count);
                         input.Write(BitConverter.GetBytes(newValue), 0, 2);
                     }
+
+                    if (isEndofOffset && transformStorageID == 0)
+                    {
+                        input.Seek(10, SeekOrigin.Begin);
+                        this._colorsCount += currentColorsAdd;
+                        input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
+                    }
+
+                    colorsAdd += currentColorsAdd;
                 }
 
-                _pendingColors.Clear();
-
-                input.Seek(10, SeekOrigin.Begin);
-                this._colorsCount += colorsAdd;
-                input.Write(BitConverter.GetBytes((ushort)this._colorsCount), 0, 2);
+                _pendingColors.Clear();  
             }
 
             input.Close();
