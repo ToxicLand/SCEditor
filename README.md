@@ -1,4 +1,5 @@
 <img src="https://raw.githubusercontent.com/abdudsoul/SCEditor/master/a-logo%20dark.png?token=GHSAT0AAAAAAB65IXVHW34HDDKPG6IXXSXEY7PNESQ" width="64">
+
 # Supercell SC Editor - with viewer
 
 Create or Edit Supercell (Clash of Clans, Clash Royale, Brawl Stars, Boom Beach) SC Files.
