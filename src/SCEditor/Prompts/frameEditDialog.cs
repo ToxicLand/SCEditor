@@ -117,6 +117,10 @@ namespace SCEditor.Prompts
         {
             if (!string.IsNullOrEmpty(dataTypeTextBox.Text))
             {
+                int CurrentSelectedFrameIndex = FramesArrayBox.SelectedIndex;
+                if (CurrentSelectedFrameIndex > (FramesArrayBox.Items.Count - 1))
+                    return;
+
                 int frameIndex = getSelectedFrameIndex();
                 int frameTimelineIndex = frameTimelineDataBox.SelectedIndex;
                 int frameTimelineTypeIndex = (frameIndex * 3) + frameTimelineIndex;
@@ -167,7 +171,13 @@ namespace SCEditor.Prompts
 
                 _isEdited = true;
                 refreshMenu();
+
+                // Reload current frames data
+                FramesArrayBox.SelectedIndex = CurrentSelectedFrameIndex;
+                addItemDataToBox();
             }
+
+
         }
 
         private void cloneFrameSelectedButton_Click(object sender, EventArgs e)
@@ -293,7 +303,11 @@ namespace SCEditor.Prompts
 
             int frameIndex = getSelectedFrameIndex();
 
-            dataTypeTextBox.Text = _timelineArray[(frameIndex * 3) + frameTimelineDataBox.SelectedIndex].ToString();
+            int DataIndex = ((frameIndex * 3) + frameTimelineDataBox.SelectedIndex);
+            if (DataIndex > (_timelineArray.Length - 1))
+                return;
+
+            dataTypeTextBox.Text = _timelineArray[DataIndex].ToString();
 
             if (frameTimelineDataBox.SelectedIndex == 2 || (frameTimelineDataBox.SelectedIndex - 2) % 3 == 0)
             {
@@ -301,8 +315,6 @@ namespace SCEditor.Prompts
                     return;
 
                 Tuple<Color, byte, Color> color = _scfile.getColors(((MovieClip)_data)._transformStorageId)[(int)_timelineArray[(frameIndex * 3) + frameTimelineDataBox.SelectedIndex]];
-
-            Console.WriteLine();
             }
         }
 
@@ -320,6 +332,7 @@ namespace SCEditor.Prompts
 
         public void addItemsToBox()
         {
+            FramesArrayBox.Items.Clear();
             for (int i = 0; i < _frames.Length; i++)
             {
                 FramesArrayBox.Items.Add( i + " | Frame - " + _frames[i].Id);
@@ -328,6 +341,11 @@ namespace SCEditor.Prompts
 
         public void addItemDataToBox()
         {
+            if (FramesArrayBox.SelectedIndex == -1)
+                return;
+
+            frameTimelineDataBox.Items.Clear();
+
             string[] dataType = new string[3] { "Children Index: ", "Matrix Index: ", "Color Index: " };
             int timelineCount = _frames[FramesArrayBox.SelectedIndex].Id;
 

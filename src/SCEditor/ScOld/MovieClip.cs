@@ -127,6 +127,17 @@ namespace SCEditor.ScOld
             return _scFile;
         }
 
+        public override string GetInfo()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine("/!\\ Experimental Rendering");
+            sb.AppendLine("");
+            sb.AppendLine("Id: " + this.Id);
+            sb.AppendLine("FPS: " + this.FPS);
+            return sb.ToString();
+        }
+
         public string findExportnames(uint clipID)
         {
             var exportResult = "";

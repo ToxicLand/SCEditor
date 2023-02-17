@@ -210,7 +210,15 @@ namespace SCEditor.Prompts
             _renderingCancelToken.Cancel();
 
             while (this.animationState == MovieClipState.Playing)
-            {
+            {           
+                if (this.animationTask != null)
+                {
+                    if (this.animationTask.Status == TaskStatus.WaitingForActivation && this.animationTask.AsyncState == null)
+                    {
+                        this.animationState = MovieClipState.Stopped;
+                    }
+                }
+
                 continue;
             }
 

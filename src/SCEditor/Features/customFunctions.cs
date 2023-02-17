@@ -1,4 +1,5 @@
-﻿using SCEditor.ScOld;
+﻿using SCEditor.Prompts;
+using SCEditor.ScOld;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -21,10 +22,13 @@ namespace SCEditor.Features
 
         public void initObject(ScObject data)
         {
-            bool performFunction = false;
+            bool performFunction = true;
             if (!performFunction)
                 return;
 
+            LegendTreeFunction(data);
+
+            return;
             TextField tx = new TextField(_scFile, (TextField)data, _scFile.getMaxId());
             tx.customAdded = true;
 
@@ -379,6 +383,78 @@ namespace SCEditor.Features
 
             Console.WriteLine("flag done");
         }
+
+        private void LegendTreeFunction(ScObject data)
+        {
+            if (data.objectType == ScObject.SCObjectType.Export)
+                data = data.GetDataObject();
+
+            List<ushort> newTimelineArray = new List<ushort>();
+            List<ScObject> newFramesArray = new List<ScObject>();
+
+            MovieClipFrame newMVFrame = new MovieClipFrame(_scFile) { customAdded = true };
+            newMVFrame.SetId(1);
+
+            int alphaValueShape1 = 80;
+            inputDataDialog dialogAlpha = new inputDataDialog(1);
+            dialogAlpha.setLabelText("Start Alpha");
+            if (dialogAlpha.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                alphaValueShape1 = dialogAlpha.inputTextBoxInt;
+            }
+
+            int AlphaToChange = 1;
+            inputDataDialog dialogAlphaChange = new inputDataDialog(1);
+            dialogAlphaChange.setLabelText("Alpha Change Per Frame");
+            if (dialogAlphaChange.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                AlphaToChange = dialogAlphaChange.inputTextBoxInt;
+            }
+
+            for (int colorIndex = 0; colorIndex < 120; colorIndex++)
+            {
+                if (colorIndex > 60)
+                {
+                    alphaValueShape1 = (int)(alphaValueShape1 - AlphaToChange);
+                }
+                else
+                {
+                    alphaValueShape1 = (int)(alphaValueShape1 + AlphaToChange);
+                }
+
+                // original shape
+                newTimelineArray.Add(0);
+                newTimelineArray.Add(ushort.MaxValue);
+
+                Tuple<Color, byte, Color> toColor = new Tuple<Color, byte, Color>(Color.FromArgb(231, 134, 255), (byte)alphaValueShape1, Color.FromArgb(0, 0, 0));
+                int toColorIdx = _scFile.getColors(((MovieClip)data)._transformStorageId).FindIndex(c => c.Equals(toColor));
+                if (toColorIdx == -1)
+                {
+                    toColorIdx = _scFile.getColors(((MovieClip)data)._transformStorageId).Count;
+
+                    _scFile.addColor(toColor, 0);
+                    _scFile.addPendingColor(toColor, 0);
+                }
+
+                newTimelineArray.Add((ushort)toColorIdx);
+
+                newFramesArray.Add(newMVFrame);
+            }
+
+            ((MovieClip)data).setTimelineOffsetArray(newTimelineArray.ToArray());
+            ((MovieClip)data).SetFrames(newFramesArray);
+
+            int FPS = 24;
+            inputDataDialog dialog = new inputDataDialog(1);
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                FPS = dialog.inputTextBoxInt;
+            }
+
+            ((MovieClip)data).SetFramePerSecond((byte)FPS);
+
+            _scFile.AddChange(data);
+        }
         private void legendDecoJuneFunction(ScObject data)
         {
             if (data.objectType == ScObject.SCObjectType.Export)
@@ -447,7 +523,16 @@ namespace SCEditor.Features
 
             ((MovieClip)data).setTimelineOffsetArray(newTimelineArray.ToArray());
             ((MovieClip)data).SetFrames(newFramesArray);
-            ((MovieClip)data).SetFramePerSecond(18); // check
+
+            int FPS = 24;
+
+            inputDataDialog dialog = new inputDataDialog(1);
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                FPS = dialog.inputTextBoxInt;
+            }
+
+            ((MovieClip)data).SetFramePerSecond((byte)FPS);
 
             _scFile.AddChange(data);
         }
