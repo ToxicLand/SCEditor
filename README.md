@@ -17,14 +17,14 @@
 
 ### Custom Features (Main)
 
-####- Add your own custom sprites
+#### - Add your own custom sprites
 Yes, You are able to add your own Character/Building.
 
 No, it will not be fully automated, You may have to mess around with how many frames you want by manually editing it afterwards.
 
 This tool uses another software (paid version of it) called [TexturePacker](https://www.codeandweb.com/texturepacker "TexturePacker"). It is used to convert each of the Animations Frames Shapes into a single Texture.
 
-####- Combine 2 SC Files Data Together
+#### - Combine 2 SC Files Data Together
 Combine 2 SC Files together while having the ability to choose which exports to import from the second SC File.
 
 This feature also uses [TexturePacker](https://www.codeandweb.com/texturepacker "TexturePacker") - Paid Version, to combine all the exports back to a single texture.
@@ -35,7 +35,7 @@ It will import full Export data and save it as a new Export in the file (this in
 - You can choose to use importing sc objects to instead use the main files one
 (For example: if you import a character from another file with each export having shadow shape with id 50, while you have a shadow already in your current file, you can enter the ids to make sure that shape with id 50 is not imported but replaced by the one in original file)
 
-####- Live Edit a Export/Movieclip data
+#### - Live Edit a Export/Movieclip data
 This will help with manually adjusting the x,y position of the Shape in the Object.
 You can either choose to move the shapechunk's x,y position directly (this will effect all the Exports/Movieclips using that specific shapechunk) or generate a matrix which can be replaced for the specific shape in the moveclips frames data
 
