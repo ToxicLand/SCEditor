@@ -1,9 +1,11 @@
-<img src="https://raw.githubusercontent.com/abdudsoul/SCEditor/master/a-logo%20dark.png?token=GHSAT0AAAAAAB65IXVHW34HDDKPG6IXXSXEY7PNESQ" width="64">
+<img src="https://raw.githubusercontent.com/abdudsoul/SCEditor/master/src/SCEditor/git/a-logo%20dark.png?token=GHSAT0AAAAAAB65IXVHW34HDDKPG6IXXSXEY7PNESQ" width="64">
 
 # Supercell SC Editor - with viewer
 
 Create or Edit Supercell (Clash of Clans, Clash Royale, Brawl Stars, Boom Beach) SC Files.
 Add or Edit an Exisiting or Custom Character, Building or other game object.
+
+<img src="https://github.com/abdudsoul/SCEditor/blob/master/src/SCEditor/git/export%20animation.gif?raw=true" width="512">
 
 ### Requirements
 - Atleast 2 cores cpu
@@ -35,6 +37,9 @@ No, it will not be fully automated, You may have to mess around with how many fr
 This tool uses another software (paid version of it) called [TexturePacker](https://www.codeandweb.com/texturepacker "TexturePacker"). It is used to convert each of the Animations Frames Shapes into a single Texture.
 
 #### - Combine 2 SC Files Data Together
+
+<img src="https://github.com/abdudsoul/SCEditor/blob/master/src/SCEditor/git/import_combine.gif?raw=true" width="512">
+
 Combine 2 SC Files together while having the ability to choose which exports to import from the second SC File.
 
 This feature also uses [TexturePacker](https://www.codeandweb.com/texturepacker "TexturePacker") - Paid Version, to combine all the exports back to a single texture.
@@ -46,6 +51,9 @@ It will import full Export data and save it as a new Export in the file (this in
 (For example: if you import a character from another file with each export having shadow shape with id 50, while you have a shadow already in your current file, you can enter the ids to make sure that shape with id 50 is not imported but replaced by the one in original file)
 
 #### - Live Edit a Export/Movieclip data
+
+<img src="https://raw.githubusercontent.com/abdudsoul/SCEditor/master/src/SCEditor/git/edit%20character.gif" width="512">
+
 This will help with manually adjusting the x,y position of the Shape in the Object.
 You can either choose to move the shapechunk's x,y position directly (this will effect all the Exports/Movieclips using that specific shapechunk) or generate a matrix which can be replaced for the specific shape in the moveclips frames data
 
