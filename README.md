@@ -39,7 +39,18 @@ It will import full Export data and save it as a new Export in the file (this in
 This will help with manually adjusting the x,y position of the Shape in the Object.
 You can either choose to move the shapechunk's x,y position directly (this will effect all the Exports/Movieclips using that specific shapechunk) or generate a matrix which can be replaced for the specific shape in the moveclips frames data
 
-#### MUST READ IF USING FOR PRODUCTION
+#### Known Bugs/Issues/Incompeted Features
+> One of the basic rules of the universe is that nothing is perfect. Perfection simply doesn't exist.....Without imperfection, neither you nor I would exist - Stephen Hawking
+
+The tools works perfectly but may cause glitches that may not cause much inconvience.
+
+- V4 saving bypassed/skipped for now (METADATA generation for v4 is unknown)
+- Cloning will reflect changes to the original unless the file is save and reopened (prolly due to variable references being soft cloned)
+- Live editing a Export/Movieclip may hang sometimes (Yet to optimize the animation renderer for it)
+- A custom sprites generator so TexturePacker is not required.
+- FOR DEVS: Alot of code being repeated, unused code, and no single library handling the rendering
+
+#### Additional Information
 
 The above information may not be complete and does not yet provide a step by step guide for how everything is done.
 
@@ -48,4 +59,4 @@ The tool is able to perform all the features mentioned above but may crash for s
 This tool has been in use for creating alot of custom mods for the past few years.
 As it works in its messy but optimized state, I do not plan on rewriting a clean code version of it for a while.
 
-###End
+If requested enough, I will create a video guide for how the editor flow works for the main features.
