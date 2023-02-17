@@ -1,3 +1,4 @@
+![](https://github.com/abdudsoul/SCEditor/blob/master/a-logo%20dark.png?raw=true | width=100)
 # Supercell SC Editor - with viewer
 
 Create or Edit Supercell (Clash of Clans, Clash Royale, Brawl Stars, Boom Beach) SC Files.
@@ -68,3 +69,8 @@ This tool has been in use for creating alot of custom mods for the past few year
 As it works in its messy but optimized state, I do not plan on rewriting a clean code version of it for a while.
 
 If requested enough, I will create a video guide for how the editor flow works for the main features.
+
+#### Credits and Thanks to
+[Jean-Baptiste Martin (Ultrapowa)](https://github.com/jeanbmar "Jean-Baptiste Martin (Ultrapowa)") - as the tool initially started building upon his USC SC Editor.
+[Mike Chiappe (Mimi)](https://github.com/Mimi8298 "Mike Chiappe (Mimi)") for helping figuring out most of Objects Variables.
+And other SC Tools on the github that I have learnt from while building this tool.
