@@ -1,5 +1,13 @@
 # Supercell SC Editor - with viewer
 
+Create or Edit Supercell (Clash of Clans, Clash Royale, Brawl Stars, Boom Beach) SC Files.
+Add or Edit an Exisiting or Custom Character, Building or other game object.
+
+### Requirements
+- Atleast 2 cores cpu
+- .NET Core 6
+- Windows (as it uses .net core winform)
+
 ### Features (Basic)
 
 - Decompress (LZHAM, LZMA, ZSTD) (Version ~3, 4) SC Files
