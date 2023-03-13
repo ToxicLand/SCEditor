@@ -29,24 +29,18 @@ namespace SCEditor.Features
 
         private List<Blob> nonEmptyBlobs;
 
-        public enum HightlightType
-        {
-            ConvexHull,
-            LeftAndRightEdges,
-            TopAndBottomEdges,
-            Quadrilateral
-        }
-
         private HightlightType highlighting = HightlightType.Quadrilateral;
 
-        public HightlightType Highlighting
+        public HightlightType GetHightlightType()
         {
-            get { return highlighting; }
-            set
-            {
-                highlighting = value;
-            }
+            return this.highlighting;
         }
+
+        public void SetHightlightType(HightlightType highlighting)
+        {
+            this.highlighting = highlighting;
+        }
+ 
         public int getBlobCount(Bitmap bitmapImage)
         {
             dataBitmap = (Bitmap)bitmapImage.Clone();
