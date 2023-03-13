@@ -36,7 +36,7 @@ namespace SCEditor.Features
             return this.highlighting;
         }
 
-        public void SetGetHightlightType(HightlightType highlighting)
+        public void SetHightlightType(HightlightType highlighting)
         {
             this.highlighting = highlighting;
         }
