@@ -12,6 +12,10 @@ Add or Edit an Exisiting or Custom Character, Building or other game object.
 - .NET Core 6
 - Windows (as it uses .net core winform)
 
+### Usage
+
+Always run it with Visual Studio in Debug mode to make sure there are no crashes.
+
 ### Features (Basic)
 
 - Decompress (LZHAM, LZMA, ZSTD) (Version ~3, 4) SC Files
