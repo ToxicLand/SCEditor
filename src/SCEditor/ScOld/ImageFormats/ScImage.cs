@@ -1,89 +1,45 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
 using System.Drawing;
+using System.Drawing.Imaging;
+using KtxSharp;
+using SCEditor.Helpers;
+using SCEditor.ScOld.ImageDecoders;
+using SCEditor.ScOld.ImageFormats;
+using System.Collections.Generic;
+using SCEditor.ScOld.ImageEncoder;
 
 namespace SCEditor.ScOld
 {
-    internal class ScImage : IDisposable
+    public abstract class ScImage : IDisposable
     {
-        #region Constructors
-        public ScImage()
-        {
-            // Space
-        }
-        #endregion
-
-        #region Fields & Properties
-        internal bool _disposed;
-        internal ushort _imageType;
-        protected ushort _width;
-        protected ushort _height;
-        protected Bitmap _bitmap;
-        public bool is32x32 { get; set; } = false;
-
-        public ushort Width => _width;
-        public ushort Height => _height;
-        public Bitmap Image => _bitmap;
-
-        public Bitmap GetBitmap()
-        {
-            return _bitmap;
-        }
-
-        public void SetHeight(ushort height)
-        {
-            _height = height;
-        }
-
-        public ushort GetImageType()
-        {
-            return _height;
-        }
-
-        public void SetImageType(ushort type)
-        {
-            _imageType = type;
-        }
-
-        public void SetWidth(ushort width)
-        {
-            _width = width;
-        }
-
-        public virtual string GetImageTypeName()
-        {
-            return "unknown";
-        }
-        #endregion
-
-        #region Methods
-        public virtual void ReadImage(uint packetID, uint packetSize, BinaryReader br)
-        {
-            _width = br.ReadUInt16();
-            _height = br.ReadUInt16();
-        }
-
-        public virtual void WriteImage(Stream input)
-        {
-            input.Write(BitConverter.GetBytes(_width), 0, 2);
-            input.Write(BitConverter.GetBytes(_height), 0, 2);
-        }
-
+        private bool _disposed;
+        
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public uint KtxSize { get; set; }
+        public Bitmap Bitmap { get; set; }
+        public bool Is32x32 { get; set; }
+        
+        public abstract string ImageFormat { get; }
+        
         public void SetBitmap(Bitmap b)
         {
-            _bitmap = b;
-            _width = (ushort)b.Width;
-            _height = (ushort)b.Height;
+            Bitmap = b;
+            Width = (ushort)b.Width;
+            Height = (ushort)b.Height;
 
-            _bitmap.SetResolution(96, 96);
+            b.SetResolution(96, 96);
         }
         
         public virtual void Print()
         {
-            Console.WriteLine("Width: " + _width);
-            Console.WriteLine("Height: " + _height);
+            Console.WriteLine("Width: " + Width);
+            Console.WriteLine("Height: " + Height);
         }
+        
         public void Dispose()
         {
             Dispose(true);
@@ -96,18 +52,191 @@ namespace SCEditor.ScOld
             return (byte)((rawValue * 255 + ((bitRange >> 1) - 1)) / (bitRange - 1));
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected void Dispose(bool disposing)
         {
             if (_disposed)
                 return;
 
             if (disposing)
             {
-                _bitmap.Dispose();
+                Bitmap.Dispose();
             }
 
             _disposed = true;
         }
-        #endregion
+        
+        public abstract void ReadImage(uint packetID, uint packetSize, BinaryReader br);
+        public abstract void WriteImage(Stream bw);
+    }
+
+    public class ScImage<TFormat> : ScImage where TFormat : IImageFormat
+    {
+        public override string ImageFormat => TFormat.Name;
+
+        public override unsafe void ReadImage(uint packetID, uint packetSize, BinaryReader br)
+        {
+            Width = br.ReadUInt16();
+            Height = br.ReadUInt16();
+            Is32x32 = (packetID - 27) < 3;
+
+            byte[] pixelData;
+            if (KtxSize != 0)
+            {
+                byte[] ktxBytes = br.ReadBytes((int) KtxSize);
+                KtxStructure ktx = KtxLoader.LoadInput(new MemoryStream(ktxBytes));
+                
+                if (ktx.header.pixelWidth != Width || ktx.header.pixelHeight != Height)
+                {
+                    throw new Exception("KTX size mismatch");
+                }
+                
+                pixelData = GC.AllocateUninitializedArray<byte>(Width * Height * 4, true);
+                byte[] inputBytes = ktx.textureData.textureDataOfMipmapLevel[0];
+                (int blockWidth, int blockHeight) = ktx.header.glInternalFormat switch
+                {
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_4x4_KHR => (4, 4),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_5x4_KHR => (5, 4),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_5x5_KHR => (5, 5),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_6x5_KHR => (6, 5),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_6x6_KHR => (6, 6),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x5_KHR => (8, 5),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x6_KHR => (8, 6),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x8_KHR => (8, 8),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x5_KHR => (10, 5),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x6_KHR => (10, 6),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x8_KHR => (10, 8),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x10_KHR => (10, 10),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_12x10_KHR => (12, 10),
+                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_12x12_KHR => (12, 12),
+                    _ => throw new Exception("Invalid ASTC format")
+                };
+                
+                Stopwatch sw = Stopwatch.StartNew();
+                
+                bool success = AstcDecoder.Decompress(inputBytes, (uint)inputBytes.Length, (uint)Width, (uint)Height,
+                    blockWidth, blockHeight, pixelData, (uint)pixelData.Length, (uint)Width * 4);
+                if (!success)
+                {
+                    throw new Exception("Failed to decompress ASTC");
+                }
+                
+                Console.WriteLine($"Decompressed ASTC in {sw.ElapsedMilliseconds}ms ({Width}x{Height}, size: {inputBytes.Length / 1024}kb))");
+            }
+            else
+            {
+                pixelData = br.ReadBytes(Width * Height * TFormat.PixelSize);
+            }
+            
+            Bitmap = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+
+            if (Is32x32)
+            {
+                int[] pixelArray = new int[Height * Width];
+                var span = new ReadOnlySpan<byte>(pixelData);
+                for (int h = 0; h < Height; h++)
+                for (int w = 0; w < Width; w++)
+                {
+                    TFormat.ReadColor(span, out int color);
+                    pixelArray[h * Width + w] = color;
+                    span = span.Slice(TFormat.PixelSize);
+                }
+
+                pixelArray = Utils.Solve32X32Blocks(Width, Height, pixelArray);
+
+                var bitmapData = Bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly,
+                    PixelFormat.Format32bppArgb);
+                var bitmapSpan = (byte*)bitmapData.Scan0;
+                for (int h = 0; h < Height; h++)
+                for (int w = 0; w < Width; w++)
+                {
+                    *(int*)bitmapSpan = pixelArray[h * Width + w];
+                    bitmapSpan += 4;
+                }
+
+                Bitmap.UnlockBits(bitmapData);
+            }
+            else
+            {
+                var span = new ReadOnlySpan<byte>(pixelData);
+                var bitmapData = Bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+                var bitmapSpan = (byte*) bitmapData.Scan0;
+                for (int h = 0; h < Height; h++)
+                for (int w = 0; w < Width; w++)
+                {
+                    TFormat.ReadColor(span, out int color);
+                    *(int *) bitmapSpan = color;
+                    span = span.Slice(TFormat.PixelSize);
+                    bitmapSpan += 4;
+                }
+                
+                Bitmap.UnlockBits(bitmapData);
+            }
+        }
+        
+        public override unsafe void WriteImage(Stream bw)
+        {
+            Span<byte> widthBytes = stackalloc byte[2];
+            Span<byte> heightBytes = stackalloc byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(widthBytes, (ushort) Width);
+            BinaryPrimitives.WriteUInt16LittleEndian(heightBytes, (ushort) Height);
+            bw.Write(widthBytes);
+            bw.Write(heightBytes);
+
+            int offset = 0;
+            Span<byte> colorBytesList = new byte[(Height * Width * TFormat.PixelSize)];
+
+            if (Is32x32)
+            {
+                Color[,] oldPixelArray = new Color[Bitmap.Height, Bitmap.Width];
+                int oHeight = Bitmap.Height;
+                int oWidth = Bitmap.Width;
+                for (int col = 0; col < oHeight; col++)
+                for (int row = 0; row < oWidth; row++)
+                {
+                    oldPixelArray[col, row] = Bitmap.GetPixel(row, col);
+                }
+
+                Color[,] pixelArray = Utils.Create32x32Blocks(Bitmap.Width, Bitmap.Height, oldPixelArray);
+
+                for (int column = 0; column < Bitmap.Height; column++)
+                for (int row = 0; row < Bitmap.Width; row++)
+                {
+                    Span<byte> colorBytes = new byte[TFormat.PixelSize];
+                    TFormat.WriteColor(colorBytes, pixelArray[column, row].ToArgb());
+                    colorBytes.CopyTo(colorBytesList[offset..]);
+                    offset += TFormat.PixelSize;
+                }
+            }
+            else
+            {
+                for (int column = 0; column < Bitmap.Height; column++)
+                for (int row = 0; row < Bitmap.Width; row++)
+                {
+                    Span<byte> colorBytes = new byte[TFormat.PixelSize];
+
+                    int argb = Bitmap.GetPixel(row, column).ToArgb();
+                    int a = (argb >> 24) & 0xFF;
+                    int r = (argb >> 16) & 0xFF;
+                    int g = (argb >> 8) & 0xFF;
+                    int b = argb & 0xFF;
+
+                    int abgr = (a << 24) | (b << 16) | (g << 8) | r;
+
+                    TFormat.WriteColor(colorBytes, abgr);
+                    colorBytes.CopyTo(colorBytesList[offset..]);
+                    offset += TFormat.PixelSize;
+                }
+            }
+
+            if (KtxSize != 0)
+            {
+                // todo
+                // bw.Write(AstcEncoder.Encode(colorBytesList));
+            }
+            else
+            {
+                bw.Write(colorBytesList);
+            }
+        }
     }
 }

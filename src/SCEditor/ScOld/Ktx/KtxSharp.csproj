@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>LibKTX</PackageId>
+    <VersionPrefix>0.9.0</VersionPrefix>
+    <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+    <Authors>Kaarlo Räihä</Authors>
+    <Description>.Net Standard compatible managed library for handling KTX File Format for texture data</Description>
+    <IncludeSource>true</IncludeSource>
+    <PackageProjectUrl>https://github.com/mcraiha/libktxsharp</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mcraiha/libktxsharp.git</RepositoryUrl>
+    <PackageLicenseExpression>Unlicense</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

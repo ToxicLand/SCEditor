@@ -404,17 +404,14 @@ namespace SCEditor
                 }       
 
             }
+            catch (Exception ex) when (ex is OperationCanceledException)
+            {
+                animationState = MovieClipState.Stopped;
+                return;
+            }
             catch (Exception ex)
             {
-                if (ex.GetType() == typeof(OperationCanceledException) || ex.GetType() == typeof(TaskCanceledException))
-                {
-                    animationState = MovieClipState.Stopped;
-                    return;
-                }
-                else
-                {
-                    MessageBox.Show(ex.Message);
-                }
+                MessageBox.Show(ex.Message);
             }
 
             animationState = MovieClipState.Stopped;
@@ -543,7 +540,7 @@ namespace SCEditor
                     {
                         if (data.GetDataType() == 2)
                         {
-                            ((Texture)data).GetImage().GetBitmap().Save(dlg.FileName, System.Drawing.Imaging.ImageFormat.Png);
+                            ((Texture)data).GetImage().Bitmap.Save(dlg.FileName, System.Drawing.Imaging.ImageFormat.Png);
                         }
                         else if (data.GetDataType() == 99 || data.GetDataType() == 0)
                         {

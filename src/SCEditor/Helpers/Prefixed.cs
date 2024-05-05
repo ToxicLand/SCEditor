@@ -25,6 +25,8 @@
 
         public override void WriteLine(string Message)
         {
+            if (Message == null) return;
+
             try
             {
                 if (Message.Length <= Console.WindowWidth)

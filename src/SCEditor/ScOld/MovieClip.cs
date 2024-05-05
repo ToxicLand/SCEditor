@@ -399,7 +399,7 @@ namespace SCEditor.ScOld
 
             // MovieClip Data { id, fps, framecount }
             input.Write(BitConverter.GetBytes(_clipId), 0, 2);
-            input.Write(BitConverter.GetBytes(_framePerSeconds), 0, 1);
+            input.Write(new [] { _framePerSeconds }, 0, 1);
             input.Write(BitConverter.GetBytes(this.Frames.Count), 0, 2);
             dataLength += 5;
 

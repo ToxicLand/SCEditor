@@ -713,7 +713,7 @@ namespace SCEditor.ScOld
                         }
                         break;
                     }
-
+                    
                     Console.WriteLine(texReader.BaseStream.Length);
                     texReader.BaseStream.Seek(0, SeekOrigin.Begin);
                     while (true)
@@ -929,6 +929,7 @@ namespace SCEditor.ScOld
                             case "1C": //28
                             case "1D": //29
                             case "22": //34
+                            case "2D": //45
                                 if (textureIndex >= _textureCount)
                                     throw new Exception($"Trying to load too many shapes.\n Index: {textureIndex} | Count: {_textureCount}");
 
@@ -1016,7 +1017,7 @@ namespace SCEditor.ScOld
                                 lastSCType = ScObject.SCObjectType.TextField;
                                 textFieldIndex += 1;
                                 break;
-
+                            
                             case "08":
                                 float[] Points = new float[6];
                                 for (int Index = 0; Index < 6; Index++)

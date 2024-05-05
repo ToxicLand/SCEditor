@@ -21,16 +21,6 @@ namespace SCEditor.Features
 {
     public class ImportSCData
     {
-        private static Dictionary<byte, Type> textureImageType = new Dictionary<byte, Type>{
-                {0, typeof(ImageRgba8888)},
-                {1, typeof(ImageRgba8888)},
-                { 2, typeof(ImageRgba4444)},
-                { 3, typeof(ImageRgba5551)},
-                { 4, typeof(ImageRgb565)},
-                { 6, typeof(ImageLuminance8Alpha8)},
-                { 9, typeof(ImageRgba4444)},
-                { 10, typeof(ImageLuminance8)}};
-
         private ScFile _scFile;
         private ScFile scToImportFrom;
         private Dictionary<ushort, ushort> _shapesAlreadyAdded;
@@ -829,8 +819,8 @@ namespace SCEditor.Features
             }
             else
             {
-                string textureTypeName = ((Texture)_scFile.GetTextures()[_textureToImportToID])._image.GetImageTypeName();
-                isGeneratedTextureRGBA4444 = textureTypeName == "RGB4444" ? true : (textureTypeName == "RGB8888" ? false : throw new Exception("Not added"));
+                string textureTypeName = ((Texture)_scFile.GetTextures()[_textureToImportToID])._image.ImageFormat;
+                isGeneratedTextureRGBA4444 = textureTypeName == "RGBA4444" ? true : (textureTypeName == "RGBA8888" ? false : throw new Exception("Not added"));
             }
 
             int generatedTextureScale = 1;
@@ -996,7 +986,7 @@ namespace SCEditor.Features
                         Texture texture = (Texture)_scFile.GetTextures()[newShapeChunk.GetTextureId()];
                         if (texture != null)
                         {
-                            Bitmap bitmap = texture._image.GetBitmap();
+                            Bitmap bitmap = texture._image.Bitmap;
                             bitmap.SetResolution(96, 96);
 
                             GraphicsPath gpuv = new GraphicsPath();

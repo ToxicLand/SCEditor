@@ -307,7 +307,7 @@ namespace SCEditor.ScOld
             var texture = (Texture)_scFile.GetTextures()[_textureId];
 
             // Texture ID
-            input.Write(BitConverter.GetBytes(_textureId), 0, 1);
+            input.Write(new [] { _textureId }, 0, 1);
             outOffset += 1;
 
             int shapePointCount = _xy.Length == _uv.Length ? _xy.Length : throw new Exception("shapePointCount Not Match WRITE()");

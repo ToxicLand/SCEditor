@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Buffers;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using SCEditor.ScOld;
 
@@ -6,33 +7,39 @@ namespace SCEditor
 {
     internal static class ExtensionMethods
     {
-        private static Dictionary<string, int> nodeCount;
+        private static Dictionary<int, int> nodeCount;
+        private static Dictionary<int, string> dataTypeToName;
+        private static HashSet<string> usedIds;
+        
         public static void Populate(this TreeView tv, List<ScObject> scd)
         {
-            nodeCount = new Dictionary<string, int>();
+            nodeCount = new Dictionary<int, int>();
+            dataTypeToName = new Dictionary<int, string>();
+            usedIds = new HashSet<string>();
 
+            Dictionary<int, List<TreeNode>> nodes = new Dictionary<int, List<TreeNode>>();
             foreach (var data in scd)
             {
-                var dataTypeKey = data.GetDataType().ToString();
-                var dataTypeName = data.GetDataTypeName();
+                var dataTypeKey = data.GetDataType();
                 var id = data.Id.ToString();
 
-                if (!tv.Nodes.ContainsKey(dataTypeKey))
+                if (!nodes.TryGetValue(dataTypeKey, out var list))
                 {
-                    tv.Nodes.Add(dataTypeKey, dataTypeName);
+                    nodes.Add(dataTypeKey, list = new List<TreeNode>());
                     nodeCount.Add(dataTypeKey, 0);
+                    dataTypeToName.Add(dataTypeKey, data.GetDataTypeName());
                 }
                 else
                 {
-                    nodeCount[dataTypeKey] = tv.Nodes[dataTypeKey].Nodes.Count;
+                    nodeCount[dataTypeKey] += 1;
                 }
-
-                if (dataTypeKey == "7")
+                
+                if (dataTypeKey == 7)
                 {
                     int i = 1;
                     while (true)
                     {
-                        if (tv.Nodes[dataTypeKey].Nodes.ContainsKey(id))
+                        if (usedIds.Contains(id))
                         {
                             id = id + $"_{i}";
                         }
@@ -44,9 +51,27 @@ namespace SCEditor
                     } 
                 }
 
-                tv.Nodes[dataTypeKey].Nodes.Add(id, data.GetName());
-                tv.Nodes[dataTypeKey].Nodes[id].Tag = data;
-                tv.Nodes[dataTypeKey].Nodes[id].PopulateChildren(data);
+                usedIds.Add(id);
+
+                TreeNode node = new TreeNode
+                {
+                    Name = id,
+                    Text = data.GetName(),
+                    Tag = data
+                };
+                node.PopulateChildren(data);
+                list.Add(node);
+            }
+            
+            foreach (var node in nodes)
+            {
+                TreeNode treeNode = new TreeNode
+                {
+                    Name = node.Key.ToString(),
+                    Text = dataTypeToName[node.Key]
+                };
+                treeNode.Nodes.AddRange(node.Value.ToArray());
+                tv.Nodes.Add(treeNode);
             }
         }
 
@@ -55,14 +80,30 @@ namespace SCEditor
             if (sco.Children == null || sco.Children.Count <= 0)
                 return;
 
-            foreach (var child in sco.Children)
+            if (sco.Children.Count == 1)
             {
-                tn.Nodes.Add(child.Id.ToString(), child.GetName());
-                tn.Nodes[child.Id.ToString()].Tag = child;
-
-                if (child != null)
-                    PopulateChildren(tn.Nodes[child.Id.ToString()], child);
+                tn.Nodes.Add(CreateTreeNode(sco.Children[0]));
+                return;
             }
+            
+            TreeNode[] treeNodes = new TreeNode[sco.Children.Count];
+            for (int index = 0; index < sco.Children.Count; ++index)
+            {
+                treeNodes[index] = CreateTreeNode(sco.Children[index]);
+            }
+            
+            tn.Nodes.AddRange(treeNodes);
+        }
+
+        private static TreeNode CreateTreeNode(ScObject sco)
+        {
+            TreeNode treeNode = new TreeNode(sco.GetName())
+            {
+                Name = sco.Id.ToString(),
+                Tag = sco
+            };
+            PopulateChildren(treeNode, sco);
+            return treeNode;
         }
     }
 }

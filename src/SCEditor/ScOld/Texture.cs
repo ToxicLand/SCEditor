@@ -23,38 +23,38 @@ namespace SCEditor.ScOld
         {
             s_imageTypes = new Dictionary<byte, Type>
             {
-                {0, typeof(ImageRgba8888)},
-                {1, typeof(ImageRgba8888)},
-                {2, typeof(ImageRgba4444)},
-                {3, typeof(ImageRgba5551 )},
-                {4, typeof(ImageRgb565)},
-                {6, typeof(ImageLuminance8Alpha8)},
-                {9, typeof(ImageRgba4444)},
-                {10, typeof(ImageLuminance8)}
+                {0, typeof(ScImage<ImageFormatRgba8888>)},
+                {1, typeof(ScImage<ImageFormatRgba8888>)},
+                {2, typeof(ScImage<ImageFormatRgba4444>)},
+                {3, typeof(ScImage<ImageFormatRgba5551> )},
+                {4, typeof(ScImage<ImageFormatRgb565>)},
+                {6, typeof(ScImage<ImageFormatLumA88>)},
+                {9, typeof(ScImage<ImageFormatRgba4444>)},
+                {10, typeof(ScImage<ImageFormatLum8>)}
             };
         }
 
         public Texture(ScFile scs)
         {
             _scFile = scs;
-            _textureId = (ushort) _scFile.GetTextures().Count();
+            _textureId = (ushort) _scFile.GetTextures().Count;
         }
 
         public Texture(ScFile scs, Bitmap bitmap)
         {
             _scFile = scs;
-            _textureId = (ushort)_scFile.GetTextures().Count();
+            _textureId = (ushort)_scFile.GetTextures().Count;
             _imageType = 0;
             _image = (ScImage)Activator.CreateInstance(s_imageTypes[_imageType]);
             _image.SetBitmap(bitmap);
-            _textureId = (ushort)_scFile.GetTextures().Count();
+            _textureId = (ushort)_scFile.GetTextures().Count;
             _offset = -1;
         }
 
         public Texture(ScFile scs, Bitmap bitmap, byte imageType)
         {
             _scFile = scs;
-            _textureId = (ushort)_scFile.GetTextures().Count();
+            _textureId = (ushort)_scFile.GetTextures().Count;
             _imageType = imageType;
             _image = (ScImage)Activator.CreateInstance(s_imageTypes[_imageType]);
             _image.SetBitmap(bitmap);
@@ -83,7 +83,7 @@ namespace SCEditor.ScOld
             }
             else
             {
-                _image = new ScImage();
+                throw new Exception("Image type not found");
             }
             _image.SetBitmap(new Bitmap(t.Bitmap));
             _offset = t.GetOffset() > 0 ? -t.GetOffset() : -1 /*t.GetOffset()*/;
@@ -102,7 +102,7 @@ namespace SCEditor.ScOld
         internal ScFile _scFile;
         internal ScImage _image;
 
-        public override Bitmap Bitmap => _image.GetBitmap();
+        public override Bitmap Bitmap => _image.Bitmap;
 
         #endregion
 
@@ -134,8 +134,10 @@ namespace SCEditor.ScOld
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("TextureId: " + _textureId);
+            sb.AppendLine("Packet Id: " + PacketId);
+            sb.AppendLine("Is 32x32: " + _image.Is32x32.ToString());
             sb.AppendLine("ImageType: " + _imageType);
-            sb.AppendLine("ImageFormat: " + _image.GetImageTypeName());
+            sb.AppendLine("ImageFormat: " + _image.ImageFormat);
             sb.AppendLine("Width: " + _image.Width);
             sb.AppendLine("Height: " + _image.Height);
             return sb.ToString();
@@ -182,13 +184,16 @@ namespace SCEditor.ScOld
         {
             this.PacketId = packetID;
             this._packetSize = packetSize;
+
+            uint bufferSize = packetID == 45 ? br.ReadUInt32() : 0;
             _imageType = br.ReadByte();
 
             if (s_imageTypes.ContainsKey(_imageType))
                 _image = (ScImage)Activator.CreateInstance(s_imageTypes[_imageType]);
             else
-                _image = new ScImage();
+                throw new Exception("Image type not found");
 
+            _image.KtxSize = bufferSize;
             _image.ReadImage(packetID, packetSize, br);
         }
 
@@ -222,7 +227,7 @@ namespace SCEditor.ScOld
 
             UInt32 packetSize = (uint) ((_image.Width) * (_image.Height) * bytesForPXFormat) + 5;
 
-            _image.is32x32 = Math.Abs((this.PacketId - 27)) < 3;
+            _image.Is32x32 = Math.Abs((this.PacketId - 27)) < 3;
 
             if (_offset < 0) // New
             { 
@@ -232,6 +237,10 @@ namespace SCEditor.ScOld
                 input.WriteByte(_imageType);
 
                 _image.WriteImage(input);
+                if (_image.KtxSize != 0)
+                {
+                    // todo
+                }
                 _offset = _scFile.GetEofTexOffset();
                 _scFile.SetEofTexOffset(input.Position);
 
