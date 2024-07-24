@@ -6,6 +6,7 @@ using System.IO;
 using System.Drawing;
 using System.Windows;
 using SCEditor.ScOld.ImageFormats;
+using SCEditor.Sc;
 
 namespace SCEditor.ScOld
 {
@@ -180,12 +181,25 @@ namespace SCEditor.ScOld
 
             _disposed = true;
         }
-        public void Read(byte packetID, uint packetSize, BinaryReader br)
+        public void Read(ScFile swf, byte packetID, uint packetSize, BinaryReader br)
         {
             this.PacketId = packetID;
             this._packetSize = packetSize;
 
             uint bufferSize = packetID == 45 ? br.ReadUInt32() : 0;
+            string externalFilePath = "";
+            if (packetID == 47)
+            {
+                var texturePath = "";
+                byte stringLength = br.ReadByte();
+                if (stringLength < 255)
+                {
+                    texturePath = Encoding.ASCII.GetString(br.ReadBytes(stringLength));
+                }
+                var basepath = Path.GetDirectoryName(swf.GetTextureFileName());
+                externalFilePath = Path.Join(basepath, texturePath);
+            }
+
             _imageType = br.ReadByte();
 
             if (s_imageTypes.ContainsKey(_imageType))
@@ -194,6 +208,7 @@ namespace SCEditor.ScOld
                 throw new Exception("Image type not found");
 
             _image.KtxSize = bufferSize;
+            _image.ExternalTexture = externalFilePath;
             _image.ReadImage(packetID, packetSize, br);
         }
 

@@ -9,7 +9,7 @@ namespace SCEditor.ScOld
 {
     public class MovieClipModifier : ScObject
     {
-        private string _tag;
+        private byte _tag;
         private ScFile _scFile;
 
         public MovieClipModifier(ScFile scfile)
@@ -17,12 +17,12 @@ namespace SCEditor.ScOld
             this._scFile = scfile;
         }
 
-        public override void Read(BinaryReader rd, string tag)
+        public override void Read(ScFile swf, BinaryReader rd, byte tag)
         {
             _tag = tag;
             Id = rd.ReadUInt16();
         }
 
-        public string tag => _tag;
+        public byte Tag => _tag;
     }
 }

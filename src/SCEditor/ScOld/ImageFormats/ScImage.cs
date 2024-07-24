@@ -10,6 +10,9 @@ using SCEditor.ScOld.ImageDecoders;
 using SCEditor.ScOld.ImageFormats;
 using System.Collections.Generic;
 using SCEditor.ScOld.ImageEncoder;
+using Accord.Imaging.Filters;
+using System.Windows.Media.Media3D;
+using ZstdSharp;
 
 namespace SCEditor.ScOld
 {
@@ -20,6 +23,7 @@ namespace SCEditor.ScOld
         public int Width { get; set; }
         public int Height { get; set; }
         public uint KtxSize { get; set; }
+        public string ExternalTexture { get; set; }
         public Bitmap Bitmap { get; set; }
         public bool Is32x32 { get; set; }
         
@@ -73,6 +77,47 @@ namespace SCEditor.ScOld
     {
         public override string ImageFormat => TFormat.Name;
 
+        private byte[] LoadKhronosTexture(byte[] data)
+        {
+            KtxStructure ktx = KtxLoader.LoadInput(new MemoryStream(data));
+
+            Width = (int)ktx.header.pixelWidth;
+            Height = (int)ktx.header.pixelHeight;
+
+            var pixelData = GC.AllocateUninitializedArray<byte>(Width * Height * 4, true);
+            byte[] inputBytes = ktx.textureData.textureDataOfMipmapLevel[0];
+            (int blockWidth, int blockHeight) = ktx.header.glInternalFormat switch
+            {
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_4x4_KHR => (4, 4),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_5x4_KHR => (5, 4),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_5x5_KHR => (5, 5),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_6x5_KHR => (6, 5),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_6x6_KHR => (6, 6),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x5_KHR => (8, 5),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x6_KHR => (8, 6),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x8_KHR => (8, 8),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x5_KHR => (10, 5),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x6_KHR => (10, 6),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x8_KHR => (10, 8),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x10_KHR => (10, 10),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_12x10_KHR => (12, 10),
+                GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_12x12_KHR => (12, 12),
+                _ => throw new Exception("Invalid ASTC format")
+            };
+            Stopwatch sw = Stopwatch.StartNew();
+
+            bool success = AstcDecoder.Decompress(inputBytes, (uint)inputBytes.Length, (uint)Width, (uint)Height,
+                blockWidth, blockHeight, pixelData, (uint)pixelData.Length, (uint)Width * 4);
+            if (!success)
+            {
+                throw new Exception("Failed to decompress ASTC");
+            }
+
+            Console.WriteLine($"Decompressed ASTC in {sw.ElapsedMilliseconds}ms ({Width}x{Height}, size: {inputBytes.Length / 1024}kb))");
+
+            return pixelData;
+        }
+
         public override unsafe void ReadImage(uint packetID, uint packetSize, BinaryReader br)
         {
             Width = br.ReadUInt16();
@@ -82,45 +127,42 @@ namespace SCEditor.ScOld
             byte[] pixelData;
             if (KtxSize != 0)
             {
-                byte[] ktxBytes = br.ReadBytes((int) KtxSize);
-                KtxStructure ktx = KtxLoader.LoadInput(new MemoryStream(ktxBytes));
-                
-                if (ktx.header.pixelWidth != Width || ktx.header.pixelHeight != Height)
+                byte[] ktxBytes = br.ReadBytes((int)KtxSize);
+                pixelData = LoadKhronosTexture(ktxBytes);
+            } else if (ExternalTexture != "")
+            {
+                if (!Path.Exists(ExternalTexture))
                 {
-                    throw new Exception("KTX size mismatch");
+                    throw new Exception($"Failed to load external texture: {ExternalTexture}");
                 }
-                
-                pixelData = GC.AllocateUninitializedArray<byte>(Width * Height * 4, true);
-                byte[] inputBytes = ktx.textureData.textureDataOfMipmapLevel[0];
-                (int blockWidth, int blockHeight) = ktx.header.glInternalFormat switch
+
+                var extension = Path.GetExtension(ExternalTexture);
+
+                if (extension == ".zktx")
                 {
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_4x4_KHR => (4, 4),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_5x4_KHR => (5, 4),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_5x5_KHR => (5, 5),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_6x5_KHR => (6, 5),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_6x6_KHR => (6, 6),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x5_KHR => (8, 5),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x6_KHR => (8, 6),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_8x8_KHR => (8, 8),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x5_KHR => (10, 5),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x6_KHR => (10, 6),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x8_KHR => (10, 8),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_10x10_KHR => (10, 10),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_12x10_KHR => (12, 10),
-                    GlInternalFormat.GL_COMPRESSED_RGBA_ASTC_12x12_KHR => (12, 12),
-                    _ => throw new Exception("Invalid ASTC format")
-                };
-                
-                Stopwatch sw = Stopwatch.StartNew();
-                
-                bool success = AstcDecoder.Decompress(inputBytes, (uint)inputBytes.Length, (uint)Width, (uint)Height,
-                    blockWidth, blockHeight, pixelData, (uint)pixelData.Length, (uint)Width * 4);
-                if (!success)
+                    using (MemoryStream output = new MemoryStream())
+                    {
+                        using (FileStream input = new FileStream(ExternalTexture, FileMode.Open))
+                        {
+                            using (var decompressionStream = new DecompressionStream(input))
+                            {
+                                decompressionStream.CopyTo(output);
+                                decompressionStream.Close();
+                                decompressionStream.Dispose();
+                            }
+                        }
+
+                        pixelData = LoadKhronosTexture(output.GetBuffer());
+                    }
+                } else if (extension == ".ktx")
                 {
-                    throw new Exception("Failed to decompress ASTC");
+                    var ktxBytes = File.ReadAllBytes(ExternalTexture);
+                    pixelData = LoadKhronosTexture(ktxBytes);
+                } else
+                {
+                    throw new Exception($"Unknown file type: {ExternalTexture}");
                 }
-                
-                Console.WriteLine($"Decompressed ASTC in {sw.ElapsedMilliseconds}ms ({Width}x{Height}, size: {inputBytes.Length / 1024}kb))");
+
             }
             else
             {

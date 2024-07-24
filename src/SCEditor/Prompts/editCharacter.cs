@@ -159,7 +159,7 @@ namespace SCEditor.Prompts
                     if (image == null)
                     {
                         stopAnimationPlaying(true);
-                        MessageBox.Show($"Frame Index {frameIndex} returned null image.");
+                        Console.WriteLine($"Frame Index {frameIndex} returned null image.");
                         return;
                     }
 

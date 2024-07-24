@@ -300,8 +300,8 @@ namespace SCEditor.Features
             Matrix oldM = _scFile.GetMatrixs(0)[2984];
 
             oldM.Multiply(new Matrix(1f, 0f, 0f, 1f, 0.8f, 1.2f));
-            _scFile.addPendingMatrix(oldM, 0);
-            _scFile.addMatrix(oldM, 0);
+            _scFile.AddPendingMatrix(oldM, 0);
+            _scFile.AddMatrix(oldM, 0);
 
             foreach (ScObject scObject in _scFile.GetExports())
             {
@@ -343,8 +343,8 @@ namespace SCEditor.Features
             }
 
             Matrix flagMatrix = new Matrix(0.624f, -0.0322f, 0.0322f, 0.624f, -0.412f, -36.377f);
-            _scFile.addMatrix(flagMatrix, 0);
-            _scFile.addPendingMatrix(flagMatrix, 0);
+            _scFile.AddMatrix(flagMatrix, 0);
+            _scFile.AddPendingMatrix(flagMatrix, 0);
 
             foreach (var (name, data) in flagExports)
             {
@@ -637,8 +637,8 @@ namespace SCEditor.Features
 
                     newMatrix.Multiply(matrixData);
 
-                    _scFile.addMatrix(newMatrix, (_scFile.GetTransformStorage().Count - 1));
-                    _scFile.addPendingMatrix(newMatrix, (_scFile.GetTransformStorage().Count - 1));
+                    _scFile.AddMatrix(newMatrix, (_scFile.GetTransformStorage().Count - 1));
+                    _scFile.AddPendingMatrix(newMatrix, (_scFile.GetTransformStorage().Count - 1));
                 }
 
                 newTimelineArray.Add(matrixId);
