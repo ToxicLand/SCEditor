@@ -16,7 +16,7 @@ namespace SCEditor.ScOld
 
         #region Constructors
 
-        public ScFile(string infoFile, string textureFile)
+        public ScFile(string filepath, string textureFile)
         {
             _textures = new List<ScObject>();
             _shapes = new List<ScObject>();
@@ -25,8 +25,8 @@ namespace SCEditor.ScOld
             _movieClipsModifier = new List<ScObject>();
             _pendingChanges = new List<ScObject>();
             _pendingMatrixs = new Dictionary<int, List<Matrix>>();
-            _infoFile = infoFile;
-            _textureFile = textureFile;
+            m_Filepath = filepath;
+            _textureFilepath = textureFile;
             _pendingColors = new Dictionary<int, List<Tuple<Color, byte, Color>>>();
             _fontNames = new List<string>();
             _textFields = new List<ScObject>();
@@ -44,22 +44,26 @@ namespace SCEditor.ScOld
         private int _textFieldCount; 
         private int _matrixCount;
         private int _colorsCount;
+
+
         private List<ScObject> _textures;
         private List<ScObject> _shapes;
         private List<ScObject> _exports;
         private List<ScObject> _movieClips;
-        private List<ScObject> _pendingChanges;
         private List<ScObject> _movieClipsModifier;
+        private List<ScObject> _textFields;
+        private List<(List<Matrix>, List<Tuple<Color, byte, Color>>)> _transformStorage;
+
+        private List<ScObject> _pendingChanges;
         private Dictionary<int, List<Matrix>> _pendingMatrixs;
         private Dictionary<int, List<Tuple<Color, byte, Color>>>  _pendingColors;
+
         private List<string> _fontNames;
-        private List<ScObject> _textFields;
         private List<ScObject> _currentRenderingMovieClips;
-        private List<(List<Matrix>, List<Tuple<Color, byte, Color>>)> _transformStorage;
         private Dictionary<int, long> _transformStorageOffsets;
 
-        private readonly string _infoFile;
-        private readonly string _textureFile;
+        private readonly string m_Filepath;
+        private readonly string _textureFilepath;
         private long _eofOffset;
         private long _eofTextFieldOffset;
         private long _eofMovieClipOffset;
@@ -123,7 +127,7 @@ namespace SCEditor.ScOld
 
         public string GetInfoFileName()
         {
-            return _infoFile;
+            return m_Filepath;
         }
 
         public List<Tuple<Color, byte, Color>> getColors(int storageID)
@@ -133,7 +137,7 @@ namespace SCEditor.ScOld
 
         public string GetTextureFileName()
         {
-            return _textureFile;
+            return _textureFilepath;
         }
 
         public List<ScObject> GetMovieClips()
@@ -146,7 +150,7 @@ namespace SCEditor.ScOld
             return _transformStorage[storageID].Item1;
         }
 
-        public void addMatrix(Matrix matrix, int TransformStorageID)
+        public void AddMatrix(Matrix matrix, int TransformStorageID)
         {
             if (_transformStorage[TransformStorageID].Item1.Count >= ushort.MaxValue)
             {
@@ -201,7 +205,7 @@ namespace SCEditor.ScOld
             _eofTexOffset = offset;
         }
 
-        public void addPendingMatrix(Matrix data, int TransformStorageID)
+        public void AddPendingMatrix(Matrix data, int TransformStorageID)
         {
             if (_pendingMatrixs.ContainsKey(TransformStorageID))
             {
@@ -223,7 +227,7 @@ namespace SCEditor.ScOld
             _exportStartOffset = offset;
         }
 
-        private void ExpandFile(FileStream stream, long offset, int extraBytes)
+        private static void ExpandFile(FileStream stream, long offset, int extraBytes)
         {
             // http://stackoverflow.com/questions/3033771/file-io-with-streams-best-memory-buffer-size
             const int SIZE = 4096;
@@ -307,7 +311,7 @@ namespace SCEditor.ScOld
                         }
                         else
                         {
-                            resetOffsets(data);
+                            Reset(data);
                         }
 
                         break;
@@ -325,7 +329,7 @@ namespace SCEditor.ScOld
                         }
                         else
                         {
-                            resetOffsets(data);
+                            Reset(data);
                             movieClipEdits += 1;
                         }
 
@@ -344,7 +348,7 @@ namespace SCEditor.ScOld
                         }
                         else
                         {
-                            resetOffsets(data);
+                            Reset(data);
                         }
 
                         break;
@@ -373,7 +377,7 @@ namespace SCEditor.ScOld
 
             input.Close();
             reloadInfoFile();
-            input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            input = new FileStream(m_Filepath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
 
             if (exports.Count > 0)
             {
@@ -385,7 +389,7 @@ namespace SCEditor.ScOld
 
             input.Close();
             reloadInfoFile();
-            input = new FileStream(_infoFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            input = new FileStream(m_Filepath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
 
             if (_pendingMatrixs.Count > 0)
             {
@@ -551,7 +555,7 @@ namespace SCEditor.ScOld
             Console.WriteLine($"SaveSC: Done saving (Add/Edit) Exports: {exportAdd} | MovieClips: {movieClipAdd}/{movieClipEdits} | Shapes: {shapeAdd} | Shape Chunks: {shapeChunkAdd} | Textures: {textureAdd} | Matrixs {matrixAdd} | Colors {colorsAdd} | TextFields {textFieldsAdd}");
         }
 
-        private void resetOffsets(ScObject data)
+        private void Reset(ScObject data)
         {
             List<ushort> idsGreater = new List<ushort>();
 
@@ -653,13 +657,13 @@ namespace SCEditor.ScOld
         {
             var sw = Stopwatch.StartNew();
 
-            if (this._textureFile != this._infoFile)
+            if (this._textureFilepath != this.m_Filepath)
                 LoadTextureFile();
 
-            loadInfoFile();
+            LoadFile();
 
             sw.Stop();
-            Program.Interface.Text = $@"SC Editor :  {Path.GetFileNameWithoutExtension(_textureFile)}";
+            Program.Interface.Text = $@"SC Editor :  {Path.GetFileNameWithoutExtension(m_Filepath)}";
             Program.Interface.Update();
             Console.WriteLine(@"SC File loading finished in {0}ms", sw.Elapsed.TotalMilliseconds);
         }
@@ -668,47 +672,47 @@ namespace SCEditor.ScOld
         {
             while (true)
             {
-                using (var texReader = new BinaryReader(File.OpenRead(_textureFile)))
+                using (var texReader = new BinaryReader(File.OpenRead(_textureFilepath)))
                 {
                     Byte[] IsCompressed = texReader.ReadBytes(2);
                     if (BitConverter.ToString(IsCompressed) == "53-43")
                     {
                         DialogResult result = MessageBox.Show("The tool detected that you have load a compressed file.\nWould you like to decompress and load it?", @"SC File is Compressed", MessageBoxButtons.YesNo, MessageBoxIcon.Error, MessageBoxDefaultButton.Button2);
-
+        
                         if (result == DialogResult.Yes)
                         {
                             byte[] version = texReader.ReadBytes(4);
-
+        
                             if (version[3] == 4)
                             {
                                 byte[] unkVal = texReader.ReadBytes(4);
                             }  
-
+        
                             byte[] hashLength = texReader.ReadBytes(4);
                             var hash = texReader.ReadBytes(hashLength[3]);
-
+        
                             if (version[3] == 1 || version[3] == 3 || version[3] == 0 || version[3] == 4)
                             {
                                 string scCompressionType = BitConverter.ToString(texReader.ReadBytes(4));
                                 texReader.Close();
-
+        
                                 if (scCompressionType == "53-43-4C-5A")
                                 {
-                                    Console.WriteLine("LZHAM Compression for " + Path.GetFileName(_textureFile));
-                                    Lzma.Decompress(_textureFile);
+                                    Console.WriteLine("LZHAM Compression for " + Path.GetFileName(_textureFilepath));
+                                    Lzma.Decompress(_textureFilepath);
                                 }
                                 else if (scCompressionType == "28-B5-2F-FD")
                                 {
-                                    Console.WriteLine("Zstandard Compression for " + Path.GetFileName(_textureFile));
-                                    zstandard.decompress(_textureFile);
+                                    Console.WriteLine("Zstandard Compression for " + Path.GetFileName(_textureFilepath));
+                                    zstandard.decompress(_textureFilepath);
                                 }
                                 else
                                 {
-                                    Console.WriteLine("LZMA Compression for " + Path.GetFileName(_textureFile));
-                                    Lzma.Decompress(_textureFile);
+                                    Console.WriteLine("LZMA Compression for " + Path.GetFileName(_textureFilepath));
+                                    Lzma.Decompress(_textureFilepath);
                                 }
                             }
-
+        
                             continue;
                         }
                         break;
@@ -725,11 +729,11 @@ namespace SCEditor.ScOld
                         {
                             var tex = new Texture(this);
                             tex.SetOffset(texoffset);
-                            tex.Read(packetId, packetSize, texReader);
-
+                            tex.Read(this, packetId, packetSize, texReader);
+        
                             if (texoffset + packetSize + 5 != texReader.BaseStream.Position)
                                 throw new Exception("Reading less or more bytes for texture");
-
+        
                             this._textures.Add(tex);
                             if (texReader.BaseStream.Position != texReader.BaseStream.Length)
                             {
@@ -744,13 +748,15 @@ namespace SCEditor.ScOld
             }
         }
 
-        public void loadInfoFile()
+        
+
+        public void LoadFile()
         {
             var sw = Stopwatch.StartNew();
 
             while (true)
             {
-                using (var reader = new BinaryReader(File.OpenRead(_infoFile)))
+                using (var reader = new BinaryReader(File.OpenRead(m_Filepath)))
                 {
                     Byte[] IsCompressed = reader.ReadBytes(2);
                     Console.WriteLine(BitConverter.ToString(IsCompressed) == "53-43");
@@ -788,18 +794,18 @@ namespace SCEditor.ScOld
 
                                 if (scCompressionType == "53-43-4C-5A")
                                 {
-                                    Console.WriteLine("LZHAM Compression for " + Path.GetFileName(_infoFile));
-                                    Lzma.Decompress(_infoFile);
+                                    Console.WriteLine("LZHAM Compression for " + Path.GetFileName(m_Filepath));
+                                    Lzma.Decompress(m_Filepath);
                                 }
                                 else if (scCompressionType == "28-B5-2F-FD")
                                 {
-                                    Console.WriteLine("Zstandard Compression for " + Path.GetFileName(_infoFile));
-                                    zstandard.decompress(_infoFile);
+                                    Console.WriteLine("Zstandard Compression for " + Path.GetFileName(m_Filepath));
+                                    zstandard.decompress(m_Filepath);
                                 }
                                 else
                                 {
-                                    Console.WriteLine("LZMA Compression for " + Path.GetFileName(_infoFile));
-                                    Lzma.Decompress(_infoFile);
+                                    Console.WriteLine("LZMA Compression for " + Path.GetFileName(m_Filepath));
+                                    Lzma.Decompress(m_Filepath);
                                 }
                             }
 
@@ -892,10 +898,8 @@ namespace SCEditor.ScOld
                     {
                         long offset = reader.BaseStream.Position;
 
-                        var datatag = reader.ReadByte();
+                        var tag = reader.ReadByte();
                         var tagSize = reader.ReadUInt32();
-
-                        var tag = datatag.ToString("X2");
 
                         if (tagSize < 0)
                             throw new Exception("Negative tag length. Tag " + tag);
@@ -905,7 +909,7 @@ namespace SCEditor.ScOld
 
                         switch (tag)
                         {
-                            case "00": //0
+                            case 0: //0
                                 if (_shapeCount != shapeIndex ||
                                 _movieClipCount != movieClipIndex ||
                                 _textFieldCount != textFieldIndex)
@@ -922,14 +926,14 @@ namespace SCEditor.ScOld
                                 _eofOffset = offset;
                                 break;
 
-                            case "01":
-                            case "10": //16
-                            case "13": //19
-                            case "1B": //27
-                            case "1C": //28
-                            case "1D": //29
-                            case "22": //34
-                            case "2D": //45
+                            case 1:
+                            case 16:
+                            case 19:
+                            case 27:
+                            case 28:
+                            case 29:
+                            case 34:
+                            case 45:
                                 if (textureIndex >= _textureCount)
                                     throw new Exception($"Trying to load too many shapes.\n Index: {textureIndex} | Count: {_textureCount}");
 
@@ -938,7 +942,7 @@ namespace SCEditor.ScOld
                                     var texture = new Texture(this);
                                     texture.SetOffset(offset);
                                     texture.setLength(tagSize);
-                                    texture.Read(datatag, tagSize, reader);
+                                    texture.Read(this, tag, tagSize, reader);
                                     _eofTexOffset = reader.BaseStream.Position;
                                     this._textures.Add(texture);
                                 }
@@ -956,15 +960,15 @@ namespace SCEditor.ScOld
                                 textureIndex += 1;
                                 break;
 
-                            case "02":
-                            case "12": //18
+                            case 2:
+                            case 18:
                                 if (shapeIndex >= _shapeCount)
                                     throw new Exception($"Trying to load too many shapes.\n Index: {shapeIndex} | Count: {_shapeCount}");
 
                                 var shape = new Shape(this);
                                 shape.SetOffset(offset);
                                 shape.setLength(tagSize);
-                                shape.Read(reader, tag);
+                                shape.Read(this, reader, tag);
                                 _shapes[shapeIndex] = shape;
 
                                 _eofShapeOffset = reader.BaseStream.Position;
@@ -974,15 +978,16 @@ namespace SCEditor.ScOld
                                 shapeIndex += 1;
                                 break;
 
-                            case "03":
-                            case "0A": //10
-                            case "0E": //14
-                            case "23": //35
-                            case "0C": //12
+                            case 3:
+                            case 10:
+                            case 14:
+                            case 35:
+                            case 12:
+                            case 49:
                                 if (movieClipIndex >= _movieClipCount)
                                     throw new Exception($"Trying to load too many movieclips.\n Index: {movieClipIndex} | Count: {_movieClipCount}");
 
-                                var movieClip = new MovieClip(this, datatag);
+                                var movieClip = new MovieClip(this, tag);
                                 movieClip.SetOffset(offset);
                                 movieClip.setLength(tagSize);
                                 ushort clipId = movieClip.ReadMV(reader, tag, tagSize);
@@ -995,19 +1000,19 @@ namespace SCEditor.ScOld
                                 movieClipIndex += 1;
                                 break;
 
-                            case "07":
-                            case "0F": //15
-                            case "14": //20
-                            case "15": //21
-                            case "19": //25
-                            case "21": //33
-                            case "2B": //43
-                            case "2C": //44
+                            case 7:
+                            case 15:
+                            case 20:
+                            case 21:
+                            case 25:
+                            case 33:
+                            case 43:
+                            case 44:
                                 if (textFieldIndex >= _textFieldCount)
                                     throw new Exception($"Trying to load too many TextFields. \n Index: {textFieldIndex} | Count: {_textFieldCount}");
 
-                                TextField textField = new TextField(this, datatag);
-                                textField.Read(reader, tag);
+                                TextField textField = new TextField(this, tag);
+                                textField.Read(this, reader, tag);
                                 textField.setLength(tagSize);
                                 _textFields[textFieldIndex] = textField;
 
@@ -1018,7 +1023,7 @@ namespace SCEditor.ScOld
                                 textFieldIndex += 1;
                                 break;
                             
-                            case "08":
+                            case 8:
                                 float[] Points = new float[6];
                                 for (int Index = 0; Index < 6; Index++)
                                 {
@@ -1031,7 +1036,7 @@ namespace SCEditor.ScOld
                                 matrixIndex++;
                                 break;
 
-                            case "09":
+                            case 9:
                                 var ra = reader.ReadByte();
                                 var ga = reader.ReadByte();
                                 var ba = reader.ReadByte();
@@ -1044,24 +1049,24 @@ namespace SCEditor.ScOld
                                 colorIndex += 1;
                                 break;
 
-                            case "0D": // 13 
+                            case 13: // 13 
                                 reader.ReadInt32();
                                 throw new Exception("TAG_TIMELINE_INDEXES no longer in use");
 
-                            case "17": // 23
+                            case 23: // 23
                                 // TODO
                                 break;
 
-                            case "1A": //26
+                            case 26: //26
                                 //canLoadTex = false;
                                 //_texDependency = true;
                                 break;
 
-                            case "1E": // 30
+                            case 30: // 30
                                 // CUSTOM TEXFILE
                                 break;
 
-                            case "20": // 32
+                            case 32: // 32
                                 var stg1Count = reader.ReadByte();
                                 if (stg1Count != 255)
                                 {
@@ -1076,7 +1081,7 @@ namespace SCEditor.ScOld
                                 //TODO
                                 break;
 
-                            case "24":
+                            case 36:
                                 float[] Points2 = new float[6];
                                 for (int Index = 0; Index < 6; Index++)
                                 {
@@ -1089,7 +1094,7 @@ namespace SCEditor.ScOld
                                 matrixIndex++;
                                 break;
 
-                            case "25": //37
+                            case 37: //37
                                 ushort movieClipModifierCount = reader.ReadUInt16();
 
                                 for (int i = 0; i < movieClipModifierCount; i++)
@@ -1098,18 +1103,18 @@ namespace SCEditor.ScOld
                                 }
                                 break;
 
-                            case "26": //38
-                            case "27": //39
-                            case "28": //40
+                            case 38: //38
+                            case 39: //39
+                            case 40: //40
                                 MovieClipModifier mcmo = new MovieClipModifier(this);
                                 mcmo.setLength(tagSize);
                                 mcmo._offset = reader.BaseStream.Position;
-                                mcmo.Read(reader, tag);
+                                mcmo.Read(this, reader, tag);
 
                                 this._movieClipsModifier[movieClipModifierIndex++] = mcmo;
                                 break;
 
-                            case "2A": //42
+                            case 42: //42
                                 _transformStorageID += 1;
 
                                 _transformStorageOffsets.Add(_transformStorageID, offset);
@@ -1124,7 +1129,7 @@ namespace SCEditor.ScOld
                                 break;
 
                             default:
-                                Console.WriteLine($"LoadingSC: Unknown Tag {datatag} with size {tagSize}");
+                                Console.WriteLine($"LoadingSC: Unknown Tag {tag} with size {tagSize}");
                                 reader.ReadBytes(Convert.ToInt32(tagSize));
                                 break;
                         }
@@ -1132,7 +1137,7 @@ namespace SCEditor.ScOld
                         if ((offset + tagSize + 5) != reader.BaseStream.Position)
                         {
                             string lastsctypeid = $"ID: {lastSCId}";
-                            Console.WriteLine($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {datatag}; Hex: {tag} {(lastSCType != ScObject.SCObjectType.None ? lastsctypeid : "")}");
+                            Console.WriteLine($"Started with offset {offset} trying to load data of size {tagSize} but current position is {reader.BaseStream.Position}.\n DataTag {tag}; Hex: {tag} {(lastSCType != ScObject.SCObjectType.None ? lastsctypeid : "")}");
                         }
                     }
                 }
@@ -1185,12 +1190,12 @@ namespace SCEditor.ScOld
                                 {
                                     mv.addChildren(this.getTextFields()[findIndex]);
                                 }
-                                else
-                                {
-                                    string err = $"MovieClip with ID {mv.Id} has children id {tcId} of invalid type.";
-                                    MessageBox.Show(err, "Invalid Children Type");
-                                    Console.WriteLine(err);
-                                }
+                                // else
+                                // {
+                                //     string err = $"MovieClip with ID {mv.Id} has children id {tcId} of invalid type.";
+                                //     MessageBox.Show(err, "Invalid Children Type");
+                                //     Console.WriteLine(err);
+                                // }
                             }
                         }
                     }
@@ -1262,7 +1267,7 @@ namespace SCEditor.ScOld
             _sofTagsOffset = 0;
             _eofTextFieldOffset = 0;
 
-            this.loadInfoFile();
+            this.LoadFile();
 
             this._textures = new List<ScObject>(previousTextureData.ToList());
 

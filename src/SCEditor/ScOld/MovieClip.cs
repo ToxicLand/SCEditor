@@ -87,10 +87,12 @@ namespace SCEditor.ScOld
         public bool hasShadow => _hasShadow;
         public byte FPS => _framePerSeconds;
         public override SCObjectType objectType => SCObjectType.MovieClip;
-        private string _packetId;
+        private byte _packetId;
 
         public int _lastPlayedFrame { get; set; }
         public MovieClipState _animationState { get; set; }
+
+        public List<object> CustomProperties = null;
         #endregion
 
         #region Methods
@@ -155,20 +157,40 @@ namespace SCEditor.ScOld
             return exportResult;
         }
 
-        public unsafe override ushort ReadMV(BinaryReader br, string packetId, uint length)
+        public unsafe override ushort ReadMV(BinaryReader br, byte packetId, uint length)
         {
             _clipId = br.ReadUInt16();
             _framePerSeconds = br.ReadByte();
             _frameCount = br.ReadInt16();
+            if (packetId == 49)
+            {
+                CustomProperties = new();
+                var customPropertyCount = br.ReadByte();
+
+                for(var i = 0; customPropertyCount > i; i++)
+                {
+                    var type = br.ReadByte();
+
+                    switch (type)
+                    {
+                        case 0:
+                            CustomProperties.Add(br.ReadBoolean());
+                            break;
+                        default:
+                            throw new Exception($"Unknown Custom Property type: {type}");
+                    }
+                }
+            }
+
             _length = length;
             _packetId = packetId;
 
-            if (packetId == "0E")
+            if (packetId == 14)
             {
                 throw new Exception("TAG_MOVIE_CLIP_4 no longer supported");
             }
 
-            if (packetId == "03")
+            if (packetId == 3)
             {
                 throw new Exception("TAG_MOVIE_CLIP no longer supported");
             }
@@ -194,7 +216,7 @@ namespace SCEditor.ScOld
             _timelineChildrenId = new ushort[count];
             br.Read(MemoryMarshal.Cast<ushort, byte>((Span<ushort>)_timelineChildrenId));
 
-            if (packetId == "0C" || packetId == "23")
+            if (packetId == 12 || packetId >= 35 )
             {
                 _flags = new byte[count];
                 br.Read(_flags, 0, count);
@@ -395,32 +417,49 @@ namespace SCEditor.ScOld
 
         private int writeData(Stream input)
         {
-            int dataLength = 0;
+            var position = input.Position;
 
             // MovieClip Data { id, fps, framecount }
             input.Write(BitConverter.GetBytes(_clipId), 0, 2);
             input.Write(new [] { _framePerSeconds }, 0, 1);
             input.Write(BitConverter.GetBytes(this.Frames.Count), 0, 2);
-            dataLength += 5;
+            
+            if (CustomProperties != null)
+            {
+                input.Write(BitConverter.GetBytes(CustomProperties.Count), 0, 1);
+
+                foreach (var property in CustomProperties)
+                {
+                    if (property is bool)
+                    {
+                        input.Write(BitConverter.GetBytes(0), 0, 1);
+                        input.Write(BitConverter.GetBytes((bool)property), 0, 1);
+                    } else
+                    {
+                        Console.WriteLine($"Unknown custom property type: {property}. Skip..");
+                    }
+                }
+            }
+
 
             // timelineOffset
             input.Write(BitConverter.GetBytes(timelineOffsetCount / 3), 0, 4);
-            dataLength += 4;
+
 
             byte[] target = new byte[_timelineOffsetArray.Length * 2];
             Buffer.BlockCopy(_timelineOffsetArray, 0, target, 0, _timelineOffsetArray.Length * 2);
             input.Write(target, 0, target.Length);
-            dataLength += target.Length;
+
 
             // Childrens Count
             input.Write(BitConverter.GetBytes((ushort)timelineChildrenId.Length), 0, 2);
-            dataLength += 2;
+
 
             // Childrens IDS
             for (int i = 0; i < timelineChildrenId.Length; i++)
             {
                 input.Write(BitConverter.GetBytes(timelineChildrenId[i]), 0, 2);
-                dataLength += 2;
+
             }
 
             // Childrens Flags - CHECK
@@ -434,8 +473,6 @@ namespace SCEditor.ScOld
                 {
                     input.WriteByte(0);
                 }
-
-                dataLength += 1;
             }
 
             // Childrens Names
@@ -450,10 +487,7 @@ namespace SCEditor.ScOld
                     byte[] stringData = Encoding.ASCII.GetBytes(timelineChildrenNames[i]);
                     input.WriteByte((byte)stringData.Length);
                     input.Write(stringData, 0, stringData.Length);
-
-                    dataLength += stringData.Length;
                 }
-                dataLength += 1;
             }
 
             if (_transformStorageId > 0)
@@ -461,7 +495,6 @@ namespace SCEditor.ScOld
                 input.Write(BitConverter.GetBytes(41), 0, 1);
                 input.Write(BitConverter.GetBytes(0), 0, 4);
                 input.Write(new byte[1] { _transformStorageId }, 0, 1);
-                dataLength += 6;
             }
 
             // Frames
@@ -473,7 +506,6 @@ namespace SCEditor.ScOld
                     {
                         input.Write(BitConverter.GetBytes(11), 0, 1);
                         input.Write(BitConverter.GetBytes(0), 0, 4);
-                        dataLength += 5;
 
                         int frameLength = 0;
 
@@ -496,8 +528,6 @@ namespace SCEditor.ScOld
                         }
                         frameLength += 1;
 
-                        dataLength += frameLength;
-
                         // Write FrameLength
                         input.Seek(-(frameLength + 4), SeekOrigin.Current);
                         input.Write(BitConverter.GetBytes(frameLength), 0, 4);
@@ -506,7 +536,7 @@ namespace SCEditor.ScOld
                 }
             }
 
-            return dataLength;
+            return (int)(position - input.Position);
         }
 
         public override Bitmap Render(RenderingOptions options)

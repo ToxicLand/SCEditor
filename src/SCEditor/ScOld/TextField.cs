@@ -95,7 +95,7 @@ namespace SCEditor.ScOld
             return "TextFields";
         }
 
-        public override void Read(BinaryReader br, string packetid)
+        public override void Read(ScFile swf, BinaryReader br, byte packetid)
         {
             Id = br.ReadUInt16();
 
@@ -149,7 +149,7 @@ namespace SCEditor.ScOld
                 _textData = Encoding.ASCII.GetString(br.ReadBytes(stringLength2)); // 196
             }
 
-            if (packetid == "07")
+            if (packetid == 7)
                 return;
 
             if (br.ReadBoolean())
@@ -160,32 +160,32 @@ namespace SCEditor.ScOld
                 
             switch (packetid)
             {
-                case "14":
+                case 20:
                     _flag |= 32;
                     break;
-                case "15":
+                case 21:
                     _flag |= 32;
                     _fontOutlineColor = readColor(br);
                     break;
-                case "19":
+                case 25:
                     _fontOutlineColor = readColor(br);
                     break;
 
-                case "21":
-                case "2B":
-                case "2C":
+                case 33:
+                case 43:
+                case 44:
                     _fontOutlineColor = readColor(br);
                     _transform1 = br.ReadUInt16();
                     _transform2 = br.ReadUInt16();
                     _flag |= 32;
 
-                    if (packetid == "2B" || packetid == "2C")
+                    if (packetid == 43 || packetid == 44)
                     {
                         _unk46tmp = br.ReadUInt16();
                         _unk46 = (ushort)(((uint)(0x7FFF * _unk46tmp + ((-40656255836343L * _unk46tmp) >> 32)) >> 31) + ((uint)(0x7FFF * _unk46tmp + ((-40656255836343L * _unk46tmp) >> 32)) >> 8));
                     }
 
-                    if (packetid == "2C" && br.ReadBoolean())
+                    if (packetid == 44 && br.ReadBoolean())
                     {
                         _flag |= 64;
                         _flag64 = true;

@@ -105,7 +105,7 @@ namespace SCEditor.Features
             {
                 if (importScFileInfo != importScFileTex)
                     scToImportFrom.LoadTextureFile();
-                scToImportFrom.loadInfoFile();
+                scToImportFrom.LoadFile();
             }
             catch (Exception ex)
             {
@@ -378,8 +378,8 @@ namespace SCEditor.Features
                         continue;
                     }
 
-                    _scFile.addMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID], (_scFile.GetTransformStorage().Count - 1));
-                    _scFile.addPendingMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID], (_scFile.GetTransformStorage().Count - 1));
+                    _scFile.AddMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID], (_scFile.GetTransformStorage().Count - 1));
+                    _scFile.AddPendingMatrix(scToImportFrom.GetMatrixs(storageID)[matrixID], (_scFile.GetTransformStorage().Count - 1));
                 }
 
                 for (int i = 0; i < _colorTransformToAdd.Count; i++)

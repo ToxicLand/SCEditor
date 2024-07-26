@@ -52,9 +52,9 @@ namespace SCEditor.ScOld
                 input.Seek(Math.Abs(shape.GetOffset()), SeekOrigin.Begin);
                 using (var br = new BinaryReader(input))
                 {
-                    var packetId = br.ReadByte().ToString("X2");
+                    var packetId = br.ReadByte();
                     var packetSize = br.ReadUInt32();
-                    this.Read(br, packetId);
+                    this.Read(null, br, packetId);
                 }
             }
 
@@ -316,7 +316,7 @@ namespace SCEditor.ScOld
 
         }
 
-        public sealed override void Read(BinaryReader br, string id)
+        public sealed override void Read(ScFile swf, BinaryReader br, byte id)
         {
             _shapeId = br.ReadUInt16();
             _shapeChunkCount = br.ReadUInt16();
@@ -326,7 +326,7 @@ namespace SCEditor.ScOld
                 _chunks.Add(new ShapeChunk(_scFile));
             }
 
-            _shapeChunkVertexCount = id == "12" ? br.ReadUInt16() : 4 * _shapeChunkCount;
+            _shapeChunkVertexCount = id == 2 ? 4 * _shapeChunkCount : br.ReadUInt16();
 
             int index = 0;
 
@@ -347,7 +347,7 @@ namespace SCEditor.ScOld
                         chunk.SetChunkId((ushort)index);
                         chunk.SetShapeId(_shapeId);
                         chunk.SetChunkType(chunkType);
-                        chunk.Read(br, id);
+                        chunk.Read(swf, br, id);
 
                         index++;
                     }

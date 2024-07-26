@@ -111,7 +111,7 @@ namespace SCEditor.ScOld
             return true;
         }
 
-        public override void Read(BinaryReader br, string id)
+        public override void Read(ScFile swf, BinaryReader br, byte id)
         {
             _offset = br.BaseStream.Position;
             _textureId = br.ReadByte();
@@ -121,7 +121,7 @@ namespace SCEditor.ScOld
             if (texture == null)
                 throw new InvalidOperationException($"Texture {_textureId} wasn't loaded yet.");
 
-            _vertexCount = id == "04" ? 4 : br.ReadByte();
+            _vertexCount = id == 2 ? 4 : br.ReadByte();
 
             _xy = new PointF[_vertexCount];
             _uv = new PointF[_vertexCount];

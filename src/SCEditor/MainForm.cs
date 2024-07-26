@@ -884,8 +884,8 @@ namespace SCEditor
                                     int matrixId = _scFile.GetMatrixs(((MovieClip)eachData)._transformStorageId).Count;
                                     Console.WriteLine($"Saved Matrix with id {matrixId} for Shape id {data.childrenId}");
 
-                                    _scFile.addMatrix(data.matrixData, ((MovieClip)eachData)._transformStorageId);
-                                    _scFile.addPendingMatrix(data.matrixData, ((MovieClip)eachData)._transformStorageId);
+                                    _scFile.AddMatrix(data.matrixData, ((MovieClip)eachData)._transformStorageId);
+                                    _scFile.AddPendingMatrix(data.matrixData, ((MovieClip)eachData)._transformStorageId);
 
                                     if (matrixReplaceAll != DialogResult.Cancel)
                                     {
@@ -973,8 +973,8 @@ namespace SCEditor
                         {
                             Console.WriteLine($"Added Matrix with ID: {_scFile.GetMatrixs(transformStorageId).Count - 1} in Transform Storage ID: {transformStorageId}");
 
-                            _scFile.addMatrix(matrixData, transformStorageId);
-                            _scFile.addPendingMatrix(matrixData, transformStorageId);
+                            _scFile.AddMatrix(matrixData, transformStorageId);
+                            _scFile.AddPendingMatrix(matrixData, transformStorageId);
                         }
                     }
                 }
