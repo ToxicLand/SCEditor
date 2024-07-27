@@ -45,7 +45,7 @@ namespace SCEditor.Prompts
 
             foreach (object export in exportsToList)
             {
-                if (((Export)export).GetName().StartsWith("area_light") && true)
+                if (((Export)export).GetName().StartsWith("bb_attack_booster_lvl1") && true)
                     afterThisChecked = true;
 
                 exportsListBox.Items.Add(new exportItemClass { exportName = ((Export)export).GetName(), exportData = export }, afterThisChecked);

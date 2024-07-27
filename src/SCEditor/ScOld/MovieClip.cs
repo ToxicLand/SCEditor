@@ -23,11 +23,13 @@ namespace SCEditor.ScOld
 
         MovieClip()
         {
+            _packetId = 12;
             _transformStorageId = 0;
         }
 
         public MovieClip(ScFile scs, short dataType)
         {
+            _packetId = 12;
             _scFile = scs;
             _dataType = dataType;
             _childrens = new List<ScObject>();
@@ -36,6 +38,8 @@ namespace SCEditor.ScOld
 
         public MovieClip(MovieClip mv)
         {
+            _packetId = mv._packetId;
+
             _scFile = mv.GetStorageObject();
 
             _offset = -1;
@@ -337,7 +341,7 @@ namespace SCEditor.ScOld
                 input.Seek(_scFile.GetEofOffset(), SeekOrigin.Begin);
 
                 // DataType and Length
-                input.Write(BitConverter.GetBytes(12), 0, 1);
+                input.WriteByte(_packetId);
                 input.Write(BitConverter.GetBytes(0), 0, 4);
 
                 int dataLength = writeData(input);
@@ -423,24 +427,31 @@ namespace SCEditor.ScOld
             input.Write(BitConverter.GetBytes(_clipId), 0, 2);
             input.Write(new [] { _framePerSeconds }, 0, 1);
             input.Write(BitConverter.GetBytes(this.Frames.Count), 0, 2);
-            
-            if (CustomProperties != null)
-            {
-                input.Write(BitConverter.GetBytes(CustomProperties.Count), 0, 1);
 
-                foreach (var property in CustomProperties)
+            if (_packetId == 49)
+            {
+                if (CustomProperties == null)
                 {
-                    if (property is bool)
+                    input.WriteByte(0);  
+                }
+                else
+                {
+                    input.Write(BitConverter.GetBytes(CustomProperties.Count), 0, 1);
+
+                    foreach (var property in CustomProperties)
                     {
-                        input.Write(BitConverter.GetBytes(0), 0, 1);
-                        input.Write(BitConverter.GetBytes((bool)property), 0, 1);
-                    } else
-                    {
-                        Console.WriteLine($"Unknown custom property type: {property}. Skip..");
+                        if (property is bool)
+                        {
+                            input.Write(BitConverter.GetBytes(0), 0, 1);
+                            input.Write(BitConverter.GetBytes((bool)property), 0, 1);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Unknown custom property type: {property}. Skip..");
+                        }
                     }
                 }
             }
-
 
             // timelineOffset
             input.Write(BitConverter.GetBytes(timelineOffsetCount / 3), 0, 4);
@@ -462,18 +473,21 @@ namespace SCEditor.ScOld
 
             }
 
-            // Childrens Flags - CHECK
-            for (int i = 0; i < timelineChildrenId.Length; i++)
+            // Childrens Flags
+            if (_packetId == 12 || _packetId >= 35)
             {
-                if (_flags != null)
+                for (int i = 0; i < timelineChildrenId.Length; i++)
                 {
-                    input.WriteByte(_flags[i]);
+                    if (_flags != null)
+                    {
+                        input.WriteByte(_flags[i]);
+                    }
+                    else
+                    {
+                        input.WriteByte(0);
+                    }
                 }
-                else
-                {
-                    input.WriteByte(0);
-                }
-            }
+            }        
 
             // Childrens Names
             for (int i = 0; i < timelineChildrenId.Length; i++)
@@ -536,7 +550,7 @@ namespace SCEditor.ScOld
                 }
             }
 
-            return (int)(position - input.Position);
+            return (int)(input.Position - position);
         }
 
         public override Bitmap Render(RenderingOptions options)
